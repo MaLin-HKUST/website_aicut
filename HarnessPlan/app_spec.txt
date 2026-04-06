@@ -1,0 +1,58 @@
+智能剪口播气口
+
+权威规格
+- 唯一产品/实现规格来源：/Users/malin13/Documents/trae_projects/website_aicut/doc/cujian_plan_cx2.md
+
+目标
+- 在现有 website_aicut + aicut2602 体系中实现“智能剪口播气口”功能。
+- 采用三阶段离散任务流：analyze -> preview -> finalize。
+- 通过 Harness 管理长期开发，保证可跨 session 续作。
+
+核心能力
+- analyze：从 TOS 下载原视频和标准文案，执行 A 流程，产出 script、ASR、DelayCuts。
+- preview：用户只允许通过按钮做删除线/反删除线，重算 edited_delay_cuts、pause_cuts、audio_b。
+- finalize：基于最后一次成功 preview 的产物，按输出规格生成最终视频并上传 TOS。
+
+必须遵守的约束
+- preview 阶段不是自由文本编辑器。
+- 用户只能通过按钮执行“添加删除线”和“反删除线（恢复）”。
+- 不允许新增正文、改写正文、删除正文字符。
+- edited_script 只允许变化 {} 标记范围，正文字符内容必须保持一致。
+- audio_b 只用于试听，不参与最终视频合成。
+- audio_a 不暴露给前端。
+- 输入视频和最终视频走 TOS，API 不直接传大文件本体。
+- preview 结束后 audio_b 需要上传 TOS 并回写 URL。
+- normalize 只在 finalize 阶段、且 output_mode=vertical_1080p 时执行。
+- 输出码率规则必须真实生效：min(input_bitrate, 12Mbps)。
+- finalize 只能基于最后一次成功 preview 对应的 active_edit_id/finalize_source_edit_id。
+- GroundTruth 归档默认开启，由 feed_to_ai=true 控制。
+- GroundTruth 存储到 TOS 目录：
+  cujian_input_data/{company}/{year-month}/cujian_userdata_{timestamp}/
+
+GroundTruth 目录最少内容
+- reference.txt
+- analyze_script.txt
+- edited_script.txt
+- asr_result.json
+- metadata.json
+
+GroundTruth 内容语义
+- 标准文案
+- 输入视频 URL / TOS key
+- 输入视频 ASR
+- 系统输出 script
+- 用户修改后的 script
+
+实现边界
+- 新的在线封装代码放在 /app/aicut2602/libs/cut_breakpoints/online_version/
+- 服务编排、API、worker 仍放在 website_aicut 仓库
+- 不直接修改原 DirectCutter 的固定输出参数逻辑；新增在线版 cutter 注入动态码率
+
+成功标准
+- 可通过 API 创建 smart-cut 任务并完成 TOS 输入绑定。
+- analyze 成功产出 script 和可用于 preview 的中间结果。
+- preview 成功产出 audio_b 并上传到 TOS。
+- finalize 成功产出最终视频、上传 TOS，并返回下载链接。
+- 当 feed_to_ai=true 时，GroundTruth 目录成功上传到 TOS 指定路径。
+- 若 GroundTruth 上传失败，要单独记录状态，不阻塞最终视频成功。
+- Harness backlog 决策完整，后续 agents 不需要再做产品层判断。

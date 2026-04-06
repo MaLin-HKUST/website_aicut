@@ -1,0 +1,10 @@
+{
+  "directives": [
+    {
+      "directive": "Do not add, infer, or enforce requirements that are not explicitly in the user's requirement documents or direct instructions. If an additional requirement, constraint, safeguard, or quality bar seems desirable but is not explicitly requested, raise it only as an optional note and ask the user before treating it as required. Review and implementation must stay within stated requirements unless the user explicitly confirms an addition.",
+      "priority": "high",
+      "context": "Smart Cut scheduler / all future review and implementation work in this workspace",
+      "timestamp": "2026-04-06T14:44:28.932Z"
+    }
+  ]
+}

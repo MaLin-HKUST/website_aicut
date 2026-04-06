@@ -1,0 +1,17 @@
+services:
+  smart_cut_worker:
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+    container_name: smart_cut_worker
+    working_dir: /app/website_aicut
+    tty: true
+    stdin_open: true
+    volumes:
+      - ../aicut2602:/app/aicut2602
+      - ./tests/test_cujiian:/app/website_aicut/tests/test_cujiian
+      - /Volumes:/Volumes:ro
+      - ./tmp/smart-cut-data:/data/smart-cut
+    environment:
+      PYTHONPATH: /app/aicut2602:/app/aicut2602/libs/cut_breakpoints/online_version
+    command: ["sleep", "infinity"]

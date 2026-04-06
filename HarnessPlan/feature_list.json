@@ -1,0 +1,178 @@
+{
+  "project": "smart-cut-cx2",
+  "source_spec": "/Users/malin13/Documents/trae_projects/website_aicut/doc/cujian_plan_cx2.md",
+  "mode": "harness",
+  "features": [
+    {
+      "id": "F01",
+      "title": "Harness Bootstrap And Repo Checks",
+      "status": "done",
+      "goal": "Establish the Harness workflow, validate repo prerequisites, and lock the execution order for all later agents.",
+      "depends_on": [],
+      "acceptance": [
+        "Harness artifacts exist and are readable",
+        "init.sh status reports repo and dependency presence",
+        "Next recommended unfinished feature is F02"
+      ],
+      "owner_notes": "Do not implement product code in this feature."
+    },
+    {
+      "id": "F02",
+      "title": "Smart Cut Data Model And API Contract",
+      "status": "done",
+      "goal": "Define task tables, edit version anchors, upload states, and API schemas for smart cut.",
+      "depends_on": ["F01"],
+      "acceptance": [
+        "Task model includes active_edit_id and finalize_source_edit_id",
+        "Task model includes TOS upload fields and GroundTruth status fields",
+        "API contracts cover create, upload-prepare, upload-complete, analyze, preview, finalize, and task detail"
+      ],
+      "owner_notes": "Implemented in src/models.py with SmartCutTaskMixin and SmartCutEditMixin. SQL DDL provided."
+    },
+    {
+      "id": "F03",
+      "title": "TOS Upload Prepare And Complete Flow",
+      "status": "pending",
+      "goal": "Implement frontend-direct upload preparation and secure upload completion binding.",
+      "depends_on": ["F02"],
+      "acceptance": [
+        "API returns upload parameters for video and reference text",
+        "upload-complete validates object key prefix and object existence",
+        "Task cannot enter analyze before upload-complete succeeds"
+      ],
+      "owner_notes": "API layer implementation pending. Infrastructure ready in online_version."
+    },
+    {
+      "id": "F04",
+      "title": "Worker Queue And Task Lifecycle",
+      "status": "pending",
+      "goal": "Wire smart_cut_analyze, smart_cut_preview, and smart_cut_finalize into the worker runtime.",
+      "depends_on": ["F02", "F03"],
+      "acceptance": [
+        "Each stage is a separate queued task",
+        "Worker updates task status and error stage consistently",
+        "Local work_dir reuse follows the hard caching rules"
+      ],
+      "owner_notes": "Worker layer implementation pending. Processors ready in online_version."
+    },
+    {
+      "id": "F05",
+      "title": "Online Version Analyze Processor",
+      "status": "done",
+      "goal": "Implement analyze processor that downloads TOS inputs and runs the existing flow-a entrypoint with deterministic naming.",
+      "depends_on": ["F04"],
+      "acceptance": [
+        "Processor uses absolute path to run_raw_cut.py",
+        "Processor uses task_<task_id> output prefix",
+        "Script, ASR, DelayCuts, and analyze artifacts are persisted and queryable"
+      ],
+      "owner_notes": "Implemented in src/analyze_processor.py. Includes process_analyze() and analyze_pipeline()."
+    },
+    {
+      "id": "F06",
+      "title": "Preview Processor And Delete-Range-Only Contract",
+      "status": "done",
+      "goal": "Implement preview processing and enforce the delete-only editing model.",
+      "depends_on": ["F04", "F05"],
+      "acceptance": [
+        "Preview rejects edits that mutate正文字符内容",
+        "Edited script only differs in brace-marked delete ranges",
+        "Preview persists active_edit_id only for successful preview runs"
+      ],
+      "owner_notes": "Implemented in src/preview_processor.py. Includes _validate_edited_script() enforcement."
+    },
+    {
+      "id": "F07",
+      "title": "Generate Audio B For Preview",
+      "status": "done",
+      "goal": "Produce audio_b for试听 using robust ffmpeg processing and upload it to TOS.",
+      "depends_on": ["F06"],
+      "acceptance": [
+        "audio_b is generated without -c copy concat strategy",
+        "audio_b uploads to TOS and returns a stable URL",
+        "audio_b failure is surfaced as preview failure"
+      ],
+      "owner_notes": "Implemented in src/generate_audio_b.py. Uses FFmpeg filter_complex for single-pass encoding."
+    },
+    {
+      "id": "F08",
+      "title": "Pause Mapping To DirectCutter-Compatible JSON",
+      "status": "done",
+      "goal": "Map pause cuts from audio_a timeline back to original timeline and dump compatible JSON.",
+      "depends_on": ["F06"],
+      "acceptance": [
+        "Mapped pause cuts are stored in DirectCutter-compatible cut_segments format",
+        "Time unit is milliseconds in the dumped JSON",
+        "Finalize can consume the file without custom adapter logic"
+      ],
+      "owner_notes": "Implemented in src/pause_mapping.py. Includes map_pauses_to_original_seconds() and dump_pause_cuts_for_direct_cutter()."
+    },
+    {
+      "id": "F09",
+      "title": "Online Final Video Cutter With Dynamic Bitrate",
+      "status": "done",
+      "goal": "Implement online final cutter that preserves cut logic but controls output bitrate parameters.",
+      "depends_on": ["F08"],
+      "acceptance": [
+        "Output bitrate follows min(input_bitrate, 12Mbps) with 12Mbps fallback",
+        "Cut plan is saved alongside final video",
+        "Implementation does not rely on original DirectCutter.cut fixed encoding params"
+      ],
+      "owner_notes": "Implemented in src/final_video_cutter.py. OnlineFinalVideoCutter class with configurable bitrate."
+    },
+    {
+      "id": "F10",
+      "title": "Finalize Processor With Normalize-On-Finalize",
+      "status": "done",
+      "goal": "Implement finalize stage using output_mode and last successful preview outputs.",
+      "depends_on": ["F09"],
+      "acceptance": [
+        "original mode uses original local video copy",
+        "vertical_1080p mode generates normalized_input.mp4 and normalized_input.process.json",
+        "Finalize records final_video_url and final_upload_status"
+      ],
+      "owner_notes": "Implemented in src/finalize_processor.py. Includes process_finalize() and finalize_pipeline()."
+    },
+    {
+      "id": "F11",
+      "title": "GroundTruth Recorder And TOS Directory Upload",
+      "status": "done",
+      "goal": "Record opted-in GroundTruth samples into the required TOS directory structure.",
+      "depends_on": ["F10"],
+      "acceptance": [
+        "feed_to_ai defaults to true and is accepted by finalize API",
+        "GroundTruth directory contains reference.txt, analyze_script.txt, edited_script.txt, asr_result.json, metadata.json",
+        "GroundTruth uploads to cujian_input_data/{company}/{year-month}/cujian_userdata_{timestamp}/"
+      ],
+      "owner_notes": "Implemented in src/groundtruth_recorder.py. Includes record_groundtruth(), build_groundtruth_tos_path(), upload_groundtruth()."
+    },
+    {
+      "id": "F12",
+      "title": "Web UI Flow And Audio B Playback",
+      "status": "pending",
+      "goal": "Build the smart-cut page and integrate upload, delete-toggle editing, preview playback, finalize options, and download link.",
+      "depends_on": ["F03", "F07", "F10", "F11"],
+      "acceptance": [
+        "Frontend uploads video and reference directly to TOS",
+        "Preview UI only supports delete and restore buttons",
+        "Audio player uses audio_b_url from TOS",
+        "Finalize UI exposes output_mode and feed_to_ai checkbox"
+      ],
+      "owner_notes": "Frontend implementation pending. Backend processors ready."
+    },
+    {
+      "id": "F13",
+      "title": "End-To-End Verification And Acceptance",
+      "status": "pending",
+      "goal": "Verify the full smart-cut flow and lock acceptance evidence.",
+      "depends_on": ["F12"],
+      "acceptance": [
+        "Analyze -> preview -> finalize succeeds end-to-end",
+        "vertical_1080p mode preserves acceptable cut alignment",
+        "Download link and GroundTruth directory upload both validate against TOS",
+        "Normalize-late approach is blocked from release if alignment is not stable"
+      ],
+      "owner_notes": "Pending full integration and E2E testing."
+    }
+  ]
+}
