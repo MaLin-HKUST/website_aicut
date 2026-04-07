@@ -1,21 +1,8 @@
 version: "3.3"
 
 services:
-  admin:
-    build:
-      context: ./apps/admin
-    environment:
-      PORT: 8001
-      DB_PATH: /data/website_aicut.db
-    ports:
-      - "127.0.0.1:8001:8001"
-    volumes:
-      - sqlite_data:/data
-    restart: unless-stopped
-
   api:
-    build:
-      context: ./apps/api
+    image: website_aicut-api:sqlite-admin
     environment:
       DATABASE_URL: sqlite:///data/website_aicut.db
       ADMIN_USERNAME: admin
@@ -28,13 +15,10 @@ services:
       - "127.0.0.1:8000:8000"
     volumes:
       - sqlite_data:/data
-    depends_on:
-      - db
     restart: unless-stopped
 
   web:
-    build:
-      context: ./apps/web
+    image: website_aicut-web:admin
     environment:
       INTERNAL_API_BASE_URL: http://api:8000
     ports:
@@ -43,21 +27,5 @@ services:
       - api
     restart: unless-stopped
 
-  db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-scheduler}
-      POSTGRES_USER: ${POSTGRES_USER:-scheduler}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-scheduler}
-    volumes:
-      - scheduler_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-scheduler}"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-    restart: unless-stopped
-
 volumes:
   sqlite_data:
-  scheduler_data:
