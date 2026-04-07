@@ -115,7 +115,7 @@
     {
       "id": "F09",
       "title": "End-To-End Testing",
-      "status": "in_progress",
+      "status": "done",
       "goal": "完整功能测试验证",
       "depends_on": ["F06", "F08"],
       "acceptance": [
@@ -130,8 +130,8 @@
     },
     {
       "id": "F10",
-      "title": "Merge To Master",
-      "status": "pending",
+      "title": "Build Images And Deploy",
+      "status": "in_progress",
       "goal": "将 admin-dev 分支合并回 master 并部署",
       "depends_on": ["F09"],
       "acceptance": [
