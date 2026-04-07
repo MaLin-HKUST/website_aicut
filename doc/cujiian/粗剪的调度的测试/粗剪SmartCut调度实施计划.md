@@ -85,7 +85,27 @@
 - 设备状态推进
 - 失败/重试/报警
 
-### 4.2 前端直传 TOS
+### 4.2 双表状态机原则
+
+本专项必须严格遵守当前调度系统的双表模型：
+
+- A 只写任务表
+- Worker 只写设备表
+- A 通过读取设备表推进任务表
+- Worker 通过读取任务表决定是否执行
+
+不能把系统理解成“靠 API 回调驱动状态推进”的模型。
+
+正确性来源于：
+
+- 状态机设计正确
+- 两张表职责边界清晰
+- 代码不允许出现越权写入
+- 测试把错误路径测出来
+
+不把额外的“防止伪造”“额外安全层”“回调补丁逻辑”作为本计划的主体。
+
+### 4.3 前端直传 TOS
 
 大文件不经过 API 服务体传输。
 
@@ -98,7 +118,7 @@
 5. 后端校验 key 与对象存在性
 6. 通过后才允许进入 analyze
 
-### 4.3 跨步骤必需产物必须持久化
+### 4.4 跨步骤必需产物必须持久化
 
 不能依赖容器本地目录作为唯一真相。
 
@@ -114,7 +134,7 @@
 - finalize 的 final_video
 - finalize 产生的 GroundTruth 目录
 
-### 4.4 每一步完成后释放 Worker
+### 4.5 每一步完成后释放 Worker
 
 - analyze 成功后，任务进入 `waiting_user`
 - preview 成功后，任务回到 `waiting_user`
@@ -122,7 +142,7 @@
 
 Worker 在每一步结束后回到空闲。
 
-### 4.5 后续步骤允许换 Worker
+### 4.6 后续步骤允许换 Worker
 
 只要新 Worker 能力兼容，并且必需输入在 TOS/数据库中可获得，后续阶段可以由任意兼容 Worker 接续。
 
@@ -288,19 +308,25 @@ scheduler task 需要承载阶段输入信息，按 `task_type` 区分：
 - `ready_analyze -> analyzing`
 
 #### analyze 成功
-- `analyzing -> waiting_user`
+- Worker 在设备表中完成本阶段执行
+- A 观察到设备表合法状态后推进任务表：
+  - `analyzing -> waiting_user`
 
 #### preview 派工
 - `waiting_user -> previewing`
 
 #### preview 成功
-- `previewing -> waiting_user`
+- Worker 在设备表中完成本阶段执行
+- A 观察到设备表合法状态后推进任务表：
+  - `previewing -> waiting_user`
 
 #### finalize 派工
 - `waiting_user -> finalizing`
 
 #### finalize 成功
-- `finalizing -> success`
+- Worker 在设备表中完成本阶段执行
+- A 观察到设备表合法状态后推进任务表：
+  - `finalizing -> success`
 
 ---
 
@@ -384,8 +410,15 @@ worker runtime 需要完成：
 - 上报 heartbeat
 - 拉取已分配给自己的 scheduler task
 - 按 `task_type` 执行阶段处理
-- 回写设备状态
-- 回写阶段结果
+- 只写自己的设备状态
+- 把阶段产物写到本地工作目录并上传到 TOS
+
+说明：
+
+- Worker 不直接推进业务任务表
+- Worker 不直接裁决全局调度关系
+- Worker 的全局行为只体现在设备表和阶段产物上
+- A 读取设备表，再推进任务表状态
 
 ### 9.2 Worker 能力集
 
@@ -402,10 +435,11 @@ worker runtime 需要完成：
   - 原视频
   - 参考文案
 - 调用 `analyze_processor`
-- 上传/回写：
+- 上传产物：
   - `script`
   - `asr_result`
-- 业务任务推进为 `waiting_user`
+- Worker 设备状态进入本阶段完成态
+- A 读取设备表后将业务任务推进为 `waiting_user`
 
 #### preview
 - 读取当前 edit 的 `edited_script`
@@ -413,12 +447,13 @@ worker runtime 需要完成：
   - 原视频
   - asr_result
 - 调用 `preview_processor`
-- 上传/回写：
+- 上传产物：
   - `audio_b`
   - `edited_delay_cuts`
   - `pause_cuts_on_original`
-- 更新 `active_edit_id`
-- 业务任务回到 `waiting_user`
+- Worker 设备状态进入本阶段完成态
+- A 读取设备表后更新 `active_edit_id / finalize_source_edit_id`
+- A 将业务任务推进回 `waiting_user`
 
 #### finalize
 - 读取 `active_edit_id`
@@ -430,7 +465,8 @@ worker runtime 需要完成：
 - 上传：
   - `final_video`
   - 可选 `GroundTruth`
-- 业务任务推进到 `success`
+- Worker 设备状态进入本阶段完成态
+- A 读取设备表后将业务任务推进到 `success`
 
 ### 9.4 容器工作目录
 
@@ -568,6 +604,14 @@ smart-cut-e2e/{run_id}/{task_id}/...
 - 验证调度逻辑
 - 验证业务状态推进
 - 验证重复点击、非法输入、阶段唯一性
+- 验证双表职责边界：
+  - A 只写任务表
+  - Worker 只写设备表
+
+说明：
+
+- 这里的测试重点是“代码写对、状态机闭环”
+- 不是增加额外的防伪或补丁式兜底逻辑
 
 ### 13.2 Fake TOS 集成层
 

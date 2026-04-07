@@ -6,7 +6,7 @@
     {
       "id": "F01",
       "title": "Harness Bootstrap And Branch Setup",
-      "status": "in_progress",
+      "status": "done",
       "goal": "创建 admin-dev 分支，初始化 Harness 文件结构",
       "depends_on": [],
       "acceptance": [
@@ -21,7 +21,7 @@
     {
       "id": "F02",
       "title": "Data Model Extension",
-      "status": "pending",
+      "status": "done",
       "goal": "扩展 Company/User 表，新增5个 Admin 表",
       "depends_on": ["F01"],
       "acceptance": [
@@ -35,7 +35,7 @@
     {
       "id": "F03",
       "title": "Admin Schema Definitions",
-      "status": "pending",
+      "status": "done",
       "goal": "定义所有 Admin API 的 Pydantic Schema",
       "depends_on": ["F02"],
       "acceptance": [
@@ -48,7 +48,7 @@
     {
       "id": "F04",
       "title": "Admin CRUD Layer",
-      "status": "pending",
+      "status": "done",
       "goal": "实现 Admin 数据的 CRUD 操作",
       "depends_on": ["F02"],
       "acceptance": [
@@ -61,7 +61,7 @@
     {
       "id": "F05",
       "title": "Admin API Routes",
-      "status": "pending",
+      "status": "done",
       "goal": "实现所有 Admin REST API 路由",
       "depends_on": ["F03", "F04"],
       "acceptance": [
@@ -75,7 +75,7 @@
     {
       "id": "F06",
       "title": "Admin Frontend Rewrite",
-      "status": "pending",
+      "status": "done",
       "goal": "用 Next.js 重写完整 Admin 管理面板",
       "depends_on": ["F05"],
       "acceptance": [
@@ -89,7 +89,7 @@
     {
       "id": "F07",
       "title": "Database Migration Script",
-      "status": "pending",
+      "status": "done",
       "goal": "编写 PostgreSQL → SQLite 迁移脚本",
       "depends_on": ["F02"],
       "acceptance": [
@@ -102,7 +102,7 @@
     {
       "id": "F08",
       "title": "Docker Configuration Update",
-      "status": "pending",
+      "status": "done",
       "goal": "更新 docker-compose.yml 为 SQLite 配置",
       "depends_on": ["F07"],
       "acceptance": [
@@ -115,7 +115,7 @@
     {
       "id": "F09",
       "title": "End-To-End Testing",
-      "status": "pending",
+      "status": "in_progress",
       "goal": "完整功能测试验证",
       "depends_on": ["F06", "F08"],
       "acceptance": [

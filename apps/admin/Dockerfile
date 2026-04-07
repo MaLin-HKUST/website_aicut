@@ -1,12 +1,14 @@
-FROM node:18-alpine
+FROM alpine:latest
 WORKDIR /app
 
-# 安装 sqlite3 编译依赖
-RUN apk add --no-cache python3 make g++
+# 安装 nodejs 和 npm
+RUN apk add --no-cache nodejs npm
 
 # 复制依赖文件
 COPY package*.json ./
-RUN npm ci --only=production
+
+# 安装 express 和 uuid（sqlite3 会在 npm install 时自动处理）
+RUN npm install express sqlite3 uuid
 
 # 复制应用代码
 COPY . .
