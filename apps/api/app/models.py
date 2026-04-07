@@ -38,7 +38,7 @@ class Company(TimestampMixin, Base):
 
     users: Mapped[list["User"]] = relationship(back_populates="company")
     materials: Mapped[list["Material"]] = relationship(back_populates="company")
-    asset_library: Mapped["AssetLibrary" | None] = relationship("AssetLibrary", foreign_keys=[asset_library_id])
+    asset_library: Mapped["AssetLibrary"] = relationship("AssetLibrary", foreign_keys=[asset_library_id])
 
 
 class User(TimestampMixin, Base):
