@@ -297,6 +297,536 @@ def create_material(
     return serialize_material_read(material)
 
 
+# ============================================
+# Admin Management API (对标 admindb_test)
+# ============================================
+
+
+# --- 序列化辅助函数 ---
+def serialize_admin_company(company: models.Company) -> dict:
+    return {
+        "company_id": company.id,
+        "company_name": company.name,
+        "monthly_video_quota": company.monthly_video_quota,
+        "monthly_video_remaining": company.monthly_video_remaining,
+        "billing_cycle_start_date": company.billing_cycle_start_date,
+        "tts_enabled": company.tts_enabled,
+        "ai_voice_monthly_usage": company.ai_voice_monthly_usage,
+        "ai_voice_usage_start_date": company.ai_voice_usage_start_date,
+        "asset_library_id": company.asset_library_id,
+        "status": company.status,
+        "created_at": company.created_at,
+        "updated_at": company.updated_at,
+    }
+
+
+def serialize_admin_user(user: models.User) -> dict:
+    return {
+        "user_id": user.id,
+        "company_id": user.company_id,
+        "login_account": user.username,
+        "user_name": user.user_name,
+        "status": user.status,
+        "role": user.role,
+        "created_at": user.created_at,
+        "updated_at": user.updated_at,
+    }
+
+
+def serialize_admin_library(library: models.AssetLibrary) -> dict:
+    return {
+        "asset_library_id": library.id,
+        "company_id": library.company_id,
+        "library_name": library.library_name,
+        "root_path": library.root_path,
+        "config_path": library.config_path,
+        "config_version": library.config_version,
+        "config_import_status": library.config_import_status,
+        "config_import_time": library.config_import_time,
+        "description": library.description,
+        "status": library.status,
+        "created_at": library.created_at,
+        "updated_at": library.updated_at,
+    }
+
+
+def serialize_admin_tag_group(tag_group: models.AssetLibraryTagGroup) -> dict:
+    return {
+        "tag_group_id": tag_group.id,
+        "asset_library_id": tag_group.asset_library_id,
+        "group_key": tag_group.group_key,
+        "group_name": tag_group.group_name,
+        "group_order": tag_group.group_order,
+        "allow_multi_select": tag_group.allow_multi_select,
+        "allow_select_all": tag_group.allow_select_all,
+        "source_type": tag_group.source_type,
+        "status": tag_group.status,
+        "created_at": tag_group.created_at,
+        "updated_at": tag_group.updated_at,
+    }
+
+
+def serialize_admin_tag(tag: models.AssetLibraryTag) -> dict:
+    return {
+        "tag_id": tag.id,
+        "asset_library_id": tag.asset_library_id,
+        "tag_group_id": tag.tag_group_id,
+        "tag_key": tag.tag_key,
+        "tag_name": tag.tag_name,
+        "filter_condition": tag.filter_condition,
+        "filter_path": tag.filter_path,
+        "source_value": tag.source_value,
+        "tag_order": tag.tag_order,
+        "is_default_selected": tag.is_default_selected,
+        "status": tag.status,
+        "created_at": tag.created_at,
+        "updated_at": tag.updated_at,
+    }
+
+
+def serialize_admin_custom_group(group: models.UserCustomTagGroup, tag_ids: list[int]) -> dict:
+    return {
+        "custom_tag_group_id": group.id,
+        "company_id": group.company_id,
+        "user_id": group.user_id,
+        "asset_library_id": group.asset_library_id,
+        "group_name": group.group_name,
+        "description": group.description,
+        "status": group.status,
+        "created_at": group.created_at,
+        "updated_at": group.updated_at,
+        "tag_ids": tag_ids,
+    }
+
+
+# --- 企业管理 ---
+
+
+@app.get("/admin/api/companies", response_model=list[schemas.AdminCompanyRead])
+def admin_list_companies_api(
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    companies = crud.admin_list_companies(db)
+    return [serialize_admin_company(c) for c in companies]
+
+
+@app.post("/admin/api/companies", response_model=schemas.AdminCompanyRead, status_code=status.HTTP_201_CREATED)
+def admin_create_company_api(
+    payload: schemas.AdminCompanyCreate,
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    if crud.get_company_by_name(db, payload.company_name.strip()) is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Company name already exists")
+    company = crud.admin_create_company(db, **payload.model_dump())
+    return serialize_admin_company(company)
+
+
+@app.get("/admin/api/companies/{company_id}", response_model=schemas.AdminCompanyRead)
+def admin_get_company_api(
+    company_id: int,
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    company = crud.admin_get_company(db, company_id)
+    if company is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found")
+    return serialize_admin_company(company)
+
+
+@app.put("/admin/api/companies/{company_id}", response_model=schemas.AdminCompanyRead)
+def admin_update_company_api(
+    company_id: int,
+    payload: schemas.AdminCompanyUpdate,
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    company = crud.admin_get_company(db, company_id)
+    if company is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found")
+    # 检查名称唯一性
+    if payload.company_name is not None:
+        existing = crud.get_company_by_name(db, payload.company_name.strip())
+        if existing is not None and existing.id != company_id:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Company name already exists")
+    company = crud.admin_update_company(db, company, **payload.model_dump(exclude_unset=True))
+    return serialize_admin_company(company)
+
+
+@app.delete("/admin/api/companies/{company_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_company_api(
+    company_id: int,
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    company = crud.admin_get_company(db, company_id)
+    if company is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found")
+    crud.admin_delete_company(db, company)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --- 用户管理 ---
+
+
+@app.get("/admin/api/users", response_model=list[schemas.AdminUserRead])
+def admin_list_users_api(
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    users = crud.admin_list_users(db)
+    return [serialize_admin_user(u) for u in users]
+
+
+@app.post("/admin/api/users", response_model=schemas.AdminUserRead, status_code=status.HTTP_201_CREATED)
+def admin_create_user_api(
+    payload: schemas.AdminUserCreate,
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    if crud.get_user_by_username(db, payload.login_account.strip()) is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already exists")
+    if db.get(models.Company, payload.company_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found")
+    user = crud.admin_create_user(db, **payload.model_dump())
+    return serialize_admin_user(user)
+
+
+@app.get("/admin/api/users/{user_id}", response_model=schemas.AdminUserRead)
+def admin_get_user_api(
+    user_id: int,
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    user = crud.admin_get_user(db, user_id)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    return serialize_admin_user(user)
+
+
+@app.put("/admin/api/users/{user_id}", response_model=schemas.AdminUserRead)
+def admin_update_user_api(
+    user_id: int,
+    payload: schemas.AdminUserUpdate,
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    user = crud.admin_get_user(db, user_id)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    # 检查账号唯一性
+    if payload.login_account is not None:
+        existing = crud.get_user_by_username(db, payload.login_account.strip())
+        if existing is not None and existing.id != user_id:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already exists")
+    # 检查公司存在
+    if payload.company_id is not None and db.get(models.Company, payload.company_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found")
+    user = crud.admin_update_user(db, user, **payload.model_dump(exclude_unset=True))
+    return serialize_admin_user(user)
+
+
+@app.delete("/admin/api/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_user_api(
+    user_id: int,
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    user = crud.admin_get_user(db, user_id)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    crud.admin_delete_user(db, user)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --- 素材库管理 ---
+
+
+@app.get("/admin/api/libraries", response_model=list[schemas.AdminAssetLibraryRead])
+def admin_list_libraries_api(
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    libraries = crud.admin_list_libraries(db)
+    return [serialize_admin_library(l) for l in libraries]
+
+
+@app.post("/admin/api/libraries", response_model=schemas.AdminAssetLibraryRead, status_code=status.HTTP_201_CREATED)
+def admin_create_library_api(
+    payload: schemas.AdminAssetLibraryCreate,
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    if db.get(models.Company, payload.company_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found")
+    library = crud.admin_create_library(db, **payload.model_dump())
+    return serialize_admin_library(library)
+
+
+@app.get("/admin/api/libraries/{library_id}", response_model=schemas.AdminAssetLibraryRead)
+def admin_get_library_api(
+    library_id: int,
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    library = crud.admin_get_library(db, library_id)
+    if library is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Library not found")
+    return serialize_admin_library(library)
+
+
+@app.put("/admin/api/libraries/{library_id}", response_model=schemas.AdminAssetLibraryRead)
+def admin_update_library_api(
+    library_id: int,
+    payload: schemas.AdminAssetLibraryUpdate,
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    library = crud.admin_get_library(db, library_id)
+    if library is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Library not found")
+    library = crud.admin_update_library(db, library, **payload.model_dump(exclude_unset=True))
+    return serialize_admin_library(library)
+
+
+@app.delete("/admin/api/libraries/{library_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_library_api(
+    library_id: int,
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    library = crud.admin_get_library(db, library_id)
+    if library is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Library not found")
+    crud.admin_delete_library(db, library)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@app.post("/admin/api/libraries/{library_id}/import", response_model=schemas.AdminAssetLibraryRead)
+def admin_import_library_api(
+    library_id: int,
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    """模拟导入配置（更新状态为 success）"""
+    from datetime import datetime, timezone
+    library = crud.admin_get_library(db, library_id)
+    if library is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Library not found")
+    library.config_import_status = "success"
+    library.config_import_time = datetime.now(timezone.utc)
+    library.config_version = "1.0.0"
+    db.commit()
+    db.refresh(library)
+    return serialize_admin_library(library)
+
+
+@app.get("/admin/api/libraries/{library_id}/tag-groups", response_model=list[schemas.AdminTagGroupRead])
+def admin_list_library_tag_groups_api(
+    library_id: int,
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    if crud.admin_get_library(db, library_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Library not found")
+    groups = crud.admin_list_tag_groups(db, library_id)
+    return [serialize_admin_tag_group(g) for g in groups]
+
+
+@app.get("/admin/api/libraries/{library_id}/tags", response_model=list[schemas.AdminTagRead])
+def admin_list_library_tags_api(
+    library_id: int,
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    if crud.admin_get_library(db, library_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Library not found")
+    tags = crud.admin_list_tags_by_library(db, library_id)
+    return [serialize_admin_tag(t) for t in tags]
+
+
+# --- 标签组管理 ---
+
+
+@app.post("/admin/api/tag-groups", response_model=schemas.AdminTagGroupRead, status_code=status.HTTP_201_CREATED)
+def admin_create_tag_group_api(
+    payload: schemas.AdminTagGroupCreate,
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    if crud.admin_get_library(db, payload.asset_library_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Library not found")
+    tag_group = crud.admin_create_tag_group(db, **payload.model_dump())
+    return serialize_admin_tag_group(tag_group)
+
+
+@app.put("/admin/api/tag-groups/{tag_group_id}", response_model=schemas.AdminTagGroupRead)
+def admin_update_tag_group_api(
+    tag_group_id: int,
+    payload: schemas.AdminTagGroupUpdate,
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    tag_group = crud.admin_get_tag_group(db, tag_group_id)
+    if tag_group is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tag group not found")
+    tag_group = crud.admin_update_tag_group(db, tag_group, **payload.model_dump(exclude_unset=True))
+    return serialize_admin_tag_group(tag_group)
+
+
+@app.delete("/admin/api/tag-groups/{tag_group_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_tag_group_api(
+    tag_group_id: int,
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    tag_group = crud.admin_get_tag_group(db, tag_group_id)
+    if tag_group is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tag group not found")
+    crud.admin_delete_tag_group(db, tag_group)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --- 标签管理 ---
+
+
+@app.get("/admin/api/tag-groups/{tag_group_id}/tags", response_model=list[schemas.AdminTagRead])
+def admin_list_tags_api(
+    tag_group_id: int,
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    if crud.admin_get_tag_group(db, tag_group_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tag group not found")
+    tags = crud.admin_list_tags(db, tag_group_id)
+    return [serialize_admin_tag(t) for t in tags]
+
+
+@app.post("/admin/api/tags", response_model=schemas.AdminTagRead, status_code=status.HTTP_201_CREATED)
+def admin_create_tag_api(
+    payload: schemas.AdminTagCreate,
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    if crud.admin_get_library(db, payload.asset_library_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Library not found")
+    if crud.admin_get_tag_group(db, payload.tag_group_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tag group not found")
+    tag = crud.admin_create_tag(db, **payload.model_dump())
+    return serialize_admin_tag(tag)
+
+
+@app.put("/admin/api/tags/{tag_id}", response_model=schemas.AdminTagRead)
+def admin_update_tag_api(
+    tag_id: int,
+    payload: schemas.AdminTagUpdate,
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    tag = crud.admin_get_tag(db, tag_id)
+    if tag is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tag not found")
+    tag = crud.admin_update_tag(db, tag, **payload.model_dump(exclude_unset=True))
+    return serialize_admin_tag(tag)
+
+
+@app.delete("/admin/api/tags/{tag_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_tag_api(
+    tag_id: int,
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    tag = crud.admin_get_tag(db, tag_id)
+    if tag is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tag not found")
+    crud.admin_delete_tag(db, tag)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --- 自定义标签组管理 ---
+
+
+@app.get("/admin/api/custom-groups", response_model=list[schemas.AdminCustomGroupRead])
+def admin_list_custom_groups_api(
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    groups = crud.admin_list_custom_groups(db)
+    result = []
+    for group in groups:
+        tag_ids = crud.admin_get_custom_group_tags(db, group.id)
+        result.append(serialize_admin_custom_group(group, tag_ids))
+    return result
+
+
+@app.post("/admin/api/custom-groups", response_model=schemas.AdminCustomGroupRead, status_code=status.HTTP_201_CREATED)
+def admin_create_custom_group_api(
+    payload: schemas.AdminCustomGroupCreate,
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    if db.get(models.Company, payload.company_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found")
+    if crud.admin_get_user(db, payload.user_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if crud.admin_get_library(db, payload.asset_library_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Library not found")
+    group = crud.admin_create_custom_group(db, tag_ids=payload.tag_ids, **payload.model_dump(exclude={"tag_ids"}))
+    tag_ids = crud.admin_get_custom_group_tags(db, group.id)
+    return serialize_admin_custom_group(group, tag_ids)
+
+
+@app.get("/admin/api/custom-groups/{group_id}", response_model=schemas.AdminCustomGroupRead)
+def admin_get_custom_group_api(
+    group_id: int,
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    group = crud.admin_get_custom_group(db, group_id)
+    if group is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Custom group not found")
+    tag_ids = crud.admin_get_custom_group_tags(db, group_id)
+    return serialize_admin_custom_group(group, tag_ids)
+
+
+@app.put("/admin/api/custom-groups/{group_id}", response_model=schemas.AdminCustomGroupRead)
+def admin_update_custom_group_api(
+    group_id: int,
+    payload: schemas.AdminCustomGroupUpdate,
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    group = crud.admin_get_custom_group(db, group_id)
+    if group is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Custom group not found")
+    # 验证关联实体
+    if payload.company_id is not None and db.get(models.Company, payload.company_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found")
+    if payload.user_id is not None and crud.admin_get_user(db, payload.user_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if payload.asset_library_id is not None and crud.admin_get_library(db, payload.asset_library_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Library not found")
+    data = payload.model_dump(exclude_unset=True)
+    tag_ids = data.pop("tag_ids", None)
+    group = crud.admin_update_custom_group(db, group, tag_ids=tag_ids, **data)
+    tag_ids = crud.admin_get_custom_group_tags(db, group.id)
+    return serialize_admin_custom_group(group, tag_ids)
+
+
+@app.delete("/admin/api/custom-groups/{group_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_custom_group_api(
+    group_id: int,
+    _: models.User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+):
+    group = crud.admin_get_custom_group(db, group_id)
+    if group is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Custom group not found")
+    crud.admin_delete_custom_group(db, group)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @app.post("/scheduler/tasks", response_model=schemas.SchedulerTaskRead, status_code=status.HTTP_201_CREATED)
 def create_scheduler_task_endpoint(
     payload: schemas.SchedulerTaskCreate,
