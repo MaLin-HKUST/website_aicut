@@ -309,3 +309,212 @@ class SmartCutEditSummary(BaseModel):
 class SmartCutTaskDetailWithEdits(SmartCutTaskRead):
     """任务详情包含 edits 历史"""
     edits: list[SmartCutEditSummary] = []
+
+
+# ============================================
+# Admin Management Schemas
+# ============================================
+
+
+class AdminCompanyCreate(BaseModel):
+    company_name: str = Field(min_length=1, max_length=100)
+    monthly_video_quota: int = Field(default=0, ge=0)
+    monthly_video_remaining: int = Field(default=0, ge=0)
+    billing_cycle_start_date: str = Field(min_length=10, max_length=10)
+    tts_enabled: bool = False
+    status: str = Field(default="active", pattern=r"^(active|inactive)$")
+
+
+class AdminCompanyUpdate(BaseModel):
+    company_name: str | None = Field(default=None, min_length=1, max_length=100)
+    monthly_video_quota: int | None = Field(default=None, ge=0)
+    monthly_video_remaining: int | None = Field(default=None, ge=0)
+    billing_cycle_start_date: str | None = Field(default=None, min_length=10, max_length=10)
+    tts_enabled: bool | None = None
+    status: str | None = Field(default=None, pattern=r"^(active|inactive)$")
+
+
+class AdminCompanyRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    company_id: int
+    company_name: str
+    monthly_video_quota: int
+    monthly_video_remaining: int
+    billing_cycle_start_date: str
+    tts_enabled: bool
+    ai_voice_monthly_usage: int
+    ai_voice_usage_start_date: str | None
+    asset_library_id: int | None
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class AdminUserCreate(BaseModel):
+    company_id: int
+    login_account: str = Field(min_length=1, max_length=50)
+    password: str = Field(min_length=1, max_length=100)
+    user_name: str | None = Field(default=None, min_length=1, max_length=50)
+    status: str = Field(default="active", pattern=r"^(active|disabled)$")
+    role: Role = "user"
+
+
+class AdminUserUpdate(BaseModel):
+    company_id: int | None = None
+    login_account: str | None = Field(default=None, min_length=1, max_length=50)
+    password: str | None = Field(default=None, min_length=1, max_length=100)
+    user_name: str | None = Field(default=None, min_length=1, max_length=50)
+    status: str | None = Field(default=None, pattern=r"^(active|disabled)$")
+    role: Role | None = None
+
+
+class AdminUserRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    user_id: int
+    company_id: int
+    login_account: str
+    user_name: str | None
+    status: str
+    role: Role
+    created_at: datetime
+    updated_at: datetime
+
+
+class AdminAssetLibraryCreate(BaseModel):
+    company_id: int
+    library_name: str = Field(min_length=1, max_length=100)
+    root_path: str = Field(min_length=1, max_length=500)
+    config_path: str = Field(min_length=1, max_length=500)
+    description: str | None = Field(default=None, max_length=1000)
+
+
+class AdminAssetLibraryUpdate(BaseModel):
+    library_name: str | None = Field(default=None, min_length=1, max_length=100)
+    root_path: str | None = Field(default=None, min_length=1, max_length=500)
+    config_path: str | None = Field(default=None, min_length=1, max_length=500)
+    description: str | None = Field(default=None, max_length=1000)
+    status: str | None = Field(default=None, pattern=r"^(active|inactive)$")
+
+
+class AdminAssetLibraryRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    asset_library_id: int
+    company_id: int
+    library_name: str
+    root_path: str
+    config_path: str
+    config_version: str | None
+    config_import_status: str
+    config_import_time: datetime | None
+    description: str | None
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class AdminTagGroupCreate(BaseModel):
+    asset_library_id: int
+    group_key: str = Field(min_length=1, max_length=50)
+    group_name: str = Field(min_length=1, max_length=100)
+    allow_multi_select: bool = True
+    allow_select_all: bool = True
+
+
+class AdminTagGroupUpdate(BaseModel):
+    group_key: str | None = Field(default=None, min_length=1, max_length=50)
+    group_name: str | None = Field(default=None, min_length=1, max_length=100)
+    allow_multi_select: bool | None = None
+    allow_select_all: bool | None = None
+    group_order: int | None = None
+    status: str | None = Field(default=None, pattern=r"^(active|inactive)$")
+
+
+class AdminTagGroupRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    tag_group_id: int
+    asset_library_id: int
+    group_key: str
+    group_name: str
+    group_order: int
+    allow_multi_select: bool
+    allow_select_all: bool
+    source_type: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class AdminTagCreate(BaseModel):
+    asset_library_id: int
+    tag_group_id: int
+    tag_key: str = Field(min_length=1, max_length=50)
+    tag_name: str = Field(min_length=1, max_length=100)
+    filter_condition: str = Field(min_length=1)
+    is_default_selected: bool = False
+
+
+class AdminTagUpdate(BaseModel):
+    tag_key: str | None = Field(default=None, min_length=1, max_length=50)
+    tag_name: str | None = Field(default=None, min_length=1, max_length=100)
+    filter_condition: str | None = None
+    filter_path: str | None = Field(default=None, max_length=500)
+    source_value: str | None = None
+    tag_order: int | None = None
+    is_default_selected: bool | None = None
+    status: str | None = Field(default=None, pattern=r"^(active|inactive)$")
+
+
+class AdminTagRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    tag_id: int
+    asset_library_id: int
+    tag_group_id: int
+    tag_key: str
+    tag_name: str
+    filter_condition: str
+    filter_path: str | None
+    source_value: str | None
+    tag_order: int
+    is_default_selected: bool
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class AdminCustomGroupCreate(BaseModel):
+    company_id: int
+    user_id: int
+    asset_library_id: int
+    group_name: str = Field(min_length=1, max_length=100)
+    description: str | None = Field(default=None, max_length=1000)
+    tag_ids: list[int] = Field(default_factory=list)
+
+
+class AdminCustomGroupUpdate(BaseModel):
+    company_id: int | None = None
+    user_id: int | None = None
+    asset_library_id: int | None = None
+    group_name: str | None = Field(default=None, min_length=1, max_length=100)
+    description: str | None = Field(default=None, max_length=1000)
+    tag_ids: list[int] | None = None
+    status: str | None = Field(default=None, pattern=r"^(active|inactive)$")
+
+
+class AdminCustomGroupRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    custom_tag_group_id: int
+    company_id: int
+    user_id: int
+    asset_library_id: int
+    group_name: str
+    description: str | None
+    status: str
+    created_at: datetime
+    updated_at: datetime
+    tag_ids: list[int] = []
