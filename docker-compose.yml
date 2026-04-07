@@ -1,25 +1,23 @@
+version: "3.3"
+
 services:
-  db:
-    image: postgres:16-alpine
+  admin:
+    build:
+      context: ./apps/admin
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-website_aicut}
-      POSTGRES_USER: ${POSTGRES_USER:-website_aicut}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-website_aicut}
+      PORT: 8001
+      DB_PATH: /data/website_aicut.db
     ports:
-      - "5432:5432"
+      - "127.0.0.1:8001:8001"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-website_aicut} -d ${POSTGRES_DB:-website_aicut}"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
+      - sqlite_data:/data
+    restart: unless-stopped
 
   api:
     build:
       context: ./apps/api
     environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-website_aicut}:${POSTGRES_PASSWORD:-website_aicut}@db:5432/${POSTGRES_DB:-website_aicut}
+      DATABASE_URL: sqlite:///data/website_aicut.db
       ADMIN_USERNAME: admin
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Malin123456}
       SESSION_SECRET: ${SESSION_SECRET:-change-this-secret}
@@ -27,10 +25,12 @@ services:
       MINIMAX_AUDIO_GROUP_ID: ${MINIMAX_AUDIO_GROUP_ID:-}
       MINIMAX_TTS_VOICE_ID: ${MINIMAX_TTS_VOICE_ID:-}
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - sqlite_data:/data
     depends_on:
-      db:
-        condition: service_healthy
+      - db
+    restart: unless-stopped
 
   web:
     build:
@@ -38,9 +38,26 @@ services:
     environment:
       INTERNAL_API_BASE_URL: http://api:8000
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       - api
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-scheduler}
+      POSTGRES_USER: ${POSTGRES_USER:-scheduler}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-scheduler}
+    volumes:
+      - scheduler_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-scheduler}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
 
 volumes:
-  postgres_data:
+  sqlite_data:
+  scheduler_data:
