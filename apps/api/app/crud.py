@@ -451,3 +451,355 @@ def delete_session(db: DbSession, token: str) -> None:
     if session:
         db.delete(session)
         db.commit()
+
+
+# ============================================
+# Admin Management CRUD
+# ============================================
+
+# --- Company Admin CRUD ---
+
+
+def admin_list_companies(db: DbSession) -> list[models.Company]:
+    """获取所有企业列表"""
+    return list(db.scalars(select(models.Company).order_by(models.Company.created_at.desc())))
+
+
+def admin_get_company(db: DbSession, company_id: int) -> models.Company | None:
+    """获取企业详情"""
+    return db.get(models.Company, company_id)
+
+
+def admin_create_company(db: DbSession, **kwargs) -> models.Company:
+    """创建企业"""
+    from datetime import datetime
+    today = datetime.now().strftime("%Y-%m-%d")
+    company = models.Company(
+        name=kwargs["company_name"],
+        monthly_video_quota=kwargs.get("monthly_video_quota", 0),
+        monthly_video_remaining=kwargs.get("monthly_video_remaining", 0),
+        billing_cycle_start_date=kwargs.get("billing_cycle_start_date", today),
+        tts_enabled=kwargs.get("tts_enabled", False),
+        status=kwargs.get("status", "active"),
+    )
+    db.add(company)
+    db.commit()
+    db.refresh(company)
+    return company
+
+
+def admin_update_company(db: DbSession, company: models.Company, **kwargs) -> models.Company:
+    """更新企业"""
+    for key, value in kwargs.items():
+        if value is not None and hasattr(company, key):
+            setattr(company, key, value)
+    db.commit()
+    db.refresh(company)
+    return company
+
+
+def admin_delete_company(db: DbSession, company: models.Company) -> None:
+    """删除企业"""
+    db.delete(company)
+    db.commit()
+
+
+# --- User Admin CRUD ---
+
+
+def admin_list_users(db: DbSession) -> list[models.User]:
+    """获取所有用户列表"""
+    return list(db.scalars(select(models.User).order_by(models.User.created_at.desc())))
+
+
+def admin_get_user(db: DbSession, user_id: int) -> models.User | None:
+    """获取用户详情"""
+    return db.get(models.User, user_id)
+
+
+def admin_create_user(db: DbSession, **kwargs) -> models.User:
+    """创建用户"""
+    user = models.User(
+        username=kwargs["login_account"],
+        password_hash=hash_password(kwargs["password"]),
+        role=kwargs.get("role", "user"),
+        company_id=kwargs["company_id"],
+        user_name=kwargs.get("user_name"),
+        status=kwargs.get("status", "active"),
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def admin_update_user(db: DbSession, user: models.User, **kwargs) -> models.User:
+    """更新用户"""
+    if "login_account" in kwargs and kwargs["login_account"] is not None:
+        user.username = kwargs["login_account"]
+    if "password" in kwargs and kwargs["password"]:
+        user.password_hash = hash_password(kwargs["password"])
+    if "user_name" in kwargs:
+        user.user_name = kwargs["user_name"]
+    if "company_id" in kwargs and kwargs["company_id"] is not None:
+        user.company_id = kwargs["company_id"]
+    if "role" in kwargs and kwargs["role"] is not None:
+        user.role = kwargs["role"]
+    if "status" in kwargs and kwargs["status"] is not None:
+        user.status = kwargs["status"]
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def admin_delete_user(db: DbSession, user: models.User) -> None:
+    """删除用户"""
+    db.delete(user)
+    db.commit()
+
+
+# --- AssetLibrary CRUD ---
+
+
+def admin_list_libraries(db: DbSession) -> list[models.AssetLibrary]:
+    """获取所有素材库列表"""
+    return list(db.scalars(select(models.AssetLibrary).order_by(models.AssetLibrary.created_at.desc())))
+
+
+def admin_get_library(db: DbSession, library_id: int) -> models.AssetLibrary | None:
+    """获取素材库详情"""
+    return db.get(models.AssetLibrary, library_id)
+
+
+def admin_create_library(db: DbSession, **kwargs) -> models.AssetLibrary:
+    """创建素材库"""
+    library = models.AssetLibrary(
+        company_id=kwargs["company_id"],
+        library_name=kwargs["library_name"],
+        root_path=kwargs["root_path"],
+        config_path=kwargs["config_path"],
+        description=kwargs.get("description"),
+        status=kwargs.get("status", "active"),
+    )
+    db.add(library)
+    db.commit()
+    db.refresh(library)
+    # 关联更新 company.asset_library_id
+    company = db.get(models.Company, kwargs["company_id"])
+    if company:
+        company.asset_library_id = library.id
+        db.commit()
+    return library
+
+
+def admin_update_library(db: DbSession, library: models.AssetLibrary, **kwargs) -> models.AssetLibrary:
+    """更新素材库"""
+    for key, value in kwargs.items():
+        if value is not None and hasattr(library, key):
+            setattr(library, key, value)
+    db.commit()
+    db.refresh(library)
+    return library
+
+
+def admin_delete_library(db: DbSession, library: models.AssetLibrary) -> None:
+    """删除素材库"""
+    # 清除 company 的关联
+    company = db.scalar(select(models.Company).where(models.Company.asset_library_id == library.id))
+    if company:
+        company.asset_library_id = None
+    db.delete(library)
+    db.commit()
+
+
+# --- TagGroup CRUD ---
+
+
+def admin_list_tag_groups(db: DbSession, library_id: int) -> list[models.AssetLibraryTagGroup]:
+    """获取素材库下的所有标签组"""
+    return list(
+        db.scalars(
+            select(models.AssetLibraryTagGroup)
+            .where(models.AssetLibraryTagGroup.asset_library_id == library_id)
+            .order_by(models.AssetLibraryTagGroup.group_order)
+        )
+    )
+
+
+def admin_get_tag_group(db: DbSession, tag_group_id: int) -> models.AssetLibraryTagGroup | None:
+    """获取标签组详情"""
+    return db.get(models.AssetLibraryTagGroup, tag_group_id)
+
+
+def admin_create_tag_group(db: DbSession, **kwargs) -> models.AssetLibraryTagGroup:
+    """创建标签组"""
+    tag_group = models.AssetLibraryTagGroup(
+        asset_library_id=kwargs["asset_library_id"],
+        group_key=kwargs["group_key"],
+        group_name=kwargs["group_name"],
+        allow_multi_select=kwargs.get("allow_multi_select", True),
+        allow_select_all=kwargs.get("allow_select_all", True),
+        status=kwargs.get("status", "active"),
+    )
+    db.add(tag_group)
+    db.commit()
+    db.refresh(tag_group)
+    return tag_group
+
+
+def admin_update_tag_group(
+    db: DbSession, tag_group: models.AssetLibraryTagGroup, **kwargs
+) -> models.AssetLibraryTagGroup:
+    """更新标签组"""
+    for key, value in kwargs.items():
+        if value is not None and hasattr(tag_group, key):
+            setattr(tag_group, key, value)
+    db.commit()
+    db.refresh(tag_group)
+    return tag_group
+
+
+def admin_delete_tag_group(db: DbSession, tag_group: models.AssetLibraryTagGroup) -> None:
+    """删除标签组"""
+    db.delete(tag_group)
+    db.commit()
+
+
+# --- Tag CRUD ---
+
+
+def admin_list_tags(db: DbSession, tag_group_id: int) -> list[models.AssetLibraryTag]:
+    """获取标签组下的所有标签"""
+    return list(
+        db.scalars(
+            select(models.AssetLibraryTag)
+            .where(models.AssetLibraryTag.tag_group_id == tag_group_id)
+            .order_by(models.AssetLibraryTag.tag_order)
+        )
+    )
+
+
+def admin_list_tags_by_library(db: DbSession, library_id: int) -> list[models.AssetLibraryTag]:
+    """获取素材库下的所有标签"""
+    return list(
+        db.scalars(
+            select(models.AssetLibraryTag)
+            .where(models.AssetLibraryTag.asset_library_id == library_id)
+            .order_by(models.AssetLibraryTag.tag_order)
+        )
+    )
+
+
+def admin_get_tag(db: DbSession, tag_id: int) -> models.AssetLibraryTag | None:
+    """获取标签详情"""
+    return db.get(models.AssetLibraryTag, tag_id)
+
+
+def admin_create_tag(db: DbSession, **kwargs) -> models.AssetLibraryTag:
+    """创建标签"""
+    tag = models.AssetLibraryTag(
+        asset_library_id=kwargs["asset_library_id"],
+        tag_group_id=kwargs["tag_group_id"],
+        tag_key=kwargs["tag_key"],
+        tag_name=kwargs["tag_name"],
+        filter_condition=kwargs["filter_condition"],
+        is_default_selected=kwargs.get("is_default_selected", False),
+        status=kwargs.get("status", "active"),
+    )
+    db.add(tag)
+    db.commit()
+    db.refresh(tag)
+    return tag
+
+
+def admin_update_tag(db: DbSession, tag: models.AssetLibraryTag, **kwargs) -> models.AssetLibraryTag:
+    """更新标签"""
+    for key, value in kwargs.items():
+        if value is not None and hasattr(tag, key):
+            setattr(tag, key, value)
+    db.commit()
+    db.refresh(tag)
+    return tag
+
+
+def admin_delete_tag(db: DbSession, tag: models.AssetLibraryTag) -> None:
+    """删除标签"""
+    db.delete(tag)
+    db.commit()
+
+
+# --- CustomGroup CRUD ---
+
+
+def admin_list_custom_groups(db: DbSession) -> list[models.UserCustomTagGroup]:
+    """获取所有自定义标签组"""
+    return list(
+        db.scalars(select(models.UserCustomTagGroup).order_by(models.UserCustomTagGroup.created_at.desc()))
+    )
+
+
+def admin_get_custom_group(db: DbSession, group_id: int) -> models.UserCustomTagGroup | None:
+    """获取自定义标签组详情"""
+    return db.get(models.UserCustomTagGroup, group_id)
+
+
+def admin_create_custom_group(db: DbSession, tag_ids: list[int], **kwargs) -> models.UserCustomTagGroup:
+    """创建自定义标签组"""
+    group = models.UserCustomTagGroup(
+        company_id=kwargs["company_id"],
+        user_id=kwargs["user_id"],
+        asset_library_id=kwargs["asset_library_id"],
+        group_name=kwargs["group_name"],
+        description=kwargs.get("description"),
+        status=kwargs.get("status", "active"),
+    )
+    db.add(group)
+    db.commit()
+    db.refresh(group)
+    # 创建标签关联
+    for tag_id in tag_ids:
+        item = models.UserCustomTagGroupItem(custom_tag_group_id=group.id, tag_id=tag_id)
+        db.add(item)
+    db.commit()
+    return group
+
+
+def admin_update_custom_group(
+    db: DbSession,
+    group: models.UserCustomTagGroup,
+    tag_ids: list[int] | None,
+    **kwargs,
+) -> models.UserCustomTagGroup:
+    """更新自定义标签组"""
+    for key, value in kwargs.items():
+        if value is not None and hasattr(group, key):
+            setattr(group, key, value)
+    # 更新标签关联
+    if tag_ids is not None:
+        # 删除旧关联
+        db.query(models.UserCustomTagGroupItem).filter(
+            models.UserCustomTagGroupItem.custom_tag_group_id == group.id
+        ).delete(synchronize_session=False)
+        # 创建新关联
+        for tag_id in tag_ids:
+            item = models.UserCustomTagGroupItem(custom_tag_group_id=group.id, tag_id=tag_id)
+            db.add(item)
+    db.commit()
+    db.refresh(group)
+    return group
+
+
+def admin_delete_custom_group(db: DbSession, group: models.UserCustomTagGroup) -> None:
+    """删除自定义标签组"""
+    db.delete(group)
+    db.commit()
+
+
+def admin_get_custom_group_tags(db: DbSession, group_id: int) -> list[int]:
+    """获取自定义标签组关联的标签ID列表"""
+    items = db.scalars(
+        select(models.UserCustomTagGroupItem.tag_id).where(
+            models.UserCustomTagGroupItem.custom_tag_group_id == group_id
+        )
+    )
+    return list(items)
