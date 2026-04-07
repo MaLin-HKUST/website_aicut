@@ -1,0 +1,146 @@
+{
+  "project": "admin-merge",
+  "source_spec": "/Users/malin13/Documents/trae_projects/website_aicut/doc/admin/implementation_plan.md",
+  "mode": "harness",
+  "features": [
+    {
+      "id": "F01",
+      "title": "Harness Bootstrap And Branch Setup",
+      "status": "in_progress",
+      "goal": "创建 admin-dev 分支，初始化 Harness 文件结构",
+      "depends_on": [],
+      "acceptance": [
+        "admin-dev 分支已创建并检出",
+        "HarnessPlan/admin/ 目录结构完整",
+        "feature_list.json 已创建",
+        "init.sh 可正常执行"
+      ],
+      "files": ["HarnessPlan/admin/*"],
+      "commit_message": "harness: init admin-dev branch and harness files"
+    },
+    {
+      "id": "F02",
+      "title": "Data Model Extension",
+      "status": "pending",
+      "goal": "扩展 Company/User 表，新增5个 Admin 表",
+      "depends_on": ["F01"],
+      "acceptance": [
+        "models.py 包含所有扩展字段和新表",
+        "SQLAlchemy 建表成功",
+        "模型关系正确定义"
+      ],
+      "files": ["apps/api/app/models.py"],
+      "commit_message": "feat: extend Company/User models, add Admin tables"
+    },
+    {
+      "id": "F03",
+      "title": "Admin Schema Definitions",
+      "status": "pending",
+      "goal": "定义所有 Admin API 的 Pydantic Schema",
+      "depends_on": ["F02"],
+      "acceptance": [
+        "schemas.py 包含所有 Admin schema",
+        "schema 字段类型和约束正确"
+      ],
+      "files": ["apps/api/app/schemas.py"],
+      "commit_message": "feat: add Admin Pydantic schemas"
+    },
+    {
+      "id": "F04",
+      "title": "Admin CRUD Layer",
+      "status": "pending",
+      "goal": "实现 Admin 数据的 CRUD 操作",
+      "depends_on": ["F02"],
+      "acceptance": [
+        "crud.py 包含所有 Admin CRUD 函数",
+        "所有 CRUD 函数通过单元测试"
+      ],
+      "files": ["apps/api/app/crud.py"],
+      "commit_message": "feat: add Admin CRUD operations"
+    },
+    {
+      "id": "F05",
+      "title": "Admin API Routes",
+      "status": "pending",
+      "goal": "实现所有 Admin REST API 路由",
+      "depends_on": ["F03", "F04"],
+      "acceptance": [
+        "main.py 包含约20个新路由",
+        "所有路由返回格式符合 admindb_test 规范",
+        "API 测试通过"
+      ],
+      "files": ["apps/api/app/main.py"],
+      "commit_message": "feat: add Admin REST API routes"
+    },
+    {
+      "id": "F06",
+      "title": "Admin Frontend Rewrite",
+      "status": "pending",
+      "goal": "用 Next.js 重写完整 Admin 管理面板",
+      "depends_on": ["F05"],
+      "acceptance": [
+        "admin/page.tsx 包含5个 Tab 功能",
+        "所有 CRUD 操作通过前端可执行",
+        "级联下拉正常工作"
+      ],
+      "files": ["apps/web/app/admin/page.tsx"],
+      "commit_message": "feat: rewrite Admin frontend with full management panel"
+    },
+    {
+      "id": "F07",
+      "title": "Database Migration Script",
+      "status": "pending",
+      "goal": "编写 PostgreSQL → SQLite 迁移脚本",
+      "depends_on": ["F02"],
+      "acceptance": [
+        "迁移脚本可正常执行",
+        "数据完整性验证通过"
+      ],
+      "files": ["scripts/migrate_pg_to_sqlite.py"],
+      "commit_message": "feat: add PostgreSQL to SQLite migration script"
+    },
+    {
+      "id": "F08",
+      "title": "Docker Configuration Update",
+      "status": "pending",
+      "goal": "更新 docker-compose.yml 为 SQLite 配置",
+      "depends_on": ["F07"],
+      "acceptance": [
+        "docker-compose.yml 移除 db 服务",
+        "api 服务正确挂载 SQLite 数据库"
+      ],
+      "files": ["docker-compose.yml"],
+      "commit_message": "chore: update docker-compose for SQLite deployment"
+    },
+    {
+      "id": "F09",
+      "title": "End-To-End Testing",
+      "status": "pending",
+      "goal": "完整功能测试验证",
+      "depends_on": ["F06", "F08"],
+      "acceptance": [
+        "Admin 用户可登录并访问管理面板",
+        "企业管理 CRUD 正常",
+        "用户管理 CRUD 正常（新建用户可登录）",
+        "素材库、标签、自定义标签组 CRUD 正常",
+        "业务系统功能不受影响"
+      ],
+      "files": ["tests/*"],
+      "commit_message": "test: add E2E tests for Admin functionality"
+    },
+    {
+      "id": "F10",
+      "title": "Merge To Master",
+      "status": "pending",
+      "goal": "将 admin-dev 分支合并回 master 并部署",
+      "depends_on": ["F09"],
+      "acceptance": [
+        "admin-dev 成功合并到 master",
+        "线上部署成功",
+        "线上功能验证通过"
+      ],
+      "files": [],
+      "commit_message": "release: merge admin-dev to master"
+    }
+  ]
+}

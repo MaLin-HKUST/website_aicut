@@ -1,0 +1,21 @@
+# Admin Merge Progress Log
+
+## 2026-04-07
+
+### F01: Harness Bootstrap And Branch Setup - IN PROGRESS
+- Created admin-dev branch from master
+- Created HarnessPlan/admin/ directory structure
+- Created feature_list.json, init.sh, app_spec.txt, claude-progress.txt
+- Next: git commit F01, then start F02
+
+### 待办
+- [ ] F01 commit
+- [ ] F02: Data Model Extension
+- [ ] F03: Admin Schema Definitions
+- [ ] F04: Admin CRUD Layer
+- [ ] F05: Admin API Routes
+- [ ] F06: Admin Frontend Rewrite
+- [ ] F07: Database Migration Script
+- [ ] F08: Docker Configuration Update
+- [ ] F09: End-To-End Testing
+- [ ] F10: Merge To Master

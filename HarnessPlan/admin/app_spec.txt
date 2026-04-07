@@ -1,0 +1,37 @@
+Admin 后台与主站合并
+
+权威规格
+- 唯一产品/实现规格来源：/Users/malin13/Documents/trae_projects/website_aicut/doc/admin/implementation_plan.md
+
+目标
+- 将 admindb_test 的 Admin 管理功能整合到 website_aicut 主站中
+- 主数据库从 PostgreSQL 迁移到 SQLite
+- Admin 创建的数据在业务系统中可用（用户能真实登录使用）
+
+核心能力
+- 企业管理：名称、视频额度/剩余、TTS开关、状态管理
+- 用户管理：所属企业、登录账号、密码、用户名称、状态管理
+- 素材库管理：根路径、配置文件路径、导入状态、描述
+- 标签管理：标签组（key、名称、多选/全选开关）+ 标签（key、名称、筛选条件、默认选中）
+- 自定义标签组：企业→用户级联、素材库→标签级联、名称、描述、标签多选
+
+必须遵守的约束
+- 保留 API 的 int 自增主键，Admin API 返回时映射为 company_id/user_id 格式
+- 密码继续用 PBKDF2 hash 存储，Admin 前端不显示明文
+- 数据完全共享：Admin 创建的用户可直接登录业务系统
+- 复用现有认证机制（/auth/login + session cookie）
+- 前端用现有 Next.js + Tailwind 技术栈重写
+- 每个 Feature 独立开发，完成后 git commit
+
+实现边界
+- 后端代码放在 apps/api/app/ 目录
+- 前端代码放在 apps/web/app/admin/ 目录
+- Admin API 路由前缀 /admin/api/
+- 前端通过 /api/proxy/admin/api/ 代理访问
+
+成功标准
+- admin 账号登录后进入管理面板，看到5个 Tab 功能完整
+- 可创建企业、用户、素材库、标签组、标签、自定义标签组
+- 新创建的用户可用账号密码登录业务系统
+- 业务系统的 TTS、SmartCut 等功能不受影响
+- 线上部署成功且功能验证通过
