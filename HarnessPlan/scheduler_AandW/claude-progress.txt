@@ -10,6 +10,7 @@
 - F01: Harness Bootstrap And Progress Control
 - F02: A-Scheduler Runtime Entry And Module Wiring
 - F03: A-Scheduler PostgreSQL Schema And Connectivity
+- F04: A-Machine Unified Deployment Compose
 - F05: Worker Gateway Runtime And Startup Contract
 - F06: Worker Gateway PostgreSQL Integration
 
@@ -17,6 +18,7 @@
 - Part 2 (A-machine scheduler center) has service code under `apps/scheduler`, but the deployed root compose does not yet represent the final A-machine topology.
 - Part 2 deployment examples in `HarnessPlan/cujian_scheduler2/` are planning artifacts, not yet the active production deployment entrypoint.
 - Part 2 scheduler startup now bootstraps schema on PostgreSQL, validates connectivity, and verifies required scheduler tables before entering the loop.
+- Part 2 now has a root unified compose file whose postgres, api, and scheduler services were built and started together on Docker internal networking.
 - Part 3 formal runtime entry is now `python -m worker.main`, with config validation, explicit processor registration, and graceful shutdown support.
 - Part 3 Docker startup path and healthcheck now use the formal runtime entry instead of implicit `worker.core` imports.
 - Part 3 no longer defaults the runtime path to SQLite; PostgreSQL-backed worker smoke validation now passes against `postgresql+psycopg2`.
@@ -34,6 +36,15 @@
 - `SCHEDULER_DATABASE_URL=postgresql+psycopg2://scheduler:scheduler@127.0.0.1:55432/scheduler python -m apps.scheduler.main --once`
 - PostgreSQL verifier snippet confirmed `scheduler_tasks`, `smart_cut_devices`, `smart_cut_tasks`, and `smart_cut_edits` exist in PostgreSQL
 - `docker compose -f worker/docker-compose.test.yml down`
+
+## Verification run for F04
+- `python -m compileall apps/api apps/scheduler configs`
+- `docker compose -f docker-compose.a-machine-unified.yml config`
+- `docker compose -f docker-compose.a-machine-unified.yml build api scheduler`
+- `docker compose -f docker-compose.a-machine-unified.yml up -d postgres api scheduler`
+- `docker compose -f docker-compose.a-machine-unified.yml ps -a` showed `api`, `scheduler`, and `postgres` up together
+- `docker compose -f docker-compose.a-machine-unified.yml logs --tail 80 api scheduler postgres` confirmed API health and scheduler loop startup
+- `docker compose -f docker-compose.a-machine-unified.yml down`
 
 ## Verification run for F06
 - `python -m compileall worker`
@@ -59,7 +70,7 @@
 - Merge completed feature branches into `integration/scheduler_AandW_0.0.3` before release-gate and artifact export
 
 ## Next recommended feature
-- F04: A-Machine Unified Deployment Compose
+- F07: Gateway-TOS Transport Ownership
 
 ## Notes
 - Formal code continues to live under the repo root, not under the harness directory.

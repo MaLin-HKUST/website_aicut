@@ -1,0 +1,104 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: a-machine-scheduler-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-scheduler}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-scheduler_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-scheduler_db}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - scheduler-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-scheduler} -d ${POSTGRES_DB:-scheduler_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - a-machine-internal
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    image: website_aicut-api:a-machine
+    container_name: a-machine-api
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-sqlite:///./data/db/smart_cut.db}
+      SCHEDULER_DATABASE_URL: ${SCHEDULER_DATABASE_URL:-postgresql+psycopg2://${POSTGRES_USER:-scheduler}:${POSTGRES_PASSWORD:-scheduler_pass}@postgres:5432/${POSTGRES_DB:-scheduler_db}}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Malin123456}
+      SESSION_SECRET: ${SESSION_SECRET:-change-this-secret}
+      TOS_MODE: ${TOS_MODE:-fake}
+      FAKE_TOS_BASE_PATH: /app/data/fake-tos
+      TOS_ENDPOINT: ${TOS_ENDPOINT:-}
+      TOS_REGION: ${TOS_REGION:-cn-shanghai}
+      TOS_BUCKET: ${TOS_BUCKET:-}
+      TOS_ACCESS_KEY: ${TOS_ACCESS_KEY:-}
+      TOS_SECRET_KEY: ${TOS_SECRET_KEY:-}
+      MINIMAX_AUDIO_API_KEY: ${MINIMAX_AUDIO_API_KEY:-}
+      MINIMAX_AUDIO_GROUP_ID: ${MINIMAX_AUDIO_GROUP_ID:-}
+      MINIMAX_TTS_VOICE_ID: ${MINIMAX_TTS_VOICE_ID:-}
+      PYTHONPATH: /app
+    volumes:
+      - api-data:/app/data
+    ports:
+      - "${API_BIND_HOST:-127.0.0.1}:${API_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - a-machine-internal
+    restart: unless-stopped
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    image: website_aicut-scheduler:a-machine
+    container_name: a-machine-scheduler
+    command: ["python", "-m", "apps.scheduler.main"]
+    environment:
+      SCHEDULER_DATABASE_URL: ${SCHEDULER_DATABASE_URL:-postgresql+psycopg2://${POSTGRES_USER:-scheduler}:${POSTGRES_PASSWORD:-scheduler_pass}@postgres:5432/${POSTGRES_DB:-scheduler_db}}
+      SCHEDULER_INTERVAL: ${SCHEDULER_INTERVAL:-5}
+      TOS_MODE: ${TOS_MODE:-fake}
+      FAKE_TOS_BASE_PATH: /app/data/fake-tos
+      TOS_ENDPOINT: ${TOS_ENDPOINT:-}
+      TOS_REGION: ${TOS_REGION:-cn-shanghai}
+      TOS_BUCKET: ${TOS_BUCKET:-}
+      TOS_ACCESS_KEY: ${TOS_ACCESS_KEY:-}
+      TOS_SECRET_KEY: ${TOS_SECRET_KEY:-}
+      PYTHONPATH: /app
+    volumes:
+      - api-data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+    networks:
+      - a-machine-internal
+    restart: unless-stopped
+
+  web:
+    image: ${WEB_IMAGE:-website_aicut-web:admin}
+    container_name: a-machine-web
+    environment:
+      INTERNAL_API_BASE_URL: http://api:8000
+    ports:
+      - "${WEB_BIND_HOST:-127.0.0.1}:${WEB_PORT:-3000}:3000"
+    depends_on:
+      - api
+    networks:
+      - a-machine-internal
+    restart: unless-stopped
+
+networks:
+  a-machine-internal:
+    driver: bridge
+
+volumes:
+  scheduler-postgres-data:
+  api-data:

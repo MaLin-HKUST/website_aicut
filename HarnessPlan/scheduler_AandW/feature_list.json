@@ -131,7 +131,7 @@
     {
       "id": "F04",
       "title": "A-Machine Unified Deployment Compose",
-      "status": "pending",
+      "status": "done",
       "goal": "Produce the actual A-machine deployment compose for business API/web + PostgreSQL + scheduler center.",
       "depends_on": ["F03"],
       "acceptance": [
@@ -155,6 +155,20 @@
         "apps/scheduler",
         "apps/api",
         "HarnessPlan/scheduler_AandW"
+      ],
+      "verification": [
+        "python -m compileall apps/api apps/scheduler configs",
+        "docker compose -f docker-compose.a-machine-unified.yml config",
+        "docker compose -f docker-compose.a-machine-unified.yml build api scheduler",
+        "docker compose -f docker-compose.a-machine-unified.yml up -d postgres api scheduler",
+        "docker compose -f docker-compose.a-machine-unified.yml ps -a",
+        "docker compose -f docker-compose.a-machine-unified.yml logs --tail 80 api scheduler postgres",
+        "docker compose -f docker-compose.a-machine-unified.yml down"
+      ],
+      "result": [
+        "Added a root unified A-machine compose file that references real repo Dockerfiles",
+        "API container now starts with production-style uvicorn and explicitly bootstraps the scheduler PostgreSQL connection",
+        "Unified compose startup was validated for postgres, api, and scheduler on Docker internal networking"
       ],
       "current_findings": [
         "HarnessPlan/cujian_scheduler2 compose examples exist",

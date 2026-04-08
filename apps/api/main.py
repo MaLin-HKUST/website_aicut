@@ -4,6 +4,7 @@ FastAPI 应用主入口，注册所有路由和中间件。
 """
 
 from contextlib import asynccontextmanager
+import logging
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -11,9 +12,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from configs.database import init_db
+from configs.database import (
+    check_database_connection,
+    get_scheduler_database_url,
+    init_db,
+    init_scheduler_db,
+)
 from apps.api.routes import api_router
 
+logger = logging.getLogger(__name__)
 
 # ============ 生命周期管理 ============
 
@@ -25,8 +32,16 @@ async def lifespan(app: FastAPI):
     """
     # 启动时
     init_db()
+    scheduler_url = get_scheduler_database_url(fallback_to_database_url=False)
+    scheduler_engine = None
+    if scheduler_url:
+        scheduler_engine = init_scheduler_db(scheduler_url)
+        check_database_connection(scheduler_engine)
+        logger.info("API scheduler database bootstrap completed")
     yield
     # 关闭时（如有需要可添加清理逻辑）
+    if scheduler_engine is not None:
+        scheduler_engine.dispose()
 
 
 # ============ 创建 FastAPI 应用 ============
