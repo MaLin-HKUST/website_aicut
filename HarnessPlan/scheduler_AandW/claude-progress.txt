@@ -10,18 +10,28 @@
 - F01: Harness Bootstrap And Progress Control
 - F02: A-Scheduler Runtime Entry And Module Wiring
 - F05: Worker Gateway Runtime And Startup Contract
+- F06: Worker Gateway PostgreSQL Integration
 
 ## Grounded status captured in this session
 - Part 2 (A-machine scheduler center) has service code under `apps/scheduler`, but the deployed root compose does not yet represent the final A-machine topology.
 - Part 2 deployment examples in `HarnessPlan/cujian_scheduler2/` are planning artifacts, not yet the active production deployment entrypoint.
 - Part 3 formal runtime entry is now `python -m worker.main`, with config validation, explicit processor registration, and graceful shutdown support.
 - Part 3 Docker startup path and healthcheck now use the formal runtime entry instead of implicit `worker.core` imports.
-- Part 3 still defaults to SQLite in current runnable/test configuration, so PostgreSQL-backed completion remains the next feature target.
+- Part 3 no longer defaults the runtime path to SQLite; PostgreSQL-backed worker smoke validation now passes against `postgresql+psycopg2`.
+- Part 3 assigned-task lookup was verified against PostgreSQL by inserting an `ASSIGNED` scheduler task and resolving it through `worker.find_assigned_task()`.
 
 ## Verification run for F05
 - `python -m compileall worker`
 - `WORKER_DATA_BASE=/tmp/worker-runtime-smoke DATABASE_URL=sqlite:////tmp/worker-runtime-smoke/worker.db FAKE_TOS_BASE_PATH=/tmp/worker-runtime-smoke/fake_tos python -m worker.main --check`
 - `WORKER_DATA_BASE=/tmp/worker-runtime-smoke DATABASE_URL=sqlite:////tmp/worker-runtime-smoke/worker_run.db FAKE_TOS_BASE_PATH=/tmp/worker-runtime-smoke/fake_tos python -m worker.main --run-seconds 1`
+
+## Verification run for F06
+- `python -m compileall worker`
+- `python -m worker.main --check` fails until `DATABASE_URL` is set explicitly
+- `docker compose -f worker/docker-compose.test.yml up -d postgres`
+- `WORKER_DATA_BASE=/tmp/worker-runtime-pg DATABASE_URL=postgresql+psycopg2://scheduler:scheduler@127.0.0.1:55432/scheduler FAKE_TOS_BASE_PATH=/tmp/worker-runtime-pg/fake_tos python -m worker.main --check`
+- `WORKER_DATA_BASE=/tmp/worker-runtime-pg DATABASE_URL=postgresql+psycopg2://scheduler:scheduler@127.0.0.1:55432/scheduler FAKE_TOS_BASE_PATH=/tmp/worker-runtime-pg/fake_tos python -m worker.main --run-seconds 1`
+- PostgreSQL verifier snippet inserted an assigned scheduler task and `worker.find_assigned_task()` returned the same task id
 
 ## Verification run for F02
 - `python -m compileall apps/scheduler apps/models apps/services configs`
@@ -31,12 +41,15 @@
 - Result: added a dedicated scheduler runtime entrypoint, made scheduler DB URL precedence explicit, and removed cross-thread session use from the loop.
 
 ## Commit policy for this harness
-- One feature per commit
-- Stage only files relevant to the feature
-- Do not mix unrelated dirty worktree files into feature commits
+- One feature branch per feature
+- Prefer one worktree per feature when multiple coding agents run in parallel
+- Feature work may contain multiple commits, but feature completion still requires a clear feature commit plus verification
+- Stage only files inside the feature commit_scope
+- Do not use `git add .` or `git commit -a` for feature work
+- Merge completed feature branches into `integration/scheduler_AandW_0.0.3` before release-gate and artifact export
 
 ## Next recommended feature
-- F03: A-Scheduler PostgreSQL Schema And Connectivity
+- F07: Gateway-TOS Transport Ownership
 
 ## Notes
 - Formal code continues to live under the repo root, not under the harness directory.

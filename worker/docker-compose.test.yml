@@ -1,17 +1,34 @@
-version: '3.8'
-
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: smart-cut-worker-postgres-test
+    environment:
+      - POSTGRES_DB=scheduler
+      - POSTGRES_USER=scheduler
+      - POSTGRES_PASSWORD=scheduler
+    ports:
+      - "55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scheduler -d scheduler"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
   worker:
     build:
       context: ..
       dockerfile: worker/Dockerfile.combined
     image: smart-cut-worker-combined:latest
     container_name: smart-cut-worker-test
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       - WORKER_ID=worker_01
       - WORKER_NAME=Smart Cut Worker 01
-      # 使用绝对路径避免相对路径问题
-      - DATABASE_URL=sqlite:////app/data/worker.db
+      - DATABASE_URL=postgresql+psycopg2://scheduler:scheduler@postgres:5432/scheduler
       - USE_FAKE_TOS=true
       - FAKE_TOS_BASE_PATH=/tmp/fake_tos
       - SUPPORTED_TASK_TYPES=smart_cut_analyze,smart_cut_preview,smart_cut_finalize
@@ -36,4 +53,5 @@ services:
       start_period: 10s
 
 volumes:
+  postgres-data:
   worker-data:

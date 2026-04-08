@@ -13,6 +13,8 @@ import os
 from dataclasses import dataclass
 from typing import Any, Sequence
 
+from sqlalchemy.engine import make_url
+
 from apps.models.scheduler_task import SchedulerTaskType
 from apps.services.tos_service import TOSService
 from worker.core import SmartCutWorker
@@ -59,7 +61,7 @@ class WorkerRuntimeConfig:
         return cls(
             worker_id=worker_id,
             worker_name=worker_name,
-            db_url=os.environ.get("DATABASE_URL", "sqlite:///./worker.db").strip(),
+            db_url=os.environ.get("DATABASE_URL", "").strip(),
             api_base_url=os.environ.get("API_BASE_URL", "http://localhost:8000").strip(),
             workspace=os.environ.get("WORKER_DATA_BASE", "/data/smart-cut").strip(),
             use_fake_tos=os.environ.get("USE_FAKE_TOS", "true").lower() == "true",
@@ -76,7 +78,7 @@ class WorkerRuntimeConfig:
         if not self.worker_name:
             raise ValueError("WORKER_NAME must not be empty")
         if not self.db_url:
-            raise ValueError("DATABASE_URL must not be empty")
+            raise ValueError("DATABASE_URL must be set explicitly; the worker runtime no longer defaults to SQLite")
         if not self.api_base_url:
             raise ValueError("API_BASE_URL must not be empty")
         if not self.workspace:
@@ -92,6 +94,8 @@ class WorkerRuntimeConfig:
                 "SUPPORTED_TASK_TYPES contains unsupported values: "
                 + ", ".join(invalid_task_types)
             )
+
+        make_url(self.db_url)
 
     def to_log_fields(self) -> dict[str, Any]:
         return {

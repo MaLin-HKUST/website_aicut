@@ -3,6 +3,7 @@
 
 # Database Migration
 alembic>=1.12.0
+psycopg2-binary>=2.9.9
 
 # HTTP Client
 httpx>=0.25.0

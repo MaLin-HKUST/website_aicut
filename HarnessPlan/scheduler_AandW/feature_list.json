@@ -8,6 +8,22 @@
     "/Users/malin13/Documents/trae_projects/website_aicut/doc/cujiian/粗剪的调度的测试/粗剪SmartCut调度实施计划.md"
   ],
   "artifact_output_dir": "/Volumes/XIAOMA-A-1T/docker_hub/WorkerGateway_and_Ascheduler",
+  "development_workflow": {
+    "branch_model": "one-feature-one-branch",
+    "worktree_model": "one-feature-one-worktree-when-parallel",
+    "integration_branch": "integration/scheduler_AandW_0.0.3",
+    "commit_policy": [
+      "Feature work happens on its own feature branch.",
+      "Feature development may include multiple commits, but the feature must end with at least one clear feature commit plus verification evidence.",
+      "Only stage files inside the feature commit_scope.",
+      "Do not use git add . or git commit -a for feature work in this harness.",
+      "Completed feature branches merge into the integration branch before release-gate and artifact export."
+    ],
+    "pre_commit_checks": [
+      "git status --short",
+      "git diff --cached --name-only"
+    ]
+  },
   "artifact_naming": {
     "a_scheduler": "a-scheduler_0.0.3_YYYYMMDD_HHMMSS_<shortsha>.tar.gz",
     "worker_gateway": "worker-gateway_0.0.3_YYYYMMDD_HHMMSS_<shortsha>.tar.gz"
@@ -23,6 +39,13 @@
         "scheduler_AandW contains app_spec.txt, feature_list.json, claude-progress.txt, init.sh, README.md, case_catalog.yaml, run_release_gate.py, reports/RESULT_TEMPLATE.md",
         "Harness records artifact naming and output directory rules for version 0.0.3",
         "Harness status command reports the next unfinished feature"
+      ],
+      "branch_name": "feature/F01-harness-bootstrap",
+      "write_scope": [
+        "HarnessPlan/scheduler_AandW"
+      ],
+      "commit_scope": [
+        "HarnessPlan/scheduler_AandW"
       ],
       "verification": [
         "./HarnessPlan/scheduler_AandW/init.sh status",
@@ -40,6 +63,15 @@
         "A dedicated scheduler runtime entry exists and can start the scheduler loop",
         "Scheduler startup uses the intended PostgreSQL scheduler database URL",
         "The scheduler runtime can be used as a Docker command entrypoint"
+      ],
+      "branch_name": "feature/F02-a-scheduler-runtime",
+      "write_scope": [
+        "apps/scheduler",
+        "HarnessPlan/scheduler_AandW"
+      ],
+      "commit_scope": [
+        "apps/scheduler",
+        "HarnessPlan/scheduler_AandW"
       ],
       "current_findings": [
         "apps/scheduler/scheduler_service.py contains service logic",
@@ -66,6 +98,21 @@
         "scheduler_tasks and smart_cut_devices tables are created and read from PostgreSQL",
         "No default SQLite path remains in the A-scheduler production path",
         "Connection settings and startup checks are explicit"
+      ],
+      "branch_name": "feature/F03-a-scheduler-postgres",
+      "write_scope": [
+        "apps/scheduler",
+        "apps/models",
+        "apps/services",
+        "configs",
+        "HarnessPlan/scheduler_AandW"
+      ],
+      "commit_scope": [
+        "apps/scheduler",
+        "apps/models",
+        "apps/services",
+        "configs",
+        "HarnessPlan/scheduler_AandW"
       ]
     },
     {
@@ -78,6 +125,23 @@
         "Unified compose is valid and references real Dockerfiles that exist in the repo",
         "Business API uses its business database path intentionally",
         "Scheduler center and API both connect to the same PostgreSQL scheduler database over Docker internal networking"
+      ],
+      "branch_name": "feature/F04-a-machine-compose",
+      "write_scope": [
+        "deploy",
+        "docker-compose.yml",
+        "docker-compose.*.yml",
+        "apps/scheduler",
+        "apps/api",
+        "HarnessPlan/scheduler_AandW"
+      ],
+      "commit_scope": [
+        "deploy",
+        "docker-compose.yml",
+        "docker-compose.*.yml",
+        "apps/scheduler",
+        "apps/api",
+        "HarnessPlan/scheduler_AandW"
       ],
       "current_findings": [
         "HarnessPlan/cujian_scheduler2 compose examples exist",
@@ -95,6 +159,15 @@
         "Processor registration and main loop are part of the formal runtime path",
         "Separated gateway architecture is favored over combined experimental mode"
       ],
+      "branch_name": "feature/F05-worker-gateway-runtime",
+      "write_scope": [
+        "worker",
+        "HarnessPlan/scheduler_AandW"
+      ],
+      "commit_scope": [
+        "worker",
+        "HarnessPlan/scheduler_AandW"
+      ],
       "current_findings": [
         "Formal runtime entry now lives at python -m worker.main",
         "Worker startup contract validates runtime config, registers processors explicitly, and drives the main loop through a single entrypoint",
@@ -110,7 +183,7 @@
     {
       "id": "F06",
       "title": "Worker Gateway PostgreSQL Integration",
-      "status": "pending",
+      "status": "done",
       "goal": "Make Worker gateway read and write the shared A-machine PostgreSQL scheduler database.",
       "depends_on": ["F05"],
       "acceptance": [
@@ -118,10 +191,35 @@
         "Gateway can register, heartbeat, and query assigned tasks against PostgreSQL",
         "Runtime validation proves it against PostgreSQL, not only SQLite"
       ],
+      "branch_name": "feature/F06-worker-gateway-postgres",
+      "write_scope": [
+        "worker",
+        "configs",
+        "apps/models",
+        "apps/services",
+        "HarnessPlan/scheduler_AandW"
+      ],
+      "commit_scope": [
+        "worker",
+        "configs",
+        "apps/models",
+        "apps/services",
+        "HarnessPlan/scheduler_AandW"
+      ],
       "current_findings": [
-        "worker/docker-compose.test.yml still uses sqlite:////app/data/worker.db",
-        "configs/database.py still defaults to a local sqlite path"
-      ]
+        "worker.main now requires DATABASE_URL to be set explicitly instead of defaulting the runtime path to SQLite",
+        "worker/docker-compose.test.yml now provisions PostgreSQL and points worker runtime to postgresql+psycopg2",
+        "PostgreSQL smoke validation covered runtime wiring plus assigned-task lookup through worker.find_assigned_task()"
+      ],
+      "verification": [
+        "python -m compileall worker",
+        "python -m worker.main --check  # expected failure when DATABASE_URL is unset",
+        "docker compose -f worker/docker-compose.test.yml up -d postgres",
+        "WORKER_DATA_BASE=/tmp/worker-runtime-pg DATABASE_URL=postgresql+psycopg2://scheduler:scheduler@127.0.0.1:55432/scheduler FAKE_TOS_BASE_PATH=/tmp/worker-runtime-pg/fake_tos python -m worker.main --check",
+        "WORKER_DATA_BASE=/tmp/worker-runtime-pg DATABASE_URL=postgresql+psycopg2://scheduler:scheduler@127.0.0.1:55432/scheduler FAKE_TOS_BASE_PATH=/tmp/worker-runtime-pg/fake_tos python -m worker.main --run-seconds 1",
+        "python verifier snippet inserting ASSIGNED SchedulerTask in PostgreSQL and confirming worker.find_assigned_task() returns it"
+      ],
+      "commit_rule": "Commit worker PostgreSQL runtime changes and harness tracking only."
     },
     {
       "id": "F07",
@@ -133,6 +231,19 @@
         "Gateway downloads all required task inputs from TOS into the shared work directory",
         "Gateway uploads all declared outputs from the shared work directory to TOS",
         "Algorithm container does not require direct TOS credentials"
+      ],
+      "branch_name": "feature/F07-gateway-tos-transport",
+      "write_scope": [
+        "worker",
+        "apps/services",
+        "configs",
+        "HarnessPlan/scheduler_AandW"
+      ],
+      "commit_scope": [
+        "worker",
+        "apps/services",
+        "configs",
+        "HarnessPlan/scheduler_AandW"
       ]
     },
     {
@@ -145,6 +256,17 @@
         "task_manifest.json contract is fixed",
         "result_manifest.json contract is fixed",
         "Shared directory layout under /data/worker-jobs/{task_id} is fixed"
+      ],
+      "branch_name": "feature/F08-gateway-algorithm-contract",
+      "write_scope": [
+        "worker",
+        "configs",
+        "HarnessPlan/scheduler_AandW"
+      ],
+      "commit_scope": [
+        "worker",
+        "configs",
+        "HarnessPlan/scheduler_AandW"
       ]
     },
     {
@@ -157,6 +279,17 @@
         "Gateway starts the algorithm container with mounted work directory",
         "Gateway waits for exit status and reads result_manifest.json",
         "Gateway can map stages to algorithm-container command lines deterministically"
+      ],
+      "branch_name": "feature/F09-gateway-docker-runner",
+      "write_scope": [
+        "worker",
+        "configs",
+        "HarnessPlan/scheduler_AandW"
+      ],
+      "commit_scope": [
+        "worker",
+        "configs",
+        "HarnessPlan/scheduler_AandW"
       ]
     },
     {
@@ -169,6 +302,25 @@
         "A scheduler assigns analyze task in PostgreSQL",
         "Worker gateway picks it up and executes algorithm container",
         "Outputs are uploaded to TOS and scheduler state advances correctly"
+      ],
+      "branch_name": "feature/F10-analyze-e2e",
+      "write_scope": [
+        "apps/scheduler",
+        "worker",
+        "apps/models",
+        "apps/services",
+        "configs",
+        "tests",
+        "HarnessPlan/scheduler_AandW"
+      ],
+      "commit_scope": [
+        "apps/scheduler",
+        "worker",
+        "apps/models",
+        "apps/services",
+        "configs",
+        "tests",
+        "HarnessPlan/scheduler_AandW"
       ]
     },
     {
@@ -181,6 +333,25 @@
         "Gateway executes preview container with manifest inputs",
         "audio_b and preview manifests are produced and uploaded",
         "Business task and scheduler task state close correctly"
+      ],
+      "branch_name": "feature/F11-preview-e2e",
+      "write_scope": [
+        "apps/scheduler",
+        "worker",
+        "apps/models",
+        "apps/services",
+        "configs",
+        "tests",
+        "HarnessPlan/scheduler_AandW"
+      ],
+      "commit_scope": [
+        "apps/scheduler",
+        "worker",
+        "apps/models",
+        "apps/services",
+        "configs",
+        "tests",
+        "HarnessPlan/scheduler_AandW"
       ]
     },
     {
@@ -193,6 +364,25 @@
         "Gateway executes finalize container with manifest inputs",
         "final_video and optional GroundTruth outputs are uploaded",
         "Final task state and worker release are correct"
+      ],
+      "branch_name": "feature/F12-finalize-e2e",
+      "write_scope": [
+        "apps/scheduler",
+        "worker",
+        "apps/models",
+        "apps/services",
+        "configs",
+        "tests",
+        "HarnessPlan/scheduler_AandW"
+      ],
+      "commit_scope": [
+        "apps/scheduler",
+        "worker",
+        "apps/models",
+        "apps/services",
+        "configs",
+        "tests",
+        "HarnessPlan/scheduler_AandW"
       ]
     },
     {
@@ -205,6 +395,25 @@
         "Offline workers are marked offline by A-scheduler",
         "Their assigned tasks are reset to pending",
         "Recovery behavior is verified with PostgreSQL-backed runs"
+      ],
+      "branch_name": "feature/F13-heartbeat-recovery",
+      "write_scope": [
+        "apps/scheduler",
+        "worker",
+        "apps/models",
+        "apps/services",
+        "configs",
+        "tests",
+        "HarnessPlan/scheduler_AandW"
+      ],
+      "commit_scope": [
+        "apps/scheduler",
+        "worker",
+        "apps/models",
+        "apps/services",
+        "configs",
+        "tests",
+        "HarnessPlan/scheduler_AandW"
       ]
     },
     {
@@ -217,6 +426,19 @@
         "Image tar outputs land in /Volumes/XIAOMA-A-1T/docker_hub/WorkerGateway_and_Ascheduler",
         "Filenames follow version 0.0.3 plus timestamp naming",
         "Harness artifacts record component name, version, timestamp, commit, and path"
+      ],
+      "branch_name": "feature/F14-artifact-build-versioning",
+      "write_scope": [
+        "HarnessPlan/scheduler_AandW",
+        "worker",
+        "apps/scheduler",
+        "scripts"
+      ],
+      "commit_scope": [
+        "HarnessPlan/scheduler_AandW",
+        "worker",
+        "apps/scheduler",
+        "scripts"
       ]
     },
     {
@@ -229,6 +451,25 @@
         "A-scheduler, PostgreSQL, Worker gateway, and algorithm image all run together",
         "Core stage flows pass end-to-end",
         "A release report is generated under the harness reports directory"
+      ],
+      "branch_name": "feature/F15-release-gate",
+      "write_scope": [
+        "HarnessPlan/scheduler_AandW",
+        "tests",
+        "worker",
+        "apps/scheduler",
+        "apps/models",
+        "apps/services",
+        "configs"
+      ],
+      "commit_scope": [
+        "HarnessPlan/scheduler_AandW",
+        "tests",
+        "worker",
+        "apps/scheduler",
+        "apps/models",
+        "apps/services",
+        "configs"
       ]
     }
   ]
