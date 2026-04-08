@@ -8,7 +8,6 @@ import logging
 import signal
 import socket
 import sys
-from datetime import datetime
 from typing import Any, Optional
 
 from sqlalchemy import create_engine
@@ -50,6 +49,8 @@ class SmartCutWorker:
         api_base_url: str,
         tos_service: Any,
         workspace: str,
+        worker_name: Optional[str] = None,
+        supported_task_types: Optional[list[str]] = None,
         db_url: Optional[str] = None,
         heartbeat_interval: float = 10.0,
         poll_interval: float = 5.0,
@@ -73,14 +74,14 @@ class SmartCutWorker:
         self.poll_interval = poll_interval
         
         # 支持的任务类型
-        self.supported_task_types = [
+        self.supported_task_types = supported_task_types or [
             SchedulerTaskType.SMART_CUT_ANALYZE.value,
             SchedulerTaskType.SMART_CUT_PREVIEW.value,
             SchedulerTaskType.SMART_CUT_FINALIZE.value,
         ]
         
         # Worker 信息
-        self.worker_name = f"SmartCut Worker {worker_id}"
+        self.worker_name = worker_name or f"SmartCut Worker {worker_id}"
         self.worker_version = WORKER_VERSION
         self.hostname = socket.gethostname()
         
@@ -95,7 +96,7 @@ class SmartCutWorker:
         self._running = False
         
         # 处理器注册表
-        self._processors: dict[str, BaseProcessor] = {}
+        self._processors: dict[str, Any] = {}
     
     def _init_database(self, db_url: Optional[str]) -> None:
         """初始化数据库连接
@@ -105,18 +106,24 @@ class SmartCutWorker:
         """
         if db_url is None:
             db_url = "sqlite:///:memory:"
-            
-        self.engine = create_engine(
-            db_url,
-            connect_args={"check_same_thread": False}
-        )
+
+        engine_kwargs: dict[str, Any] = {}
+        if db_url.startswith("sqlite"):
+            engine_kwargs["connect_args"] = {"check_same_thread": False}
+
+        self.engine = create_engine(db_url, **engine_kwargs)
         self.SessionLocal = sessionmaker(
             autocommit=False,
             autoflush=False,
             bind=self.engine
         )
         
-        # 创建所有表
+        # 运行时需要的模型必须先加载到 metadata 中，否则跨表外键在启动阶段会失败。
+        from apps.models.task import SmartCutTask  # noqa: F401
+        from apps.models.edit import SmartCutEdit  # noqa: F401
+        from apps.models.device import SmartCutDevice  # noqa: F401
+        from apps.models.scheduler_task import SchedulerTask  # noqa: F401
+
         Base.metadata.create_all(bind=self.engine)
         logger.info(f"Database initialized: {db_url}")
     
@@ -129,7 +136,7 @@ class SmartCutWorker:
         """获取当前状态"""
         return self._status
     
-    def register_processor(self, task_type: str, processor: BaseProcessor) -> None:
+    def register_processor(self, task_type: str, processor: Any) -> None:
         """注册任务处理器
         
         Args:
@@ -257,7 +264,7 @@ class SmartCutWorker:
         finally:
             db.close()
     
-    def execute_task(self, scheduler_task: SchedulerTask) -> bool:
+    async def execute_task(self, scheduler_task: SchedulerTask) -> bool:
         """执行调度任务
         
         流程：
@@ -294,8 +301,8 @@ class SmartCutWorker:
                 lambda p: self._on_progress_update(scheduler_task, p)
             )
             
-            # 执行任务
-            result = processor.process(scheduler_task, self.workspace)
+            # 执行任务 (processor.process 是 async 方法)
+            result = await processor.process(scheduler_task, self.workspace)
             
             # 标记任务完成
             self._mark_task_completed(scheduler_task, result)
@@ -315,7 +322,7 @@ class SmartCutWorker:
         finally:
             self._current_task = None
     
-    def _get_processor(self, task_type: str) -> Optional[BaseProcessor]:
+    def _get_processor(self, task_type: str) -> Optional[Any]:
         """获取任务处理器
         
         Args:
@@ -439,7 +446,7 @@ class SmartCutWorker:
                 if task:
                     # 执行任务
                     self._current_task = task
-                    self.execute_task(task)
+                    await self.execute_task(task)
                 else:
                     # 没有任务，等待轮询间隔
                     try:
@@ -473,6 +480,10 @@ class SmartCutWorker:
         logger.info("Received shutdown signal")
         self._shutdown_event.set()
         self._running = False
+
+    def request_shutdown(self) -> None:
+        """公开的关闭入口，供 runtime 包装层或测试触发。"""
+        self._signal_handler()
     
     def _sync_signal_handler(self, signum, frame) -> None:
         """同步信号处理器（Windows 兼容）"""
@@ -516,3 +527,14 @@ class SmartCutWorker:
             logger.error(f"Failed to update offline status: {e}")
         
         logger.info("Worker shutdown complete")
+
+
+async def main() -> int:
+    """兼容旧入口，委托给正式 runtime 模块。"""
+    from worker.main import run_from_cli
+
+    return await run_from_cli(sys.argv[1:])
+
+
+if __name__ == "__main__":
+    raise SystemExit(asyncio.run(main()))

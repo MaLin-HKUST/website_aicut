@@ -10,23 +10,30 @@ services:
     environment:
       - WORKER_ID=worker_01
       - WORKER_NAME=Smart Cut Worker 01
-      - DATABASE_URL=sqlite:///./test.db
+      # 使用绝对路径避免相对路径问题
+      - DATABASE_URL=sqlite:////app/data/worker.db
       - USE_FAKE_TOS=true
       - FAKE_TOS_BASE_PATH=/tmp/fake_tos
       - SUPPORTED_TASK_TYPES=smart_cut_analyze,smart_cut_preview,smart_cut_finalize
       - POLL_INTERVAL=5
+      - HEARTBEAT_INTERVAL=10
       - LOG_LEVEL=INFO
       - PYTHONPATH=/app:/app/aicut2602:/app/aicut2602/libs/cut_breakpoints/online_version
       - WORKER_DATA_BASE=/data/smart-cut
     volumes:
+      # 持久化数据目录
       - ./data:/app/data
-      - ./data/smart-cut:/data/smart-cut
+      - worker-data:/data/smart-cut
       - ./logs:/app/logs
     working_dir: /app
-    command: []  # 使用 Dockerfile 中的 ENTRYPOINT
+    # 覆盖 entrypoint 进行测试时可以取消注释
+    # entrypoint: ["sleep", "infinity"]
     healthcheck:
-      test: ["CMD", "python", "-c", "import worker.core; print('OK')"]
+      test: ["CMD", "python", "-m", "worker.main", "--check"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
+
+volumes:
+  worker-data:

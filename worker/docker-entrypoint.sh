@@ -37,4 +37,4 @@ echo "🎯 Starting Worker..."
 echo "=========================================="
 
 # 启动Worker
-exec python -m worker.core
+exec python -m worker.main

@@ -4,23 +4,31 @@
 - 2026-04-08
 
 ## Mode
-- initialize
+- feature-delivery
 
 ## Completed
 - F01: Harness Bootstrap And Progress Control
+- F02: A-Scheduler Runtime Entry And Module Wiring
+- F05: Worker Gateway Runtime And Startup Contract
 
 ## Grounded status captured in this session
 - Part 2 (A-machine scheduler center) has service code under `apps/scheduler`, but the deployed root compose does not yet represent the final A-machine topology.
 - Part 2 deployment examples in `HarnessPlan/cujian_scheduler2/` are planning artifacts, not yet the active production deployment entrypoint.
-- Part 3 (Worker gateway) has significant code under `worker/`, `apps/models/`, `apps/services/`, and `configs/`.
-- Part 3 still defaults to SQLite in current runnable/test configuration, so PostgreSQL-backed completion is not yet proven.
-- Current worktree already contains uncommitted edits in `worker/`; harness bootstrap commit must not include those changes.
+- Part 3 formal runtime entry is now `python -m worker.main`, with config validation, explicit processor registration, and graceful shutdown support.
+- Part 3 Docker startup path and healthcheck now use the formal runtime entry instead of implicit `worker.core` imports.
+- Part 3 still defaults to SQLite in current runnable/test configuration, so PostgreSQL-backed completion remains the next feature target.
 
-## Verification run for F01
-- Created harness artifact directories under `HarnessPlan/scheduler_AandW`
-- Will verify with:
-  - `./HarnessPlan/scheduler_AandW/init.sh status`
-  - `./HarnessPlan/scheduler_AandW/init.sh repo-check`
+## Verification run for F05
+- `python -m compileall worker`
+- `WORKER_DATA_BASE=/tmp/worker-runtime-smoke DATABASE_URL=sqlite:////tmp/worker-runtime-smoke/worker.db FAKE_TOS_BASE_PATH=/tmp/worker-runtime-smoke/fake_tos python -m worker.main --check`
+- `WORKER_DATA_BASE=/tmp/worker-runtime-smoke DATABASE_URL=sqlite:////tmp/worker-runtime-smoke/worker_run.db FAKE_TOS_BASE_PATH=/tmp/worker-runtime-smoke/fake_tos python -m worker.main --run-seconds 1`
+
+## Verification run for F02
+- `python -m compileall apps/scheduler apps/models apps/services configs`
+- `python -m apps.scheduler.main --help`
+- `python -c "import apps.scheduler, sys; print('configs.database' in sys.modules)"`
+- `env SCHEDULER_DATABASE_URL=postgresql://scheduler:secret@postgres:5432/scheduler_db DATABASE_URL=sqlite:////tmp/ignored.db python -c "from apps.scheduler.main import resolve_database_url; print(resolve_database_url(None))"`
+- Result: added a dedicated scheduler runtime entrypoint, made scheduler DB URL precedence explicit, and removed cross-thread session use from the loop.
 
 ## Commit policy for this harness
 - One feature per commit
@@ -28,7 +36,7 @@
 - Do not mix unrelated dirty worktree files into feature commits
 
 ## Next recommended feature
-- F02: A-Scheduler Runtime Entry And Module Wiring
+- F03: A-Scheduler PostgreSQL Schema And Connectivity
 
 ## Notes
 - Formal code continues to live under the repo root, not under the harness directory.

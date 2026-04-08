@@ -58,7 +58,7 @@ class BaseProcessor(ABC):
         self._progress_callback = callback
     
     @abstractmethod
-    def process(self, task: SchedulerTask, workspace: str) -> dict[str, Any]:
+    async def process(self, task: SchedulerTask, workspace: str) -> dict[str, Any]:
         """处理任务 - 子类必须实现
         
         Args:

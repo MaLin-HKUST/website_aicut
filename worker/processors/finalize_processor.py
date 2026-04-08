@@ -71,8 +71,8 @@ class FinalizeProcessor(BaseProcessor):
         self._task: Optional[SchedulerTask] = None
         self._work_dir: Optional[Path] = None
     
-    def process(self, task: SchedulerTask, workspace: str) -> dict[str, Any]:
-        """处理 finalize 任务（同步入口，内部调用异步方法）
+    async def process(self, task: SchedulerTask, workspace: str) -> dict[str, Any]:
+        """处理 finalize 任务
         
         Args:
             task: 调度任务对象
@@ -84,8 +84,7 @@ class FinalizeProcessor(BaseProcessor):
                 - final_video_bitrate: 输出码率
                 - groundtruth_url: GroundTruth URL (如果 feed_to_ai)
         """
-        # 运行异步处理流程
-        return asyncio.run(self._process_async(task, workspace))
+        return await self._process_async(task, workspace)
     
     async def _process_async(self, task: SchedulerTask, workspace: str) -> dict[str, Any]:
         """异步处理主流程"""

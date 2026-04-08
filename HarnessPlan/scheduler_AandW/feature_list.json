@@ -33,7 +33,7 @@
     {
       "id": "F02",
       "title": "A-Scheduler Runtime Entry And Module Wiring",
-      "status": "pending",
+      "status": "done",
       "goal": "Make the A-machine scheduler center runnable as a real service, not just a service class.",
       "depends_on": ["F01"],
       "acceptance": [
@@ -44,6 +44,16 @@
       "current_findings": [
         "apps/scheduler/scheduler_service.py contains service logic",
         "Current compose examples call python -m apps.scheduler.scheduler_service, but runtime wiring is not yet validated as the real production entry"
+      ],
+      "verification": [
+        "python -m compileall apps/scheduler apps/models apps/services configs",
+        "python -m apps.scheduler.main --help",
+        "env SCHEDULER_DATABASE_URL=postgresql://scheduler:secret@postgres:5432/scheduler_db DATABASE_URL=sqlite:////tmp/ignored.db python -c \"from apps.scheduler.main import resolve_database_url; print(resolve_database_url(None))\""
+      ],
+      "result": [
+        "Added apps.scheduler.main as the dedicated scheduler-center CLI entrypoint",
+        "Scheduler startup now resolves SCHEDULER_DATABASE_URL before DATABASE_URL",
+        "Scheduler loop now executes DB work on one thread with a single SQLAlchemy session"
       ]
     },
     {
@@ -77,7 +87,7 @@
     {
       "id": "F05",
       "title": "Worker Gateway Runtime And Startup Contract",
-      "status": "pending",
+      "status": "done",
       "goal": "Turn Worker gateway into a clean machine-level runtime with stable startup behavior.",
       "depends_on": ["F01"],
       "acceptance": [
@@ -86,9 +96,16 @@
         "Separated gateway architecture is favored over combined experimental mode"
       ],
       "current_findings": [
-        "worker/core.py has a main entry in the working tree, but formal runtime completion is not yet locked",
-        "worker code is currently dirty in the main worktree and must be handled feature-by-feature"
-      ]
+        "Formal runtime entry now lives at python -m worker.main",
+        "Worker startup contract validates runtime config, registers processors explicitly, and drives the main loop through a single entrypoint",
+        "Docker CMD, entrypoint, and healthcheck now use the formal runtime path instead of importing worker.core directly"
+      ],
+      "verification": [
+        "python -m compileall worker",
+        "WORKER_DATA_BASE=/tmp/worker-runtime-smoke DATABASE_URL=sqlite:////tmp/worker-runtime-smoke/worker.db FAKE_TOS_BASE_PATH=/tmp/worker-runtime-smoke/fake_tos python -m worker.main --check",
+        "WORKER_DATA_BASE=/tmp/worker-runtime-smoke DATABASE_URL=sqlite:////tmp/worker-runtime-smoke/worker_run.db FAKE_TOS_BASE_PATH=/tmp/worker-runtime-smoke/fake_tos python -m worker.main --run-seconds 1"
+      ],
+      "commit_rule": "Commit worker runtime entry, startup contract, and harness tracking only."
     },
     {
       "id": "F06",
