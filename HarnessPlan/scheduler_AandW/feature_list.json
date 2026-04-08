@@ -91,7 +91,7 @@
     {
       "id": "F03",
       "title": "A-Scheduler PostgreSQL Schema And Connectivity",
-      "status": "pending",
+      "status": "done",
       "goal": "Lock the scheduler-center schema and database behavior on the shared PostgreSQL scheduler database.",
       "depends_on": ["F02"],
       "acceptance": [
@@ -113,6 +113,19 @@
         "apps/services",
         "configs",
         "HarnessPlan/scheduler_AandW"
+      ],
+      "verification": [
+        "python -m compileall apps/scheduler apps/models apps/services configs",
+        "python -m apps.scheduler.main --help",
+        "docker compose -f worker/docker-compose.test.yml up -d postgres",
+        "SCHEDULER_DATABASE_URL=postgresql+psycopg2://scheduler:scheduler@127.0.0.1:55432/scheduler python -m apps.scheduler.main --once",
+        "python verifier snippet confirmed scheduler_tasks and smart_cut_devices in PostgreSQL",
+        "docker compose -f worker/docker-compose.test.yml down"
+      ],
+      "result": [
+        "Scheduler database bootstrap now creates schema and checks connectivity before starting the loop",
+        "Scheduler startup now verifies required PostgreSQL-backed tables explicitly",
+        "configs.database exposes dedicated scheduler DB helpers without changing default API DB behavior"
       ]
     },
     {

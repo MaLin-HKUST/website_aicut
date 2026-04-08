@@ -13,9 +13,8 @@ import os
 import signal
 from typing import TYPE_CHECKING, Sequence
 
-from sqlalchemy import text
-
 if TYPE_CHECKING:
+    from sqlalchemy.engine import Engine
     from sqlalchemy.orm import Session
 
     from apps.scheduler.scheduler_service import SchedulerService
@@ -68,10 +67,11 @@ def configure_logging(log_level: str) -> None:
 
 def resolve_database_url(cli_database_url: str | None) -> str:
     """Resolve the scheduler database URL with explicit scheduler precedence."""
-    database_url = (
-        cli_database_url
-        or os.getenv("SCHEDULER_DATABASE_URL")
-        or os.getenv("DATABASE_URL")
+    from configs.database import get_scheduler_database_url
+
+    database_url = get_scheduler_database_url(
+        explicit_url=cli_database_url,
+        fallback_to_database_url=True,
     )
     if not database_url:
         raise RuntimeError(
@@ -106,22 +106,42 @@ def mask_database_url(database_url: str) -> str:
 def create_scheduler_service(
     database_url: str,
     check_interval: int,
-) -> tuple["Session", "SchedulerService"]:
+) -> tuple["Engine", "Session", "SchedulerService"]:
     """Create the scheduler runtime session and service."""
-    os.environ["DATABASE_URL"] = database_url
-
-    from configs.database import SessionLocal
+    from configs.database import create_session_factory
     from apps.scheduler.scheduler_service import SchedulerService
     from apps.services.device_service import DeviceService
 
-    session = SessionLocal()
-    session.execute(text("SELECT 1"))
+    session_factory = create_session_factory(database_url)
+    session = session_factory()
     service = SchedulerService(
         db_session=session,
         device_service=DeviceService(session),
         check_interval=check_interval,
     )
-    return session, service
+    return session.get_bind(), session, service
+
+
+def bootstrap_scheduler_database(database_url: str) -> "Engine":
+    """Run explicit scheduler database startup checks."""
+    from configs.database import (
+        REQUIRED_SCHEDULER_TABLES,
+        check_database_connection,
+        get_missing_tables,
+        init_scheduler_db,
+    )
+
+    scheduler_engine = init_scheduler_db(database_url)
+    check_database_connection(scheduler_engine)
+
+    missing_tables = get_missing_tables(scheduler_engine, REQUIRED_SCHEDULER_TABLES)
+    if missing_tables:
+        raise RuntimeError(
+            "Scheduler database is missing required tables: "
+            + ", ".join(missing_tables)
+        )
+
+    return scheduler_engine
 
 
 def install_signal_handlers(service: "SchedulerService") -> None:
@@ -147,9 +167,13 @@ async def run_service(args: argparse.Namespace) -> int:
     logger = logging.getLogger(__name__)
     logger.info("Starting scheduler center with database %s", mask_database_url(database_url))
 
+    scheduler_engine = None
     session = None
     try:
-        session, service = create_scheduler_service(
+        scheduler_engine = bootstrap_scheduler_database(database_url)
+        logger.info("Scheduler database bootstrap completed")
+
+        scheduler_engine, session, service = create_scheduler_service(
             database_url=database_url,
             check_interval=args.check_interval,
         )
@@ -165,6 +189,8 @@ async def run_service(args: argparse.Namespace) -> int:
     finally:
         if session is not None:
             session.close()
+        if scheduler_engine is not None:
+            scheduler_engine.dispose()
 
 
 def main(argv: Sequence[str] | None = None) -> int:

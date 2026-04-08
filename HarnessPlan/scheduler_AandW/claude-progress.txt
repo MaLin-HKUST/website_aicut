@@ -9,12 +9,14 @@
 ## Completed
 - F01: Harness Bootstrap And Progress Control
 - F02: A-Scheduler Runtime Entry And Module Wiring
+- F03: A-Scheduler PostgreSQL Schema And Connectivity
 - F05: Worker Gateway Runtime And Startup Contract
 - F06: Worker Gateway PostgreSQL Integration
 
 ## Grounded status captured in this session
 - Part 2 (A-machine scheduler center) has service code under `apps/scheduler`, but the deployed root compose does not yet represent the final A-machine topology.
 - Part 2 deployment examples in `HarnessPlan/cujian_scheduler2/` are planning artifacts, not yet the active production deployment entrypoint.
+- Part 2 scheduler startup now bootstraps schema on PostgreSQL, validates connectivity, and verifies required scheduler tables before entering the loop.
 - Part 3 formal runtime entry is now `python -m worker.main`, with config validation, explicit processor registration, and graceful shutdown support.
 - Part 3 Docker startup path and healthcheck now use the formal runtime entry instead of implicit `worker.core` imports.
 - Part 3 no longer defaults the runtime path to SQLite; PostgreSQL-backed worker smoke validation now passes against `postgresql+psycopg2`.
@@ -24,6 +26,14 @@
 - `python -m compileall worker`
 - `WORKER_DATA_BASE=/tmp/worker-runtime-smoke DATABASE_URL=sqlite:////tmp/worker-runtime-smoke/worker.db FAKE_TOS_BASE_PATH=/tmp/worker-runtime-smoke/fake_tos python -m worker.main --check`
 - `WORKER_DATA_BASE=/tmp/worker-runtime-smoke DATABASE_URL=sqlite:////tmp/worker-runtime-smoke/worker_run.db FAKE_TOS_BASE_PATH=/tmp/worker-runtime-smoke/fake_tos python -m worker.main --run-seconds 1`
+
+## Verification run for F03
+- `python -m compileall apps/scheduler apps/models apps/services configs`
+- `python -m apps.scheduler.main --help`
+- `docker compose -f worker/docker-compose.test.yml up -d postgres`
+- `SCHEDULER_DATABASE_URL=postgresql+psycopg2://scheduler:scheduler@127.0.0.1:55432/scheduler python -m apps.scheduler.main --once`
+- PostgreSQL verifier snippet confirmed `scheduler_tasks`, `smart_cut_devices`, `smart_cut_tasks`, and `smart_cut_edits` exist in PostgreSQL
+- `docker compose -f worker/docker-compose.test.yml down`
 
 ## Verification run for F06
 - `python -m compileall worker`
@@ -49,7 +59,7 @@
 - Merge completed feature branches into `integration/scheduler_AandW_0.0.3` before release-gate and artifact export
 
 ## Next recommended feature
-- F07: Gateway-TOS Transport Ownership
+- F04: A-Machine Unified Deployment Compose
 
 ## Notes
 - Formal code continues to live under the repo root, not under the harness directory.
