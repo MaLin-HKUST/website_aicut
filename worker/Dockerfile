@@ -1,4 +1,4 @@
-# Smart Cut Worker Dockerfile
+# Smart Cut Worker Gateway Dockerfile
 
 FROM python:3.10-slim
 
@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制依赖文件
-COPY requirements.txt .
+COPY worker/requirements.txt ./requirements.txt
 
 # 安装 Python 依赖
 RUN pip install --no-cache-dir -r requirements.txt
@@ -27,9 +27,12 @@ COPY configs/ ./configs/
 # 创建工作目录
 RUN mkdir -p /app/data/db /fake-tos /data/smart-cut
 
+# 复制启动脚本
+COPY worker/docker-entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
 # 健康检查
 HEALTHCHECK --interval=60s --timeout=10s --start-period=30s --retries=3 \
-    CMD python -c "import sys; sys.exit(0)" || exit 1
+    CMD python -m worker.main --check || exit 1
 
-# 启动命令
-CMD ["python", "-m", "worker.main"]
+ENTRYPOINT ["/app/entrypoint.sh"]

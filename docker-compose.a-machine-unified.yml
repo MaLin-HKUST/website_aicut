@@ -83,7 +83,9 @@ services:
     restart: unless-stopped
 
   web:
-    image: ${WEB_IMAGE:-website_aicut-web:admin}
+    # This repo currently does not contain web build assets.
+    # Set WEB_IMAGE to a prebuilt web image before using this compose on a fresh machine.
+    image: ${WEB_IMAGE:?set WEB_IMAGE to a prebuilt web image because this repo does not contain web build assets}
     container_name: a-machine-web
     environment:
       INTERNAL_API_BASE_URL: http://api:8000

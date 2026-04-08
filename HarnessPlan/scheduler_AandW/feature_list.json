@@ -118,14 +118,12 @@
         "python -m compileall apps/scheduler apps/models apps/services configs",
         "python -m apps.scheduler.main --help",
         "docker compose -f worker/docker-compose.test.yml up -d postgres",
-        "SCHEDULER_DATABASE_URL=postgresql+psycopg2://scheduler:scheduler@127.0.0.1:55432/scheduler python -m apps.scheduler.main --once",
-        "python verifier snippet confirmed scheduler_tasks and smart_cut_devices in PostgreSQL",
-        "docker compose -f worker/docker-compose.test.yml down"
+        "SCHEDULER_DATABASE_URL=postgresql+psycopg2://scheduler:scheduler@127.0.0.1:55432/scheduler python -m apps.scheduler.main --once"
       ],
       "result": [
-        "Scheduler database bootstrap now creates schema and checks connectivity before starting the loop",
-        "Scheduler startup now verifies required PostgreSQL-backed tables explicitly",
-        "configs.database exposes dedicated scheduler DB helpers without changing default API DB behavior"
+        "Scheduler startup now bootstraps the PostgreSQL schema explicitly before entering the loop",
+        "Scheduler runtime fails fast when required scheduler tables are missing",
+        "Scheduler-center database selection remains explicit through SCHEDULER_DATABASE_URL"
       ]
     },
     {
@@ -160,15 +158,15 @@
         "python -m compileall apps/api apps/scheduler configs",
         "docker compose -f docker-compose.a-machine-unified.yml config",
         "docker compose -f docker-compose.a-machine-unified.yml build api scheduler",
-        "docker compose -f docker-compose.a-machine-unified.yml up -d postgres api scheduler",
-        "docker compose -f docker-compose.a-machine-unified.yml ps -a",
-        "docker compose -f docker-compose.a-machine-unified.yml logs --tail 80 api scheduler postgres",
-        "docker compose -f docker-compose.a-machine-unified.yml down"
+        "docker compose -f docker-compose.a-machine-unified.yml up -d postgres api scheduler"
       ],
       "result": [
-        "Added a root unified A-machine compose file that references real repo Dockerfiles",
-        "API container now starts with production-style uvicorn and explicitly bootstraps the scheduler PostgreSQL connection",
-        "Unified compose startup was validated for postgres, api, and scheduler on Docker internal networking"
+        "Root-level docker-compose.a-machine-unified.yml now wires postgres, api, scheduler, and web on one internal network",
+        "API image builds from apps/api/Dockerfile with repo-local requirements",
+        "Scheduler service now has a real container command using python -m apps.scheduler.main"
+      ],
+      "residual_risks": [
+        "The compose file expects WEB_IMAGE to exist or defaults to website_aicut-web:admin; web image build remains an external prerequisite for fresh environments"
       ],
       "current_findings": [
         "HarnessPlan/cujian_scheduler2 compose examples exist",
@@ -198,12 +196,12 @@
       "current_findings": [
         "Formal runtime entry now lives at python -m worker.main",
         "Worker startup contract validates runtime config, registers processors explicitly, and drives the main loop through a single entrypoint",
-        "Docker CMD, entrypoint, and healthcheck now use the formal runtime path instead of importing worker.core directly"
+        "Gateway-only Dockerfile, entrypoint, and test compose now use the formal runtime path instead of the combined experimental image"
       ],
       "verification": [
         "python -m compileall worker",
-        "WORKER_DATA_BASE=/tmp/worker-runtime-smoke DATABASE_URL=sqlite:////tmp/worker-runtime-smoke/worker.db FAKE_TOS_BASE_PATH=/tmp/worker-runtime-smoke/fake_tos python -m worker.main --check",
-        "WORKER_DATA_BASE=/tmp/worker-runtime-smoke DATABASE_URL=sqlite:////tmp/worker-runtime-smoke/worker_run.db FAKE_TOS_BASE_PATH=/tmp/worker-runtime-smoke/fake_tos python -m worker.main --run-seconds 1"
+        "docker compose -f worker/docker-compose.test.yml config",
+        "WORKER_DATA_BASE=/tmp/worker-runtime-check DATABASE_URL=postgresql+psycopg2://scheduler:scheduler@127.0.0.1:55432/scheduler FAKE_TOS_BASE_PATH=/tmp/worker-runtime-check/fake_tos python -m worker.main --check"
       ],
       "commit_rule": "Commit worker runtime entry, startup contract, and harness tracking only."
     },
@@ -235,8 +233,8 @@
       ],
       "current_findings": [
         "worker.main now requires DATABASE_URL to be set explicitly instead of defaulting the runtime path to SQLite",
-        "worker/docker-compose.test.yml now provisions PostgreSQL and points worker runtime to postgresql+psycopg2",
-        "PostgreSQL smoke validation covered runtime wiring plus assigned-task lookup through worker.find_assigned_task()"
+        "worker/docker-compose.test.yml now provisions PostgreSQL for the gateway-only runtime image",
+        "worker.core now verifies the shared PostgreSQL schema instead of creating tables or falling back to SQLite"
       ],
       "verification": [
         "python -m compileall worker",

@@ -2,7 +2,7 @@
 set -e
 
 echo "=========================================="
-echo "🚀 Smart Cut Worker Starting..."
+echo "🚀 Smart Cut Worker Gateway Starting..."
 echo "=========================================="
 echo "WORKER_ID: ${WORKER_ID:-not_set}"
 echo "WORKER_NAME: ${WORKER_NAME:-not_set}"
@@ -25,16 +25,11 @@ fi
 mkdir -p "${WORKER_DATA_BASE:-/data/smart-cut}"
 echo "✅ Work directory created: ${WORKER_DATA_BASE:-/data/smart-cut}"
 
-# 验证算法脚本存在
-if [ -f "/app/aicut2602/libs/cut_breakpoints/src/run_raw_cut.py" ]; then
-    echo "✅ Algorithm script found: /app/aicut2602/libs/cut_breakpoints/src/run_raw_cut.py"
-else
-    echo "⚠️  Warning: Algorithm script not found at /app/aicut2602/libs/cut_breakpoints/src/run_raw_cut.py"
-fi
+echo "ℹ️  Gateway mode: Smart-Cut algorithm image runs separately"
 
 echo ""
-echo "🎯 Starting Worker..."
+echo "🎯 Starting Worker Gateway..."
 echo "=========================================="
 
-# 启动Worker
+# 启动 Worker Gateway
 exec python -m worker.main

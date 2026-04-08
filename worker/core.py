@@ -7,13 +7,12 @@ import asyncio
 import logging
 import signal
 import socket
-import sys
 from typing import Any, Optional
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 
-from configs.database import Base
+from configs.database import check_database_connection, get_missing_tables
 from apps.models.device import SmartCutDevice, DeviceStatus
 from apps.models.scheduler_task import SchedulerTask, SchedulerTaskStatus, SchedulerTaskType
 from apps.services.device_service import DeviceService
@@ -24,6 +23,12 @@ logger = logging.getLogger(__name__)
 
 # Worker 版本号
 WORKER_VERSION = "1.0.0"
+REQUIRED_WORKER_TABLES = (
+    "scheduler_tasks",
+    "smart_cut_devices",
+    "smart_cut_tasks",
+    "smart_cut_edits",
+)
 
 
 class SmartCutWorker:
@@ -102,14 +107,20 @@ class SmartCutWorker:
         """初始化数据库连接
         
         Args:
-            db_url: 数据库 URL，None 则使用内存数据库
+            db_url: 共享调度数据库 URL，必须显式提供 PostgreSQL DSN
         """
-        if db_url is None:
-            db_url = "sqlite:///:memory:"
+        if not db_url:
+            raise ValueError(
+                "Worker gateway requires an explicit PostgreSQL DATABASE_URL"
+            )
+        if db_url.startswith("sqlite"):
+            raise ValueError(
+                "Worker gateway must use the shared PostgreSQL scheduler database; SQLite is not allowed on the formal runtime path"
+            )
 
         engine_kwargs: dict[str, Any] = {}
-        if db_url.startswith("sqlite"):
-            engine_kwargs["connect_args"] = {"check_same_thread": False}
+        engine_kwargs["pool_pre_ping"] = True
+        engine_kwargs["pool_recycle"] = 3600
 
         self.engine = create_engine(db_url, **engine_kwargs)
         self.SessionLocal = sessionmaker(
@@ -117,15 +128,16 @@ class SmartCutWorker:
             autoflush=False,
             bind=self.engine
         )
-        
-        # 运行时需要的模型必须先加载到 metadata 中，否则跨表外键在启动阶段会失败。
-        from apps.models.task import SmartCutTask  # noqa: F401
-        from apps.models.edit import SmartCutEdit  # noqa: F401
-        from apps.models.device import SmartCutDevice  # noqa: F401
-        from apps.models.scheduler_task import SchedulerTask  # noqa: F401
 
-        Base.metadata.create_all(bind=self.engine)
-        logger.info(f"Database initialized: {db_url}")
+        check_database_connection(self.engine)
+        missing_tables = get_missing_tables(self.engine, REQUIRED_WORKER_TABLES)
+        if missing_tables:
+            raise RuntimeError(
+                "Worker gateway database is missing required tables: "
+                + ", ".join(missing_tables)
+            )
+
+        logger.info("Worker gateway database verified: %s", db_url)
     
     def _get_db(self) -> Session:
         """获取数据库会话"""

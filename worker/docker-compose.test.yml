@@ -19,8 +19,8 @@ services:
   worker:
     build:
       context: ..
-      dockerfile: worker/Dockerfile.combined
-    image: smart-cut-worker-combined:latest
+      dockerfile: worker/Dockerfile
+    image: smart-cut-worker-gateway:test
     container_name: smart-cut-worker-test
     depends_on:
       postgres:
@@ -35,7 +35,7 @@ services:
       - POLL_INTERVAL=5
       - HEARTBEAT_INTERVAL=10
       - LOG_LEVEL=INFO
-      - PYTHONPATH=/app:/app/aicut2602:/app/aicut2602/libs/cut_breakpoints/online_version
+      - PYTHONPATH=/app
       - WORKER_DATA_BASE=/data/smart-cut
     volumes:
       # 持久化数据目录
@@ -43,8 +43,6 @@ services:
       - worker-data:/data/smart-cut
       - ./logs:/app/logs
     working_dir: /app
-    # 覆盖 entrypoint 进行测试时可以取消注释
-    # entrypoint: ["sleep", "infinity"]
     healthcheck:
       test: ["CMD", "python", "-m", "worker.main", "--check"]
       interval: 30s
