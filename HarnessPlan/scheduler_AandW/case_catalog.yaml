@@ -1,0 +1,103 @@
+project: worker-gateway-and-a-scheduler
+version: 0.0.3
+
+features:
+  - id: F01
+    title: Harness Bootstrap And Progress Control
+    verification:
+      - ./HarnessPlan/scheduler_AandW/init.sh status
+      - ./HarnessPlan/scheduler_AandW/init.sh repo-check
+    release_blocker: false
+
+  - id: F02
+    title: A-Scheduler Runtime Entry And Module Wiring
+    verification:
+      - python -m compileall apps/scheduler apps/models apps/services configs
+      - python -m apps.scheduler.main --help
+    release_blocker: true
+
+  - id: F03
+    title: A-Scheduler PostgreSQL Schema And Connectivity
+    verification:
+      - PostgreSQL-backed startup check
+      - scheduler tables readable in shared PostgreSQL
+    release_blocker: true
+
+  - id: F04
+    title: A-Machine Unified Deployment Compose
+    verification:
+      - compose config validation
+      - unified compose startup on A machine
+    release_blocker: true
+
+  - id: F05
+    title: Worker Gateway Runtime And Startup Contract
+    verification:
+      - gateway startup remains resident
+      - processor registration and main loop verification
+    release_blocker: true
+
+  - id: F06
+    title: Worker Gateway PostgreSQL Integration
+    verification:
+      - gateway connected to shared PostgreSQL
+      - no SQLite-only default on production path
+    release_blocker: true
+
+  - id: F07
+    title: Gateway-TOS Transport Ownership
+    verification:
+      - TOS input download check
+      - TOS output upload check
+    release_blocker: true
+
+  - id: F08
+    title: Gateway-Algorithm Shared Directory Contract
+    verification:
+      - task_manifest.json schema check
+      - result_manifest.json schema check
+    release_blocker: true
+
+  - id: F09
+    title: Gateway Docker Runner For Algorithm Image
+    verification:
+      - algorithm image launch check
+      - mounted workdir contract check
+    release_blocker: true
+
+  - id: F10
+    title: Analyze End-to-End Through Shared PostgreSQL
+    verification:
+      - analyze full-chain run
+    release_blocker: true
+
+  - id: F11
+    title: Preview End-to-End Through Shared PostgreSQL
+    verification:
+      - preview full-chain run
+    release_blocker: true
+
+  - id: F12
+    title: Finalize End-to-End Through Shared PostgreSQL
+    verification:
+      - finalize full-chain run
+    release_blocker: true
+
+  - id: F13
+    title: Heartbeat Timeout And Recovery
+    verification:
+      - offline recovery scenario
+    release_blocker: true
+
+  - id: F14
+    title: Artifact Build And Version Recording
+    verification:
+      - versioned tar output exists
+      - artifact note recorded
+    release_blocker: true
+
+  - id: F15
+    title: Release Gate
+    verification:
+      - release report generated
+    release_blocker: true

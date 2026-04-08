@@ -1,0 +1,36 @@
+# Worker Gateway + A-Scheduler Harness Progress
+
+## Date
+- 2026-04-08
+
+## Mode
+- initialize
+
+## Completed
+- F01: Harness Bootstrap And Progress Control
+
+## Grounded status captured in this session
+- Part 2 (A-machine scheduler center) has service code under `apps/scheduler`, but the deployed root compose does not yet represent the final A-machine topology.
+- Part 2 deployment examples in `HarnessPlan/cujian_scheduler2/` are planning artifacts, not yet the active production deployment entrypoint.
+- Part 3 (Worker gateway) has significant code under `worker/`, `apps/models/`, `apps/services/`, and `configs/`.
+- Part 3 still defaults to SQLite in current runnable/test configuration, so PostgreSQL-backed completion is not yet proven.
+- Current worktree already contains uncommitted edits in `worker/`; harness bootstrap commit must not include those changes.
+
+## Verification run for F01
+- Created harness artifact directories under `HarnessPlan/scheduler_AandW`
+- Will verify with:
+  - `./HarnessPlan/scheduler_AandW/init.sh status`
+  - `./HarnessPlan/scheduler_AandW/init.sh repo-check`
+
+## Commit policy for this harness
+- One feature per commit
+- Stage only files relevant to the feature
+- Do not mix unrelated dirty worktree files into feature commits
+
+## Next recommended feature
+- F02: A-Scheduler Runtime Entry And Module Wiring
+
+## Notes
+- Formal code continues to live under the repo root, not under the harness directory.
+- Artifact output version is fixed to `0.0.3`.
+- Artifact output directory is fixed to `/Volumes/XIAOMA-A-1T/docker_hub/WorkerGateway_and_Ascheduler`.

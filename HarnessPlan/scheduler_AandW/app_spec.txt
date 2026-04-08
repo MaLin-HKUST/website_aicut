@@ -1,0 +1,49 @@
+Project: WorkerGateway_and_Ascheduler
+Mode: long-running harness
+Version target: 0.0.3
+
+Goal
+- Build and verify two production components:
+  1. A-machine scheduler center
+  2. Worker gateway on worker machines
+- Keep formal product code under /Users/malin13/Documents/trae_projects/website_aicut
+- Keep harness tracking assets under /Users/malin13/Documents/trae_projects/website_aicut/HarnessPlan/scheduler_AandW
+
+Architecture contract
+- A-machine business server is already online and remains separate.
+- A-machine scheduler center and Worker gateway both connect directly to the same PostgreSQL scheduler database.
+- Worker gateway is machine-level infrastructure, not an algorithm image.
+- Smart-Cut algorithm image stays separate from Worker gateway.
+- Worker gateway and algorithm image exchange data via shared work directory + task_manifest.json + result_manifest.json.
+- TOS download/upload is owned by Worker gateway, not by the algorithm container.
+- A-machine scheduler center writes scheduler task state.
+- Worker gateway writes worker device state.
+
+Current grounded status
+- The root deployed compose still targets web + api + sqlite, not the final A-machine scheduler-center topology.
+- apps/scheduler contains scheduler-center service code, but deployment/runtime completion is not yet proven.
+- worker/ contains Worker gateway code and combined-image experiments, but the formal separated gateway + algorithm-image topology is not yet finished.
+- worker code and Docker files currently have uncommitted edits in the main repo; harness bootstrap must not mix those changes into its own commit.
+
+Success criteria
+- Harness artifacts exist and are the only source of feature tracking.
+- One feature at a time, each finished feature is verified and committed independently.
+- Image outputs are written to /Volumes/XIAOMA-A-1T/docker_hub/WorkerGateway_and_Ascheduler
+- Output filenames contain component name + version 0.0.3 + timestamp, never only "latest".
+
+Artifact naming
+- a-scheduler_0.0.3_YYYYMMDD_HHMMSS_<shortsha>.tar.gz
+- worker-gateway_0.0.3_YYYYMMDD_HHMMSS_<shortsha>.tar.gz
+
+Primary code areas
+- apps/scheduler
+- apps/models
+- apps/services
+- worker
+- configs
+- docker-compose and deploy files under the repo root or deploy-specific folders
+
+Non-goals for harness bootstrap
+- Do not move product code into the harness directory.
+- Do not force architecture decisions outside this spec.
+- Do not include unrelated dirty worktree files in harness commits.
