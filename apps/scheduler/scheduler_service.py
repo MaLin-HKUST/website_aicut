@@ -50,6 +50,26 @@ class SchedulerService:
         self.check_interval = check_interval
         self._running = False
         self._task: Optional[asyncio.Task] = None
+
+    def run_cycle(self) -> dict[str, int]:
+        """执行单次调度循环。
+
+        Returns:
+            各步骤处理结果统计
+        """
+        assigned_count = self.schedule_pending_tasks()
+        advanced_count = self.check_device_status_and_advance()
+        timeout_count = self.handle_timeouts()
+        offline_count = self.check_worker_heartbeats()
+
+        cycle_stats = {
+            "assigned": assigned_count,
+            "advanced": advanced_count,
+            "timeouts": timeout_count,
+            "offline_workers": offline_count,
+        }
+        logger.debug("Scheduler cycle stats: %s", cycle_stats)
+        return cycle_stats
     
     async def run_scheduler_loop(self) -> None:
         """运行调度主循环（异步，可停止）
@@ -65,17 +85,7 @@ class SchedulerService:
         
         while self._running:
             try:
-                # 1. 分配待处理任务（FCFS）
-                await asyncio.to_thread(self.schedule_pending_tasks)
-                
-                # 2. 检查设备状态并推进状态机
-                await asyncio.to_thread(self.check_device_status_and_advance)
-                
-                # 3. 处理超时任务
-                await asyncio.to_thread(self.handle_timeouts)
-                
-                # 4. 检查 Worker 心跳
-                await asyncio.to_thread(self.check_worker_heartbeats)
+                self.run_cycle()
                 
             except Exception as e:
                 logger.exception(f"Error in scheduler loop: {e}")
