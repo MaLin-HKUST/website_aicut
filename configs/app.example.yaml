@@ -1,0 +1,53 @@
+# Smart Cut Scheduler - 应用配置示例
+# 复制为 app.yaml 并修改
+
+app:
+  name: smart-cut-scheduler
+  debug: false
+  host: 0.0.0.0
+  port: 8000
+
+database:
+  url: sqlite:///./data/db/smart_cut.db
+  echo: false  # SQL 日志
+
+tos:
+  # Fake TOS (MinIO) 配置
+  endpoint: http://localhost:9000
+  access_key: minioadmin
+  secret_key: minioadmin
+  bucket: smart-cut
+  region: us-east-1
+  secure: false
+  
+  # 真实 TOS 配置（上线时切换）
+  # endpoint: https://tos-s3.your-domain.com
+  # access_key: YOUR_ACCESS_KEY
+  # secret_key: YOUR_SECRET_KEY
+  # bucket: your-bucket
+  # region: cn-beijing
+  # secure: true
+
+scheduler:
+  poll_interval: 5  # 秒
+  heartbeat_timeout: 60  # 秒
+  task_timeout: 3600  # 秒
+  max_retries: 3
+  cleanup_interval: 3600  # 秒
+
+worker:
+  worker_id: smart_cut_worker_1
+  worker_name: Smart Cut Worker 1
+  supported_stages:
+    - analyze
+    - preview
+    - finalize
+  heartbeat_interval: 10  # 秒
+  work_dir: /data/smart-cut
+
+logging:
+  level: INFO
+  format: "{time:YYYY-MM-DD HH:mm:ss} | {level} | {name} | {message}"
+  file: logs/smart_cut.log
+  rotation: "10 MB"
+  retention: "30 days"

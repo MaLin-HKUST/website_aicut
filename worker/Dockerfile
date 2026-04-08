@@ -1,21 +1,35 @@
-FROM python:3.11-slim
+# Smart Cut Worker Dockerfile
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+FROM python:3.10-slim
 
+# 设置工作目录
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    bash \
+# 安装系统依赖 (包含 FFmpeg 等视频处理工具)
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
     ffmpeg \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY worker/requirements.txt /tmp/worker-requirements.txt
-RUN pip install --no-cache-dir -r /tmp/worker-requirements.txt
+# 复制依赖文件
+COPY requirements.txt .
 
-COPY worker/entrypoint.sh /usr/local/bin/smart-cut-entrypoint
-COPY worker/run_manual_cujian_test.sh /usr/local/bin/run-manual-cujian-test
-RUN chmod +x /usr/local/bin/smart-cut-entrypoint /usr/local/bin/run-manual-cujian-test
+# 安装 Python 依赖
+RUN pip install --no-cache-dir -r requirements.txt
 
-ENTRYPOINT ["smart-cut-entrypoint"]
-CMD ["sleep", "infinity"]
+# 复制应用代码
+COPY apps/ ./apps/
+COPY worker/ ./worker/
+COPY configs/ ./configs/
+
+# 创建工作目录
+RUN mkdir -p /app/data/db /fake-tos /data/smart-cut
+
+# 健康检查
+HEALTHCHECK --interval=60s --timeout=10s --start-period=30s --retries=3 \
+    CMD python -c "import sys; sys.exit(0)" || exit 1
+
+# 启动命令
+CMD ["python", "-m", "worker.core"]

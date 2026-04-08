@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  worker:
+    build:
+      context: ..
+      dockerfile: worker/Dockerfile.combined
+    image: smart-cut-worker-combined:latest
+    container_name: smart-cut-worker-test
+    environment:
+      - WORKER_ID=worker_01
+      - WORKER_NAME=Smart Cut Worker 01
+      - DATABASE_URL=sqlite:///./test.db
+      - USE_FAKE_TOS=true
+      - FAKE_TOS_BASE_PATH=/tmp/fake_tos
+      - SUPPORTED_TASK_TYPES=smart_cut_analyze,smart_cut_preview,smart_cut_finalize
+      - POLL_INTERVAL=5
+      - LOG_LEVEL=INFO
+      - PYTHONPATH=/app:/app/aicut2602:/app/aicut2602/libs/cut_breakpoints/online_version
+      - WORKER_DATA_BASE=/data/smart-cut
+    volumes:
+      - ./data:/app/data
+      - ./data/smart-cut:/data/smart-cut
+      - ./logs:/app/logs
+    working_dir: /app
+    command: []  # 使用 Dockerfile 中的 ENTRYPOINT
+    healthcheck:
+      test: ["CMD", "python", "-c", "import worker.core; print('OK')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

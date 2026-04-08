@@ -1,7 +1,18 @@
-sqlalchemy==2.0.43
-pytest==8.4.1
-requests>=2.32.0
-PyYAML>=6.0
-moviepy>=2.0.0
-numpy>=1.26.0
-loguru>=0.7.0
+# Smart Cut Worker - Minimal Dependencies
+# 基础镜像已包含: sqlalchemy, requests, python-dotenv, loguru, PyYAML
+
+# Database Migration
+alembic>=1.12.0
+
+# HTTP Client
+httpx>=0.25.0
+
+# TOS/Storage
+boto3>=1.34.0
+
+# Data Validation
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Retry
+tenacity>=8.2.0

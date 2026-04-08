@@ -1,0 +1,39 @@
+# Smart Cut Worker - Combined Container
+# Based on: website_aicut-smart_cut_worker:latest
+# Includes: Algorithm scripts + Scheduler worker code
+
+FROM website_aicut-smart_cut_worker:latest
+
+USER root
+
+# 设置 pip 超时和重试
+ENV PIP_DEFAULT_TIMEOUT=300
+ENV PIP_RETRY_COUNT=5
+
+# 安装额外依赖 - 分批安装避免超时
+RUN pip install --no-cache-dir --timeout 300 alembic>=1.12.0 && \
+    pip install --no-cache-dir --timeout 300 httpx>=0.25.0 && \
+    pip install --no-cache-dir --timeout 300 boto3>=1.34.0 && \
+    pip install --no-cache-dir --timeout 300 pydantic>=2.5.0 pydantic-settings>=2.1.0 && \
+    pip install --no-cache-dir --timeout 300 tenacity>=8.2.0
+
+# 复制调度Worker代码
+COPY worker/ /app/worker/
+COPY apps/models/ /app/apps/models/
+COPY apps/services/ /app/apps/services/
+COPY configs/ /app/configs/
+
+# 设置环境变量
+ENV PYTHONPATH="/app:/app/aicut2602:/app/aicut2602/libs/cut_breakpoints/online_version"
+ENV WORKER_DATA_BASE=/data/smart-cut
+
+# 创建工作目录
+RUN mkdir -p /data/smart-cut /app/logs
+
+# 复制启动脚本
+COPY worker/docker-entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+WORKDIR /app
+
+ENTRYPOINT ["/app/entrypoint.sh"]
