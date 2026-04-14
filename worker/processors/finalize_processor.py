@@ -92,7 +92,7 @@ class FinalizeProcessor(BaseProcessor):
         
         self._task = task
         self._current_task = task
-        self._work_dir = Path(workspace) / task.business_task_id
+        self._work_dir = self.file_transport.task_dir(task.business_task_id)
         self._work_dir.mkdir(parents=True, exist_ok=True)
         
         try:
@@ -570,72 +570,15 @@ class FinalizeProcessor(BaseProcessor):
     
     async def _download_from_tos_async(self, key: str, local_path: Path) -> None:
         """异步从 TOS 下载文件"""
-        local_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        if self.tos_service and hasattr(self.tos_service, 'download_file'):
-            # 如果 TOS 服务有异步方法，使用它
-            if hasattr(self.tos_service, 'download_file_async'):
-                result = await self.tos_service.download_file_async(
-                    bucket=self.BUCKET,
-                    key=key,
-                    file_path=str(local_path)
-                )
-            else:
-                # 在线程池中执行同步下载
-                loop = asyncio.get_event_loop()
-                result = await loop.run_in_executor(
-                    None,
-                    lambda: self.tos_service.download_file(
-                        bucket=self.BUCKET,
-                        key=key,
-                        file_path=str(local_path)
-                    )
-                )
-            if not result.success:
-                raise RuntimeError(f"Failed to download {key}: {result.error}")
-        else:
-            if os.path.exists(key):
-                shutil.copy2(key, local_path)
-            else:
-                raise FileNotFoundError(f"File not found: {key}")
+        await self.file_transport.download_input(key, local_path)
     
     async def _upload_file_async(self, local_path: Path, key: str) -> None:
         """异步上传单个文件到 TOS"""
-        if self.tos_service and hasattr(self.tos_service, 'upload_file'):
-            if hasattr(self.tos_service, 'upload_file_async'):
-                result = await self.tos_service.upload_file_async(
-                    bucket=self.BUCKET,
-                    key=key,
-                    file_path=str(local_path)
-                )
-            else:
-                loop = asyncio.get_event_loop()
-                result = await loop.run_in_executor(
-                    None,
-                    lambda: self.tos_service.upload_file(
-                        bucket=self.BUCKET,
-                        key=key,
-                        file_path=str(local_path)
-                    )
-                )
-            if not result.success:
-                raise RuntimeError(f"Failed to upload {key}: {result.error}")
-        else:
-            dest = Path(f"/tmp/fake_tos/{self.BUCKET}") / key
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(local_path, dest)
+        await self.file_transport.upload_output(local_path, key)
     
     async def _upload_directory_async(self, local_dir: Path, base_key: str) -> None:
         """异步上传整个目录到 TOS"""
-        tasks = []
-        for file_path in local_dir.rglob("*"):
-            if file_path.is_file():
-                relative_path = file_path.relative_to(local_dir)
-                key = f"{base_key}/{relative_path}"
-                tasks.append(self._upload_file_async(file_path, key))
-        
-        if tasks:
-            await asyncio.gather(*tasks)
+        await self.file_transport.upload_directory(local_dir, base_key)
     
     async def _update_database_async(self, result: dict[str, Any]) -> None:
         """异步更新数据库记录"""

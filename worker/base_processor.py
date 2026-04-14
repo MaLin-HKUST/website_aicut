@@ -7,8 +7,10 @@ from abc import ABC, abstractmethod
 from typing import Any, Optional
 import os
 import logging
+from pathlib import Path
 
 from apps.models.scheduler_task import SchedulerTask
+from worker.services import GatewayFileTransport
 
 
 logger = logging.getLogger(__name__)
@@ -37,6 +39,10 @@ class BaseProcessor(ABC):
         self.workspace = workspace
         self._current_task: Optional[SchedulerTask] = None
         self._progress_callback: Optional[callable] = None
+        self.file_transport = GatewayFileTransport(
+            tos_service=tos_service,
+            workspace=workspace,
+        )
         
         # 确保工作目录存在
         os.makedirs(workspace, exist_ok=True)
@@ -109,6 +115,16 @@ class BaseProcessor(ABC):
                     raise
         
         return local_paths
+
+    async def download_input_file(self, source: str, local_path: str) -> str:
+        """Download one input into the gateway workspace."""
+        downloaded_path = await self.file_transport.download_input(source, Path(local_path))
+        return str(downloaded_path)
+
+    async def upload_output_file(self, local_path: str, key: str) -> str:
+        """Upload one output from the gateway workspace."""
+        uploaded_key = await self.file_transport.upload_output(Path(local_path), key)
+        return uploaded_key
     
     def _download_file(self, remote_path: str) -> Optional[str]:
         """下载单个文件

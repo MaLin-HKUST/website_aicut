@@ -143,7 +143,7 @@ class PreviewProcessor(BaseProcessor):
                 raise ValueError(f"Business task not found: {task.business_task_id}")
             self._business_task = business_task
             
-            work_dir = Path(self.workspace) / task.business_task_id
+            work_dir = self.file_transport.task_dir(task.business_task_id)
             input_dir = work_dir / "input"
             input_dir.mkdir(parents=True, exist_ok=True)
             
@@ -195,8 +195,7 @@ class PreviewProcessor(BaseProcessor):
         
         task = self._current_task
         edit_id = self._edit.id if self._edit else "unknown"
-        work_dir = Path(self.workspace) / task.business_task_id
-        output_dir = work_dir / "preview" / edit_id
+        output_dir = self.file_transport.stage_dir(task.business_task_id, "preview", edit_id)
         output_dir.mkdir(parents=True, exist_ok=True)
         
         # 执行算法
@@ -382,50 +381,19 @@ class PreviewProcessor(BaseProcessor):
     
     async def _download_from_tos_async(self, key: str, local_path: Path) -> None:
         """异步从TOS下载文件"""
-        local_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        # 在线程池中执行同步下载
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, self._download_from_tos_sync, key, local_path)
+        await self.file_transport.download_input(key, local_path)
     
     def _download_from_tos_sync(self, key: str, local_path: Path) -> None:
         """同步从TOS下载文件"""
-        if self.tos_service and hasattr(self.tos_service, 'download_file'):
-            result = self.tos_service.download_file(
-                bucket=self.BUCKET,
-                key=key,
-                file_path=str(local_path)
-            )
-            if not result.success:
-                raise RuntimeError(f"Failed to download {key}: {result.error}")
-        else:
-            import shutil
-            if os.path.exists(key):
-                shutil.copy2(key, local_path)
-            else:
-                raise FileNotFoundError(f"File not found: {key}")
+        self.file_transport.download_input_sync(key, local_path)
     
     async def _upload_file_async(self, local_path: Path, key: str) -> None:
         """异步上传单个文件到TOS"""
-        # 在线程池中执行同步上传
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, self._upload_file_sync, local_path, key)
+        await self.file_transport.upload_output(local_path, key)
     
     def _upload_file_sync(self, local_path: Path, key: str) -> None:
         """同步上传单个文件到TOS"""
-        if self.tos_service and hasattr(self.tos_service, 'upload_file'):
-            result = self.tos_service.upload_file(
-                bucket=self.BUCKET,
-                key=key,
-                file_path=str(local_path)
-            )
-            if not result.success:
-                raise RuntimeError(f"Failed to upload {key}: {result.error}")
-        else:
-            import shutil
-            dest = Path(f"/tmp/fake_tos/{self.BUCKET}") / key
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(local_path, dest)
+        self.file_transport.upload_output_sync(local_path, key)
     
     async def _update_database_async(self) -> None:
         """异步更新数据库记录"""

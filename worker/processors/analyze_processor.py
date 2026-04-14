@@ -65,18 +65,26 @@ class AnalyzeProcessor(BaseStageProcessor):
         if not self._current_task:
             raise RuntimeError("No task set")
         
-        input_dir = self._work_dir / "input"
+        input_dir = self.file_transport.input_dir(self._task_id)
         input_dir.mkdir(parents=True, exist_ok=True)
         
         payload = self._current_task.payload
         
         # 获取视频 key
-        video_key = payload.get("video_key") or payload.get("video_url")
+        video_key = (
+            payload.get("original_video_tos_key")
+            or payload.get("video_key")
+            or payload.get("video_url")
+        )
         if not video_key:
             raise ValueError("Missing video_key or video_url in task payload")
         
         # 获取文案 key
-        text_key = payload.get("text_key") or payload.get("text_url")
+        text_key = (
+            payload.get("reference_text_tos_key")
+            or payload.get("text_key")
+            or payload.get("text_url")
+        )
         if not text_key:
             raise ValueError("Missing text_key or text_url in task payload")
         

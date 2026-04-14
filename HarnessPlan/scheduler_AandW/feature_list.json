@@ -249,7 +249,7 @@
     {
       "id": "F07",
       "title": "Gateway-TOS Transport Ownership",
-      "status": "pending",
+      "status": "done",
       "goal": "Implement the rule that Worker gateway owns all TOS download/upload for Smart-Cut execution.",
       "depends_on": ["F06"],
       "acceptance": [
@@ -269,6 +269,16 @@
         "apps/services",
         "configs",
         "HarnessPlan/scheduler_AandW"
+      ],
+      "verification": [
+        "python -m compileall worker apps/services tests/test_worker_gateway_transport.py",
+        "pytest tests/test_worker_gateway_transport.py -q"
+      ],
+      "result": [
+        "Added worker.services.file_transport as the gateway-owned transport layer for download/upload",
+        "Gateway transport now supports bare TOS keys, fake:// download URLs, http(s) presigned URLs, and local paths",
+        "Analyze processor now accepts current payload fields original_video_tos_key and reference_text_tos_key",
+        "Preview and finalize processors now delegate file movement to the shared gateway transport path"
       ]
     },
     {

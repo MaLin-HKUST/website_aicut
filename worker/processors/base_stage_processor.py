@@ -8,6 +8,7 @@ from typing import Any, Optional
 import logging
 
 from apps.models.scheduler_task import SchedulerTask
+from worker.services import GatewayFileTransport
 
 
 logger = logging.getLogger(__name__)
@@ -39,6 +40,11 @@ class BaseStageProcessor(ABC):
         self._progress_callback: Optional[callable] = None
         self._work_dir: Optional[Any] = None
         self._task_id: Optional[str] = None
+        self.file_transport = GatewayFileTransport(
+            tos_service=tos_service,
+            workspace=workspace,
+            bucket=self.BUCKET,
+        )
     
     def set_task(self, task: SchedulerTask) -> None:
         """设置当前任务
@@ -188,23 +194,7 @@ class BaseStageProcessor(ABC):
             key: TOS 对象 key
             local_path: 本地保存路径 (Path 对象)
         """
-        local_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        if self.tos_service and hasattr(self.tos_service, 'download_file'):
-            result = self.tos_service.download_file(
-                bucket=self.BUCKET,
-                key=key,
-                file_path=str(local_path)
-            )
-            if not result.success:
-                raise RuntimeError(f"Failed to download {key}: {result.error}")
-        else:
-            import shutil
-            import os
-            if os.path.exists(key):
-                shutil.copy2(key, local_path)
-            else:
-                raise FileNotFoundError(f"File not found: {key}")
+        self.file_transport.download_input_sync(key, local_path)
     
     def _upload_to_tos(self, local_path: Any, key: str) -> None:
         """上传文件到 TOS
@@ -213,17 +203,4 @@ class BaseStageProcessor(ABC):
             local_path: 本地文件路径 (Path 对象)
             key: TOS 对象 key
         """
-        if self.tos_service and hasattr(self.tos_service, 'upload_file'):
-            result = self.tos_service.upload_file(
-                bucket=self.BUCKET,
-                key=key,
-                file_path=str(local_path)
-            )
-            if not result.success:
-                raise RuntimeError(f"Failed to upload {key}: {result.error}")
-        else:
-            import shutil
-            from pathlib import Path
-            dest = Path(f"/tmp/fake_tos/{self.BUCKET}") / key
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(local_path, dest)
+        self.file_transport.upload_output_sync(local_path, key)
