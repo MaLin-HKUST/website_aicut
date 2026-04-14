@@ -176,6 +176,32 @@ class PreviewProcessor(BaseProcessor):
                     self._input_data["asr_result"] = json.load(f)
             else:
                 raise ValueError("Missing asr_result_tos_key in business task")
+
+            self.job_contract.write_task_manifest(
+                task,
+                stage="preview",
+                edit_id=edit_id,
+                inputs={
+                    "original_video": {
+                        "source": business_task.original_video_url,
+                        "local_path": str(self._input_data["original_video"]),
+                    },
+                    "asr_result": {
+                        "source": business_task.asr_result_tos_key,
+                        "local_path": str(asr_path),
+                    },
+                    "edited_script": {
+                        "source": f"db:smart_cut_edits/{edit_id}",
+                        "local_path": str(edited_script_path),
+                    },
+                },
+                expected_outputs=[
+                    {"name": "edited_delay_cuts", "path": str(work_dir / "preview" / edit_id / "edited_delay_cuts.json")},
+                    {"name": "pause_cuts_on_original", "path": str(work_dir / "preview" / edit_id / "pause_cuts_on_original.json")},
+                    {"name": "audio_b", "path": str(work_dir / "preview" / edit_id / "audio_b.mp3")},
+                ],
+                payload=dict(payload),
+            )
             
         finally:
             db.close()
@@ -259,6 +285,27 @@ class PreviewProcessor(BaseProcessor):
         
         # 保存上传结果用于数据库更新
         self._upload_results = upload_results
+        self.job_contract.write_result_manifest(
+            task_id=task_id,
+            scheduler_task_id=task.id,
+            stage="preview",
+            status="success",
+            outputs={
+                "edited_delay_cuts": {
+                    "local_path": str(result["edited_delay_cuts_path"]) if result.get("edited_delay_cuts_path") else None,
+                    "tos_key": upload_results.get("edited_delay_cuts"),
+                },
+                "pause_cuts_on_original": {
+                    "local_path": str(result["pause_cuts_path"]) if result.get("pause_cuts_path") else None,
+                    "tos_key": upload_results.get("pause_cuts"),
+                },
+                "audio_b": {
+                    "local_path": str(result["audio_b_path"]) if result.get("audio_b_path") else None,
+                    "tos_key": upload_results.get("audio_b"),
+                },
+            },
+            metadata={"edit_id": edit_id},
+        )
     
     async def _execute_algorithm_async(
         self,
@@ -452,6 +499,17 @@ class PreviewProcessor(BaseProcessor):
             edit_id = None
             if self._current_task and self._current_task.payload:
                 edit_id = self._current_task.payload.get("edit_id")
+
+            if self._current_task:
+                self.job_contract.write_result_manifest(
+                    task_id=self._current_task.business_task_id,
+                    scheduler_task_id=self._current_task.id,
+                    stage="preview",
+                    status="failed",
+                    outputs={},
+                    error_message=error_message,
+                    metadata={"edit_id": edit_id},
+                )
             
             # 更新 Edit 状态为失败
             if edit_id:

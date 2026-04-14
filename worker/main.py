@@ -21,6 +21,7 @@ from worker.core import SmartCutWorker
 from worker.processors.analyze_processor import AnalyzeProcessor
 from worker.processors.preview_processor import PreviewProcessor
 from worker.processors.finalize_processor import FinalizeProcessor
+from worker.services import DEFAULT_WORKER_JOBS_DIR
 
 
 logger = logging.getLogger(__name__)
@@ -63,7 +64,7 @@ class WorkerRuntimeConfig:
             worker_name=worker_name,
             db_url=os.environ.get("DATABASE_URL", "").strip(),
             api_base_url=os.environ.get("API_BASE_URL", "http://localhost:8000").strip(),
-            workspace=os.environ.get("WORKER_DATA_BASE", "/data/smart-cut").strip(),
+            workspace=os.environ.get("WORKER_DATA_BASE", DEFAULT_WORKER_JOBS_DIR).strip(),
             use_fake_tos=os.environ.get("USE_FAKE_TOS", "true").lower() == "true",
             fake_tos_base=os.environ.get("FAKE_TOS_BASE_PATH", "/tmp/fake_tos").strip(),
             heartbeat_interval=float(os.environ.get("HEARTBEAT_INTERVAL", "10")),

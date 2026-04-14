@@ -111,5 +111,5 @@ cd /Users/malin13/Documents/trae_projects/website_aicut/HarnessPlan/scheduler_Aa
 
 ## 当前阶段
 
-- 已完成：F01-F07
-- 下一步：F08 Gateway-Algorithm Shared Directory Contract
+- 已完成：F01-F08
+- 下一步：F09 Gateway Docker Runner For Algorithm Image

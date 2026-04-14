@@ -284,7 +284,7 @@
     {
       "id": "F08",
       "title": "Gateway-Algorithm Shared Directory Contract",
-      "status": "pending",
+      "status": "done",
       "goal": "Define and implement the shared-directory contract between Worker gateway and the Smart-Cut algorithm image.",
       "depends_on": ["F07"],
       "acceptance": [
@@ -302,6 +302,16 @@
         "worker",
         "configs",
         "HarnessPlan/scheduler_AandW"
+      ],
+      "verification": [
+        "python -m compileall worker configs tests/test_worker_gateway_transport.py tests/test_worker_job_contract.py",
+        "pytest tests/test_worker_gateway_transport.py tests/test_worker_job_contract.py -q"
+      ],
+      "result": [
+        "Added worker.services.job_contract with fixed shared layout and manifest schema",
+        "Default worker workspace now uses /data/worker-jobs and container/runtime configs align with that path",
+        "Analyze, preview, and finalize processors now emit task_manifest.json and result_manifest.json",
+        "Added tests locking the manifest schema, directory layout, and worker default workspace path"
       ]
     },
     {

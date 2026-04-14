@@ -29,10 +29,10 @@ COPY configs/ /app/configs/
 
 # 设置环境变量
 ENV PYTHONPATH="/app:/app/aicut2602:/app/aicut2602/libs/cut_breakpoints/online_version"
-ENV WORKER_DATA_BASE=/data/smart-cut
+ENV WORKER_DATA_BASE=/data/worker-jobs
 
 # 创建工作目录
-RUN mkdir -p /data/smart-cut /app/logs
+RUN mkdir -p /data/worker-jobs /app/logs
 
 # 复制启动脚本
 COPY worker/docker-entrypoint.sh /app/entrypoint.sh

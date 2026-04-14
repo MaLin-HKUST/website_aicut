@@ -7,7 +7,7 @@ echo "=========================================="
 echo "WORKER_ID: ${WORKER_ID:-not_set}"
 echo "WORKER_NAME: ${WORKER_NAME:-not_set}"
 echo "PYTHONPATH: ${PYTHONPATH}"
-echo "WORKER_DATA_BASE: ${WORKER_DATA_BASE:-/data/smart-cut}"
+echo "WORKER_DATA_BASE: ${WORKER_DATA_BASE:-/data/worker-jobs}"
 echo ""
 
 # 检查必要的环境变量
@@ -22,8 +22,8 @@ if [ -z "$DATABASE_URL" ]; then
 fi
 
 # 创建工作目录
-mkdir -p "${WORKER_DATA_BASE:-/data/smart-cut}"
-echo "✅ Work directory created: ${WORKER_DATA_BASE:-/data/smart-cut}"
+mkdir -p "${WORKER_DATA_BASE:-/data/worker-jobs}"
+echo "✅ Work directory created: ${WORKER_DATA_BASE:-/data/worker-jobs}"
 
 echo "ℹ️  Gateway mode: Smart-Cut algorithm image runs separately"
 

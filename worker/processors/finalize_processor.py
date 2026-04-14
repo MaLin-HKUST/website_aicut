@@ -132,6 +132,28 @@ class FinalizeProcessor(BaseProcessor):
                 groundtruth_key = await self._generate_and_upload_groundtruth()
                 result["groundtruth_url"] = groundtruth_key
                 logger.info(f"GroundTruth uploaded: {groundtruth_key}")
+
+            self.job_contract.write_result_manifest(
+                task_id=self._task.business_task_id,
+                scheduler_task_id=self._task.id,
+                stage="finalize",
+                status="success",
+                outputs={
+                    "final_video": {
+                        "local_path": str(result.get("final_video_path")) if result.get("final_video_path") else None,
+                        "tos_key": result.get("final_video_url"),
+                    },
+                    "groundtruth": {
+                        "local_path": str(self._work_dir / "groundtruth") if self._input_data.get("feed_to_ai") else None,
+                        "tos_key": result.get("groundtruth_url"),
+                    },
+                },
+                metadata={
+                    "edit_id": self._edit_id,
+                    "output_mode": self._output_mode,
+                    "feed_to_ai": self._input_data.get("feed_to_ai", False),
+                },
+            )
             
             self.update_progress(1.0)
             
@@ -239,6 +261,39 @@ class FinalizeProcessor(BaseProcessor):
                 await self._download_from_tos_async(business_task.asr_result_tos_key, asr_path)
                 with open(asr_path, 'r', encoding='utf-8') as f:
                     self._input_data["asr_result"] = json.load(f)
+
+            self.job_contract.write_task_manifest(
+                self._task,
+                stage="finalize",
+                edit_id=self._edit_id,
+                inputs={
+                    "original_video": {
+                        "source": business_task.original_video_url,
+                        "local_path": str(self._input_data["original_video"]),
+                    },
+                    "reference_text": {
+                        "source": business_task.reference_text_url,
+                        "local_path": str(text_path) if business_task.reference_text_url else None,
+                    },
+                    "edited_delay_cuts": {
+                        "source": edit.delay_cuts_tos_key,
+                        "local_path": str(delay_cuts_path),
+                    },
+                    "pause_cuts_on_original": {
+                        "source": edit.pause_cuts_tos_key,
+                        "local_path": str(pause_cuts_path),
+                    },
+                    "asr_result": {
+                        "source": business_task.asr_result_tos_key,
+                        "local_path": str(asr_path) if business_task.asr_result_tos_key else None,
+                    },
+                },
+                expected_outputs=[
+                    {"name": "final_video", "path": str(self._work_dir / "finalize" / "final_video.mp4")},
+                    {"name": "groundtruth", "path": str(self._work_dir / "groundtruth")},
+                ],
+                payload=dict(payload),
+            )
             
         finally:
             db.close()
@@ -614,6 +669,19 @@ class FinalizeProcessor(BaseProcessor):
         
         db = SessionLocal()
         try:
+            if self._task:
+                self.job_contract.write_result_manifest(
+                    task_id=self._task.business_task_id,
+                    scheduler_task_id=self._task.id,
+                    stage="finalize",
+                    status="failed",
+                    outputs={},
+                    error_message=error_message,
+                    metadata={
+                        "edit_id": self._edit_id,
+                        "output_mode": self._output_mode,
+                    },
+                )
             business_task = db.query(BusinessTask).filter_by(id=self._task.business_task_id).first()
             if business_task:
                 business_task.status = TaskStatus.FINALIZE_FAILED

@@ -36,11 +36,11 @@ services:
       - HEARTBEAT_INTERVAL=10
       - LOG_LEVEL=INFO
       - PYTHONPATH=/app
-      - WORKER_DATA_BASE=/data/smart-cut
+      - WORKER_DATA_BASE=/data/worker-jobs
     volumes:
       # 持久化数据目录
       - ./data:/app/data
-      - worker-data:/data/smart-cut
+      - worker-data:/data/worker-jobs
       - ./logs:/app/logs
     working_dir: /app
     healthcheck:

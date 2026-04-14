@@ -43,7 +43,7 @@ worker:
     - preview
     - finalize
   heartbeat_interval: 10  # 秒
-  work_dir: /data/smart-cut
+  work_dir: /data/worker-jobs
 
 logging:
   level: INFO

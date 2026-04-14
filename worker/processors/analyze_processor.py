@@ -67,6 +67,7 @@ class AnalyzeProcessor(BaseStageProcessor):
         
         input_dir = self.file_transport.input_dir(self._task_id)
         input_dir.mkdir(parents=True, exist_ok=True)
+        self._prefix = f"task_{self._task_id}"
         
         payload = self._current_task.payload
         
@@ -99,6 +100,28 @@ class AnalyzeProcessor(BaseStageProcessor):
         self._download_from_tos(text_key, text_path)
         self._input_paths["text"] = text_path
         logger.info(f"Text downloaded: {text_key} -> {text_path}")
+
+        self.job_contract.write_task_manifest(
+            self._current_task,
+            stage="analyze",
+            inputs={
+                "original_video": {
+                    "source": video_key,
+                    "local_path": str(video_path),
+                },
+                "reference_text": {
+                    "source": text_key,
+                    "local_path": str(text_path),
+                },
+            },
+            expected_outputs=[
+                {"name": "script", "path": str(self._work_dir / "analyze" / "output" / f"{self._prefix}_Script1.txt")},
+                {"name": "asr_result", "path": str(self._work_dir / "analyze" / "output" / f"{self._prefix}_ASR.Result.json")},
+                {"name": "delay_cuts", "path": str(self._work_dir / "analyze" / "output" / f"{self._prefix}_DelayCutSegments.json")},
+                {"name": "audio_a", "path": str(self._work_dir / "analyze" / "output" / f"{self._prefix}_audio_a.mp3")},
+            ],
+            payload=dict(payload),
+        )
     
     async def execute(self) -> dict:
         """执行分析算法
@@ -308,6 +331,30 @@ class AnalyzeProcessor(BaseStageProcessor):
         
         # 更新数据库
         await self._update_database(result, upload_results)
+        self.job_contract.write_result_manifest(
+            task_id=task_id,
+            scheduler_task_id=self._current_task.id,
+            stage="analyze",
+            status="success",
+            outputs={
+                "script": {
+                    "local_path": str(result["script_path"]) if result.get("script_path") else None,
+                    "tos_key": upload_results.get("script"),
+                },
+                "asr_result": {
+                    "local_path": str(result["asr_path"]) if result.get("asr_path") else None,
+                    "tos_key": upload_results.get("asr"),
+                },
+                "delay_cuts": {
+                    "local_path": str(result["delay_cuts_path"]) if result.get("delay_cuts_path") else None,
+                    "tos_key": upload_results.get("delay_cuts"),
+                },
+                "audio_a": {
+                    "local_path": str(result["audio_a_path"]) if result.get("audio_a_path") else None,
+                    "tos_key": upload_results.get("audio_a"),
+                },
+            },
+        )
     
     async def _update_database(
         self,
@@ -366,6 +413,15 @@ class AnalyzeProcessor(BaseStageProcessor):
         
         db = SessionLocal()
         try:
+            if self._current_task and self._task_id:
+                self.job_contract.write_result_manifest(
+                    task_id=self._task_id,
+                    scheduler_task_id=self._current_task.id,
+                    stage="analyze",
+                    status="failed",
+                    outputs={},
+                    error_message=error_message,
+                )
             business_task = db.query(BusinessTask).filter_by(id=self._task_id).first()
             if business_task:
                 business_task.status = TaskStatus.ANALYZE_FAILED

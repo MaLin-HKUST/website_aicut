@@ -25,7 +25,7 @@ COPY worker/ ./worker/
 COPY configs/ ./configs/
 
 # 创建工作目录
-RUN mkdir -p /app/data/db /fake-tos /data/smart-cut
+RUN mkdir -p /app/data/db /fake-tos /data/worker-jobs
 
 # 复制启动脚本
 COPY worker/docker-entrypoint.sh /app/entrypoint.sh
