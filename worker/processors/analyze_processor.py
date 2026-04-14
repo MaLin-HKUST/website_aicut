@@ -8,6 +8,7 @@
 5. 更新 SmartCutTask 和 SmartCutEdit 数据库记录
 """
 
+import asyncio
 import json
 import logging
 import os
@@ -150,6 +151,22 @@ class AnalyzeProcessor(BaseStageProcessor):
         """
         if not self._current_task:
             raise RuntimeError("No task set")
+
+        if self.algorithm_runner.is_enabled():
+            manifest_result = await asyncio.to_thread(
+                self.algorithm_runner.run_stage,
+                self._task_id,
+                "analyze",
+            )
+            return {
+                "script": None,
+                "script_path": Path(manifest_result["outputs"]["script"]["local_path"]),
+                "asr_result": None,
+                "asr_path": Path(manifest_result["outputs"]["asr_result"]["local_path"]),
+                "delay_cuts": None,
+                "delay_cuts_path": Path(manifest_result["outputs"]["delay_cuts"]["local_path"]),
+                "audio_a_path": Path(manifest_result["outputs"]["audio_a"]["local_path"]),
+            }
         
         # 设置输出目录和前缀
         self._output_dir = self._work_dir / "analyze" / "output"

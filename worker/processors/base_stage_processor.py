@@ -8,7 +8,7 @@ from typing import Any, Optional
 import logging
 
 from apps.models.scheduler_task import SchedulerTask
-from worker.services import GatewayFileTransport, SmartCutJobContract
+from worker.services import AlgorithmDockerRunner, GatewayFileTransport, SmartCutJobContract
 
 
 logger = logging.getLogger(__name__)
@@ -46,6 +46,7 @@ class BaseStageProcessor(ABC):
             bucket=self.BUCKET,
         )
         self.job_contract = SmartCutJobContract(workspace=workspace)
+        self.algorithm_runner = AlgorithmDockerRunner(workspace=workspace)
     
     def set_task(self, task: SchedulerTask) -> None:
         """设置当前任务

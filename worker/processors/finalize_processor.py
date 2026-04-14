@@ -430,6 +430,16 @@ class FinalizeProcessor(BaseProcessor):
                 - final_video_path: 最终视频本地路径
                 - final_video_url: 最终视频 TOS URL
         """
+        if self.algorithm_runner.is_enabled():
+            manifest_result = await asyncio.to_thread(
+                self.algorithm_runner.run_stage,
+                self._task.business_task_id,
+                "finalize",
+            )
+            return {
+                "final_video_path": Path(manifest_result["outputs"]["final_video"]["local_path"]),
+            }
+
         video_path = self._input_data.get("video_for_cutting")
         edited_delay_cuts = self._input_data.get("edited_delay_cuts")
         pause_cuts = self._input_data.get("pause_cuts")

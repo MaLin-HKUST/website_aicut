@@ -317,7 +317,7 @@
     {
       "id": "F09",
       "title": "Gateway Docker Runner For Algorithm Image",
-      "status": "pending",
+      "status": "done",
       "goal": "Make Worker gateway launch the Smart-Cut algorithm image per task/stage instead of embedding scheduler logic into the algorithm image.",
       "depends_on": ["F08"],
       "acceptance": [
@@ -335,6 +335,16 @@
         "worker",
         "configs",
         "HarnessPlan/scheduler_AandW"
+      ],
+      "verification": [
+        "python -m compileall worker tests/test_algorithm_runner.py tests/test_worker_gateway_transport.py tests/test_worker_job_contract.py",
+        "pytest tests/test_algorithm_runner.py tests/test_worker_gateway_transport.py tests/test_worker_job_contract.py -q"
+      ],
+      "result": [
+        "Added worker.services.algorithm_runner to launch the algorithm image with deterministic docker run commands",
+        "Added worker/stages/run_stage_from_manifest.py as the container-side stage entrypoint using task/result manifests",
+        "Analyze, preview, and finalize processors now prefer the algorithm container path when USE_ALGORITHM_DOCKER_RUNNER=true",
+        "Added tests locking command construction and result-manifest handoff"
       ]
     },
     {

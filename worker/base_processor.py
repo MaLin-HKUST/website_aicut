@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 
 from apps.models.scheduler_task import SchedulerTask
-from worker.services import GatewayFileTransport, SmartCutJobContract
+from worker.services import AlgorithmDockerRunner, GatewayFileTransport, SmartCutJobContract
 
 
 logger = logging.getLogger(__name__)
@@ -44,6 +44,7 @@ class BaseProcessor(ABC):
             workspace=workspace,
         )
         self.job_contract = SmartCutJobContract(workspace=workspace)
+        self.algorithm_runner = AlgorithmDockerRunner(workspace=workspace)
         
         # 确保工作目录存在
         os.makedirs(workspace, exist_ok=True)

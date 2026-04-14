@@ -223,6 +223,21 @@ class PreviewProcessor(BaseProcessor):
         edit_id = self._edit.id if self._edit else "unknown"
         output_dir = self.file_transport.stage_dir(task.business_task_id, "preview", edit_id)
         output_dir.mkdir(parents=True, exist_ok=True)
+
+        if self.algorithm_runner.is_enabled():
+            manifest_result = await asyncio.to_thread(
+                self.algorithm_runner.run_stage,
+                task.business_task_id,
+                "preview",
+            )
+            return {
+                "edited_delay_cuts_path": Path(manifest_result["outputs"]["edited_delay_cuts"]["local_path"]),
+                "pause_cuts_path": Path(manifest_result["outputs"]["pause_cuts_on_original"]["local_path"]),
+                "audio_b_path": Path(manifest_result["outputs"]["audio_b"]["local_path"]),
+                "audio_b_url": None,
+                "delay_cuts_url": None,
+                "pause_cuts_url": None,
+            }
         
         # 执行算法
         algorithm_result = await self._execute_algorithm_async(
