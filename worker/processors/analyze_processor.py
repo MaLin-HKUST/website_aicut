@@ -153,20 +153,16 @@ class AnalyzeProcessor(BaseStageProcessor):
             raise RuntimeError("No task set")
 
         if self.algorithm_runner.is_enabled():
+            self._output_dir = self._work_dir / "analyze" / "output"
+            self._output_dir.mkdir(parents=True, exist_ok=True)
             manifest_result = await asyncio.to_thread(
                 self.algorithm_runner.run_stage,
                 self._task_id,
                 "analyze",
             )
-            return {
-                "script": None,
-                "script_path": Path(manifest_result["outputs"]["script"]["local_path"]),
-                "asr_result": None,
-                "asr_path": Path(manifest_result["outputs"]["asr_result"]["local_path"]),
-                "delay_cuts": None,
-                "delay_cuts_path": Path(manifest_result["outputs"]["delay_cuts"]["local_path"]),
-                "audio_a_path": Path(manifest_result["outputs"]["audio_a"]["local_path"]),
-            }
+            if manifest_result["status"] != "success":
+                raise RuntimeError(manifest_result.get("error_message") or "Algorithm container failed")
+            return self._parse_outputs()
         
         # 设置输出目录和前缀
         self._output_dir = self._work_dir / "analyze" / "output"

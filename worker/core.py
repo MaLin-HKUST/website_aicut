@@ -294,6 +294,7 @@ class SmartCutWorker:
         task_type = scheduler_task.task_type.value
         
         logger.info(f"Starting task execution: {task_id}, type: {task_type}")
+        self._current_task = scheduler_task
         
         # 更新状态为 running
         self._update_status(DeviceStatus.RUNNING, scheduler_task)
@@ -316,8 +317,8 @@ class SmartCutWorker:
             # 执行任务 (processor.process 是 async 方法)
             result = await processor.process(scheduler_task, self.workspace)
             
-            # 标记任务完成
-            self._mark_task_completed(scheduler_task, result)
+            # 保存执行结果，等待 A-scheduler 看到 POST 后闭环任务状态
+            self._store_task_result(scheduler_task, result)
             
             # 更新状态为 post
             self._update_status(DeviceStatus.POST, scheduler_task)
@@ -397,6 +398,21 @@ class SmartCutWorker:
             task_db = db.query(SchedulerTask).filter_by(id=task.id).first()
             if task_db:
                 task_db.mark_completed(result)
+                db.commit()
+        finally:
+            db.close()
+
+    def _store_task_result(
+        self,
+        task: SchedulerTask,
+        result: dict[str, Any]
+    ) -> None:
+        """Persist execution outputs while keeping scheduler closure on the A side."""
+        db = self._get_db()
+        try:
+            task_db = db.query(SchedulerTask).filter_by(id=task.id).first()
+            if task_db:
+                task_db.result = result
                 db.commit()
         finally:
             db.close()
