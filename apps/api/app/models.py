@@ -20,8 +20,25 @@ class Company(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
 
+    # Admin 扩展字段
+    monthly_video_quota: Mapped[int] = mapped_column(default=0, nullable=False)
+    monthly_video_remaining: Mapped[int] = mapped_column(default=0, nullable=False)
+    billing_cycle_start_date: Mapped[str] = mapped_column(String(10), nullable=False)
+    tts_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    ai_voice_monthly_usage: Mapped[int] = mapped_column(default=0, nullable=False)
+    ai_voice_usage_start_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    asset_library_id: Mapped[int | None] = mapped_column(ForeignKey("asset_libraries.id"), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
     users: Mapped[list["User"]] = relationship(back_populates="company")
     materials: Mapped[list["Material"]] = relationship(back_populates="company")
+    asset_library: Mapped["AssetLibrary"] = relationship("AssetLibrary", foreign_keys=[asset_library_id])
 
 
 class User(TimestampMixin, Base):
@@ -30,8 +47,19 @@ class User(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     username: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    password_plaintext: Mapped[str | None] = mapped_column(String(100), nullable=True)
     role: Mapped[str] = mapped_column(String(20), nullable=False, default="user")
     company_id: Mapped[int | None] = mapped_column(ForeignKey("companies.id"), nullable=True)
+
+    # Admin 扩展字段
+    user_name: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
 
     company: Mapped[Company | None] = relationship(back_populates="users")
 
@@ -252,3 +280,110 @@ class SmartCutEdit(TimestampMixin, Base):
 
     # 关系
     task: Mapped[SmartCutTask] = relationship(back_populates="edits")
+
+
+# ============================================
+# Admin Management Models
+# ============================================
+
+class AssetLibrary(TimestampMixin, Base):
+    """素材库表"""
+    __tablename__ = "asset_libraries"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"), nullable=False, index=True)
+    library_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    root_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    config_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    config_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    config_import_status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False)
+    config_import_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+
+class AssetLibraryTagGroup(TimestampMixin, Base):
+    """素材库标签组表"""
+    __tablename__ = "asset_library_tag_groups"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    asset_library_id: Mapped[int] = mapped_column(ForeignKey("asset_libraries.id"), nullable=False, index=True)
+    group_key: Mapped[str] = mapped_column(String(50), nullable=False)
+    group_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    group_order: Mapped[int] = mapped_column(default=0, nullable=False)
+    allow_multi_select: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    allow_select_all: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    source_type: Mapped[str] = mapped_column(String(20), default="config", nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+
+class AssetLibraryTag(TimestampMixin, Base):
+    """素材库标签表"""
+    __tablename__ = "asset_library_tags"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    asset_library_id: Mapped[int] = mapped_column(ForeignKey("asset_libraries.id"), nullable=False, index=True)
+    tag_group_id: Mapped[int] = mapped_column(ForeignKey("asset_library_tag_groups.id"), nullable=False, index=True)
+    tag_key: Mapped[str] = mapped_column(String(50), nullable=False)
+    tag_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    filter_condition: Mapped[str] = mapped_column(Text, nullable=False)
+    filter_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    source_value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    tag_order: Mapped[int] = mapped_column(default=0, nullable=False)
+    is_default_selected: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+
+class UserCustomTagGroup(TimestampMixin, Base):
+    """用户自定义标签组表"""
+    __tablename__ = "user_custom_tag_groups"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    asset_library_id: Mapped[int] = mapped_column(ForeignKey("asset_libraries.id"), nullable=False, index=True)
+    group_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+
+class UserCustomTagGroupItem(Base):
+    """用户自定义标签组明细表"""
+    __tablename__ = "user_custom_tag_group_items"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    custom_tag_group_id: Mapped[int] = mapped_column(
+        ForeignKey("user_custom_tag_groups.id"),
+        nullable=False,
+        index=True,
+    )
+    tag_id: Mapped[int] = mapped_column(ForeignKey("asset_library_tags.id"), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )

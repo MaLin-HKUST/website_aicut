@@ -5,19 +5,12 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { UserWorkspaceShell } from "@/components/user-workspace-shell";
 
 type AuthResponse = {
   user: {
     username: string;
     role: "admin" | "user";
-    company_name: string | null;
   };
-};
-
-type UserUsageResponse = {
-  credits_used: number;
-  credits_limit: number | null;
 };
 
 type GenerateAudioResponse = {
@@ -26,8 +19,6 @@ type GenerateAudioResponse = {
   file_name: string;
   usage_credits: number;
   usage_characters: number;
-  monthly_total_used: number;
-  monthly_limit: number | null;
 };
 
 const EXAMPLE_COPY = [
@@ -35,8 +26,6 @@ const EXAMPLE_COPY = [
   "欢迎来到新一期产品介绍，我们会在三分钟内带你快速了解本次升级亮点。",
   "这段语音用于视频口播，请保持节奏清晰、停顿自然、结尾收得干净。",
 ];
-
-const DEFAULT_TEXT = "";
 
 const FIXED_VOICE_LABEL = "MiniMax HD 固定音色";
 
@@ -49,14 +38,12 @@ function base64ToBlob(base64: string, mimeType: string) {
 export default function TTSPage() {
   const router = useRouter();
   const [user, setUser] = useState<AuthResponse["user"] | null>(null);
-  const [text, setText] = useState(DEFAULT_TEXT);
+  const [text, setText] = useState(EXAMPLE_COPY[0]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioFileName, setAudioFileName] = useState<string | null>(null);
-  const [usageCredits, setUsageCredits] = useState(0);
-  const [monthlyTotal, setMonthlyTotal] = useState(0);
-  const [monthlyLimit, setMonthlyLimit] = useState<number | null>(null);
+  const [usageCredits, setUsageCredits] = useState(EXAMPLE_COPY[0].length);
 
   useEffect(() => {
     async function bootstrap() {
@@ -71,15 +58,8 @@ export default function TTSPage() {
         router.replace("/admin");
         return;
       }
+
       setUser(payload.user);
-      
-      // 加载当前用户月度消耗
-      const usageRes = await fetch("/api/proxy/user/usage");
-      if (usageRes.ok) {
-        const usage = (await usageRes.json()) as UserUsageResponse;
-        setMonthlyTotal(usage.credits_used);
-        setMonthlyLimit(usage.credits_limit);
-      }
     }
 
     void bootstrap();
@@ -146,8 +126,6 @@ export default function TTSPage() {
       setAudioUrl(nextAudioUrl);
       setAudioFileName(payload.file_name);
       setUsageCredits(payload.usage_credits);
-      setMonthlyTotal(payload.monthly_total_used);
-      setMonthlyLimit(payload.monthly_limit);
     } catch (err) {
       setError(err instanceof Error ? err.message : "生成音频失败");
     } finally {
@@ -156,94 +134,148 @@ export default function TTSPage() {
   }
 
   return (
-    <UserWorkspaceShell
-      activeItem="文案生成语音"
-      companyName={user?.company_name ?? user?.username ?? null}
-      onLogout={logout}
-    >
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <form onSubmit={onSubmit}>
-          <Card className="rounded-[28px] border-[#cad4de] bg-white p-6 lg:p-7">
-            <div className="rounded-[24px] bg-[#f3f7fb] p-5">
-              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.28em] text-slate-500">任务操作页</p>
-                  <h2 className="mt-3 text-3xl font-semibold text-[#17202a]">把文案直接转成音频</h2>
-                </div>
-                <div className="rounded-full bg-[#18364e] px-4 py-2 text-sm text-white">
-                  本月累计TOKEN：{monthlyTotal.toLocaleString()}{monthlyLimit ? ` / ${monthlyLimit.toLocaleString()}` : ""}
-                </div>
-              </div>
-
-              <div className="mt-5 rounded-[24px] border border-[#cad4de] bg-white p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.24em] text-slate-500">输入文案</p>
-                    <p className="mt-2 text-sm text-slate-600">{characterCount} characters</p>
-                  </div>
-                  <div className="rounded-full bg-[#18364e] px-4 py-2 text-xs uppercase tracking-[0.24em] text-white">固定音色</div>
-                </div>
-
-                <label className="mt-4 block text-xs uppercase tracking-[0.28em] text-slate-500" htmlFor="tts-text">
-                  Script
-                </label>
-                <textarea
-                  id="tts-text"
-                  className="mt-3 min-h-[360px] w-full resize-none rounded-[24px] border border-[#cad4de] bg-[#fbfdff] px-5 py-4 text-base leading-8 text-foreground outline-none transition focus:border-[#18364e] focus:ring-2 focus:ring-[#18364e]/15"
-                  maxLength={9999}
-                  onChange={onTextChange}
-                  placeholder="输入你要转成语音的文案"
-                  required
-                  value={text}
-                />
-              </div>
+    <main className="min-h-screen p-4 lg:p-8">
+      <div className="mx-auto max-w-7xl">
+        <section className="relative overflow-hidden rounded-[40px] border border-[#e5dacd] bg-[#f7efe2] px-5 py-6 shadow-panel lg:px-8 lg:py-8">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-[radial-gradient(circle_at_top,rgba(196,99,61,0.24),transparent_58%)]"
+          />
+          <div className="relative flex flex-col gap-4 border-b border-[#dfcfbe] pb-6 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.35em] text-stone-500">Text To Speech</p>
+              <h1 className="mt-3 text-3xl font-semibold leading-tight text-[#241714] lg:text-5xl">
+                输入文案，直接生成可用音频。
+              </h1>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-stone-600">
+                中间工作区保留了最核心的操作链路：输入文案、查看 credit 消耗、生成音频、在线试听并下载。
+              </p>
             </div>
-
-            {error ? <p className="mt-5 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Button className="h-12 px-7 bg-[#18364e] text-base hover:bg-[#102739]" disabled={submitting} type="submit">
-                {submitting ? "生成中..." : "生成音频"}
+            <div className="flex flex-wrap gap-3">
+              <Button className="h-11 px-5" onClick={() => router.push("/welcome")} type="button" variant="secondary">
+                返回工作台
+              </Button>
+              <Button className="h-11 px-5" variant="ghost" onClick={logout}>
+                Logout
               </Button>
             </div>
-          </Card>
-        </form>
+          </div>
 
-        <div className="space-y-4">
-          <Card className="rounded-[28px] border-[#cad4de] bg-[#18364e] p-5 text-white">
-            <p className="text-xs uppercase tracking-[0.28em] text-slate-300">当前音色</p>
-            <p className="mt-3 text-xl font-semibold">康迪</p>
-          </Card>
-
-          <Card className="rounded-[28px] border-[#cad4de] bg-white p-5">
-            <p className="text-xs uppercase tracking-[0.28em] text-slate-500">生成结果</p>
-            <h2 className="mt-3 text-2xl font-semibold text-[#17202a]">输出预览</h2>
-            <div className="mt-5 rounded-[24px] border border-dashed border-[#cad4de] bg-[#f6f9fc] p-4" data-testid="tts-result-panel">
-              {audioUrl ? (
-                <div className="space-y-4">
-                  <div className="rounded-[20px] bg-white p-4">
-                    <p className="text-xs uppercase tracking-[0.24em] text-slate-500">文件</p>
-                    <p className="mt-2 break-all text-lg font-semibold text-[#17202a]">{audioFileName}</p>
+          <div className="relative mt-6 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+            <form className="space-y-5" onSubmit={onSubmit}>
+              <Card className="rounded-[32px] border-[#eadfce] bg-[#fffaf2] p-6 lg:p-7">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.3em] text-stone-500">Credit Usage Preview</p>
+                    <p className="mt-2 text-2xl font-semibold text-[#231815]">音色AITOKEN消耗：{usageCredits}</p>
                   </div>
-                  <audio className="w-full" controls src={audioUrl} />
-                  <a download={audioFileName ?? "tts-audio.mp3"} href={audioUrl}>
-                    <Button className="h-11 w-full bg-[#18364e] hover:bg-[#102739]" type="button">
-                      下载音频
-                    </Button>
-                  </a>
+                  <div className="rounded-full border border-[#e5d7c5] bg-white px-4 py-2 text-xs uppercase tracking-[0.24em] text-stone-500">
+                    HD · 1 Character = 1 Credit
+                  </div>
                 </div>
-              ) : (
-                <div className="space-y-3 py-8 text-center">
-                  <p className="text-base font-semibold text-[#17202a]">还没有生成音频</p>
-                  <p className="text-sm leading-7 text-slate-500">点击左侧生成按钮后，这里会显示播放器和下载入口。</p>
+
+                <div className="mt-5 rounded-[28px] border border-[#e7dac9] bg-white p-4">
+                  <div className="flex items-center justify-between gap-3 border-b border-dashed border-[#eadfce] pb-3">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.28em] text-stone-500">Voice</p>
+                      <p className="mt-2 text-lg font-semibold text-[#231815]">{FIXED_VOICE_LABEL}</p>
+                    </div>
+                    <div className="rounded-full bg-[#f5ebdf] px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-[#9a5d3c]">
+                      Fixed
+                    </div>
+                  </div>
+
+                  <label className="mt-4 block text-xs uppercase tracking-[0.28em] text-stone-500" htmlFor="tts-text">
+                    Script
+                  </label>
+                  <textarea
+                    id="tts-text"
+                    className="mt-3 min-h-[360px] w-full resize-none rounded-[24px] border border-[#eadfce] bg-[#fffdf9] px-5 py-4 text-base leading-8 text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
+                    maxLength={9999}
+                    onChange={onTextChange}
+                    placeholder="输入你要转成语音的文案"
+                    required
+                    value={text}
+                  />
+
+                  <div className="mt-3 flex items-center justify-between text-sm text-stone-500">
+                    <p>{characterCount} characters</p>
+                    <p>Signed in as {user?.username ?? "..."}</p>
+                  </div>
                 </div>
-              )}
+
+                {error ? <p className="mt-5 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
+
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <Button className="h-12 px-7 text-base" disabled={submitting} type="submit">
+                    {submitting ? "生成中..." : "生成音频"}
+                  </Button>
+                  <Button
+                    className="h-12 px-7 text-base"
+                    disabled={submitting}
+                    onClick={() => updateText(EXAMPLE_COPY[1])}
+                    type="button"
+                    variant="secondary"
+                  >
+                    替换示例文案
+                  </Button>
+                </div>
+              </Card>
+            </form>
+
+            <div className="space-y-5">
+              <Card className="rounded-[32px] border-[#eadfce] bg-[#fffaf2] p-6 lg:p-7">
+                <p className="text-xs uppercase tracking-[0.3em] text-stone-500">Output</p>
+                <h2 className="mt-3 text-2xl font-semibold text-[#231815]">生成结果</h2>
+                <p className="mt-3 text-sm leading-7 text-stone-600">
+                  生成成功后，音频会出现在这里。你可以直接试听，也可以下载到本地继续用于视频口播。
+                </p>
+
+                <div className="mt-6 rounded-[28px] border border-dashed border-[#dccab6] bg-white p-5" data-testid="tts-result-panel">
+                  {audioUrl ? (
+                    <div className="space-y-4">
+                      <div className="rounded-[22px] bg-[#f7efe5] p-4">
+                        <p className="text-xs uppercase tracking-[0.28em] text-stone-500">File</p>
+                        <p className="mt-2 break-all text-lg font-semibold text-[#231815]">{audioFileName}</p>
+                      </div>
+                      <audio className="w-full" controls src={audioUrl} />
+                      <a download={audioFileName ?? "tts-audio.mp3"} href={audioUrl}>
+                        <Button className="h-11 w-full text-base" type="button">
+                          下载音频
+                        </Button>
+                      </a>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 py-8 text-center">
+                      <p className="text-base font-semibold text-[#231815]">还没有生成音频</p>
+                      <p className="text-sm leading-7 text-stone-500">
+                        点击左侧的生成按钮后，这里会显示播放器和下载入口。
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </Card>
+
+              <Card className="rounded-[32px] border-[#eadfce] bg-[#2b201d] p-6 text-stone-100 lg:p-7">
+                <p className="text-xs uppercase tracking-[0.3em] text-stone-300">Prompt Ideas</p>
+                <h2 className="mt-3 text-2xl font-semibold">快速替换常用文案</h2>
+                <div className="mt-5 space-y-3">
+                  {EXAMPLE_COPY.map((sample) => (
+                    <button
+                      key={sample}
+                      className="w-full rounded-[24px] border border-white/10 bg-white/5 p-4 text-left text-sm leading-7 text-stone-200 transition hover:bg-white/10"
+                      onClick={() => updateText(sample)}
+                      type="button"
+                    >
+                      {sample}
+                    </button>
+                  ))}
+                </div>
+              </Card>
             </div>
-          </Card>
-
-
-        </div>
+          </div>
+        </section>
       </div>
-    </UserWorkspaceShell>
+    </main>
   );
 }

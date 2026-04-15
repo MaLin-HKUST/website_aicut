@@ -6,7 +6,7 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "sqlite:///data/website_aicut.db",
+    "sqlite:///./website_aicut.db",
 )
 
 

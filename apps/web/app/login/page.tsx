@@ -54,27 +54,26 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center p-6">
       <div className="grid w-full max-w-5xl gap-8 lg:grid-cols-[1.05fr_0.95fr]">
         <section className="rounded-[36px] bg-[#2f241f] p-10 text-stone-100 shadow-panel">
-          <p className="mb-4 text-sm uppercase tracking-[0.35em] text-stone-300">联系我们</p>
+          <p className="mb-4 text-sm uppercase tracking-[0.35em] text-stone-300">Website AICut</p>
           <h1 className="max-w-md text-4xl font-semibold leading-tight">
-            小马AI剪辑<br/>
-            营销视频剪辑智能体
+            A minimal cloud-ready admin bootstrap for your internal video platform.
           </h1>
           <p className="mt-6 max-w-lg text-sm leading-7 text-stone-300">
-            帮助企业完成视频剪辑的痛点<br/>
-            线上营销的放大器<br/>
-            重塑线上营销的打法
+            This slice focuses only on login, admin routing, company and user setup, and material metadata.
           </p>
         </section>
 
         <Card className="p-8 lg:p-10">
           <div className="mb-8">
-            <h2 className="text-3xl font-semibold">登录</h2>
+            <p className="text-sm uppercase tracking-[0.3em] text-stone-500">Sign In</p>
+            <h2 className="mt-2 text-3xl font-semibold">Enter your account</h2>
+            <p className="mt-2 text-sm text-stone-500">Admin goes to the control panel. Other users go to the welcome page.</p>
           </div>
 
           <form className="space-y-4" onSubmit={onSubmit}>
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="login-username">
-                用户名
+                Username
               </label>
               <Input
                 id="login-username"
@@ -88,7 +87,7 @@ export default function LoginPage() {
 
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="login-password">
-                密码
+                Password
               </label>
               <Input
                 id="login-password"
@@ -104,7 +103,7 @@ export default function LoginPage() {
             {error ? <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
 
             <Button className="w-full" disabled={submitting} type="submit">
-              {submitting ? "登录中..." : "登录"}
+              {submitting ? "Signing in..." : "Login"}
             </Button>
           </form>
         </Card>
