@@ -111,5 +111,5 @@ cd /Users/malin13/Documents/trae_projects/website_aicut/HarnessPlan/scheduler_Aa
 
 ## 当前阶段
 
-- 已完成：F01-F12
-- 下一步：F13 Heartbeat Timeout And Recovery
+- 已完成：F01-F13
+- 下一步：F14 Artifact Build And Version Recording

@@ -474,7 +474,7 @@
     {
       "id": "F13",
       "title": "Heartbeat Timeout And Recovery",
-      "status": "pending",
+      "status": "done",
       "goal": "Prove offline detection and task recovery across the shared scheduler database.",
       "depends_on": ["F06", "F10"],
       "acceptance": [
@@ -500,6 +500,16 @@
         "configs",
         "tests",
         "HarnessPlan/scheduler_AandW"
+      ],
+      "verification": [
+        "python -m compileall apps/scheduler apps/services tests/test_heartbeat_recovery_e2e_postgres.py",
+        "pytest tests/test_heartbeat_recovery_e2e_postgres.py -q",
+        "A-machine server-side: website_aicut-f10test:latest pytest /home/malin/website_aicut_f10_run/tests/test_heartbeat_recovery_e2e_postgres.py -q  # passed"
+      ],
+      "result": [
+        "Heartbeat recovery e2e now proves that stale workers are marked offline and their tasks are reset to pending",
+        "Recovery e2e proves the task can be reassigned to another healthy worker through the shared PostgreSQL scheduler state",
+        "Recovery e2e also proves the offline worker returns to idle after re-registration"
       ]
     },
     {
