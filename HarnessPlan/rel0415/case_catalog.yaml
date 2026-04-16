@@ -1,0 +1,46 @@
+version: "0415"
+cases:
+  - id: case_login_user
+    title: 普通用户登录进入 welcome
+    purpose: 验证 0415 不破坏现有登录与用户入口
+    source: /Users/malin13/Documents/trae_projects/website_aicut/doc/rel-0415-versionbook/版本0415_任务计划书.md
+
+  - id: case_smart_cut_create_and_upload
+    title: Smart Cut 创建任务并完成上传
+    purpose: 验证 Smart Cut 用户工作页能够走到 analyze 前置完成
+    source: /Users/malin13/Documents/trae_projects/website_aicut/doc/rel-0415-versionbook/版本0415_任务计划书.md
+
+  - id: case_smart_cut_analyze_preview_finalize
+    title: Smart Cut 三阶段闭环
+    purpose: 验证 analyze / preview / finalize 参数提交可用
+    source: /Users/malin13/Documents/trae_projects/website_aicut/doc/rel-0415-versionbook/版本0415_任务计划书.md
+
+  - id: case_task_center_user_view
+    title: 用户任务中心视图
+    purpose: 验证用户只能看到自己的任务和下载入口
+    source: /Users/malin13/Documents/trae_projects/website_aicut/doc/rel-0415-versionbook/版本0415_任务中心原型与范围说明.md
+
+  - id: case_task_center_admin_view
+    title: admin 任务中心视图
+    purpose: 验证 admin 看到同结构下的更完整字段
+    source: /Users/malin13/Documents/trae_projects/website_aicut/doc/rel-0415-versionbook/版本0415_任务中心原型与范围说明.md
+
+  - id: case_download_final_video
+    title: 任务中心下载最终产物
+    purpose: 验证最终视频下载入口在任务中心而不是 Smart Cut 页
+    source: /Users/malin13/Documents/trae_projects/website_aicut/doc/rel-0415-versionbook/版本0415_任务计划书.md
+
+  - id: case_regression_tts
+    title: TTS 现网回归
+    purpose: 验证 0415 不破坏现有 TTS
+    source: /Users/malin13/Documents/trae_projects/website_aicut/doc/rel-0415-versionbook/版本0415_任务计划书.md
+
+  - id: case_regression_admin
+    title: admin 现网回归
+    purpose: 验证 0415 不破坏现有 admin
+    source: /Users/malin13/Documents/trae_projects/website_aicut/doc/rel-0415-versionbook/版本0415_任务计划书.md
+
+  - id: case_cleanup_static_patch
+    title: 清理 Smart Cut 临时静态补丁
+    purpose: 验证 Nginx 静态页和入口注入已经移除
+    source: /Users/malin13/Documents/trae_projects/website_aicut/doc/rel-0415-versionbook/handover/SmartCut_接手拼装交接说明.md

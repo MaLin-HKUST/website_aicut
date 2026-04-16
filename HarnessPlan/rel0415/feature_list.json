@@ -1,0 +1,465 @@
+{
+  "project": "rel0415",
+  "version": "0415",
+  "mode": "harness",
+  "source_specs": [
+    "/Users/malin13/Documents/trae_projects/website_aicut/doc/rel-0415-versionbook/版本0415_任务计划书.md",
+    "/Users/malin13/Documents/trae_projects/website_aicut/doc/rel-0415-versionbook/版本0415_三Agent并行开发方案.md",
+    "/Users/malin13/Documents/trae_projects/website_aicut/doc/rel-0415-versionbook/版本0415_任务中心原型与范围说明.md",
+    "/Users/malin13/Documents/trae_projects/website_aicut/doc/rel-0415-versionbook/handover/SmartCut_接手拼装交接说明.md",
+    "/Users/malin13/Documents/trae_projects/website_aicut/doc/rel-0415-versionbook/handover/task-center-handover.md"
+  ],
+  "development_workflow": {
+    "branch_model": "one-feature-one-branch",
+    "worktree_model": "one-feature-one-worktree-when-parallel",
+    "integration_branch": "release/0415",
+    "commit_policy": [
+      "Feature work happens on its own feature branch.",
+      "Feature development may include multiple commits, but the feature must end with at least one clear feature commit plus verification evidence.",
+      "Only stage files inside the feature commit_scope.",
+      "Do not use git add . or git commit -a for feature work in this harness.",
+      "Completed feature branches merge into release/0415 before final validation and merge back to master."
+    ],
+    "pre_commit_checks": [
+      "git status --short",
+      "git diff --cached --name-only"
+    ]
+  },
+  "agent_lanes": {
+    "agent_1": {
+      "focus": "backend-chain-and-api",
+      "features": [
+        "F06",
+        "F07",
+        "F08",
+        "F11",
+        "F13"
+      ]
+    },
+    "agent_2": {
+      "focus": "task-center",
+      "features": [
+        "F04",
+        "F05",
+        "F07",
+        "F09",
+        "F10"
+      ]
+    },
+    "agent_3": {
+      "focus": "smart-cut-page",
+      "features": [
+        "F03",
+        "F05",
+        "F08",
+        "F09",
+        "F10"
+      ]
+    }
+  },
+  "features": [
+    {
+      "id": "F01",
+      "title": "Harness Bootstrap And Source Lock",
+      "status": "done",
+      "goal": "Create the rel0415 harness, lock the grounded 0415 plan, and make the work resumable.",
+      "depends_on": [],
+      "acceptance": [
+        "rel0415 contains app_spec.txt, feature_list.json, claude-progress.txt, init.sh, README.md, case_catalog.yaml, run_release_gate.py, reports/RESULT_TEMPLATE.md, notes/current-status.md, handover/README.md",
+        "Harness records the grounded architecture facts for 0415 and the 3-agent execution model",
+        "Harness status command reports the next unfinished feature"
+      ],
+      "branch_name": "feature/0415-harness-bootstrap",
+      "write_scope": [
+        "HarnessPlan/rel0415"
+      ],
+      "commit_scope": [
+        "HarnessPlan/rel0415"
+      ],
+      "verification": [
+        "bash -n HarnessPlan/rel0415/init.sh",
+        "python -m json.tool HarnessPlan/rel0415/feature_list.json",
+        "./HarnessPlan/rel0415/init.sh status"
+      ],
+      "result": [
+        "Created the 0415 harness with standard artifacts and release-gate script",
+        "Locked the grounded 0415 integration plan and next recommended feature"
+      ],
+      "commit_rule": "Commit only harness files for this feature."
+    },
+    {
+      "id": "F02",
+      "title": "Recover Live Next Web Baseline Into Repo",
+      "status": "done",
+      "goal": "Move the grounded live A-machine Next frontend baseline from server_sync into the formal repo code path so 0415 can be developed on a real web codebase.",
+      "depends_on": [
+        "F01"
+      ],
+      "acceptance": [
+        "A formal apps/web tree exists under the main repo",
+        "Recovered web baseline matches the live A-machine Next baseline instead of a placeholder static page",
+        "Recovery does not overwrite backend code or versionbook docs"
+      ],
+      "branch_name": "feature/0415-recover-web-baseline",
+      "write_scope": [
+        "apps/web",
+        "server_sync/20260415_a_machine_snapshot/code_and_data/apps/web",
+        "HarnessPlan/rel0415"
+      ],
+      "commit_scope": [
+        "apps/web",
+        "HarnessPlan/rel0415"
+      ],
+      "verification": [
+        "test -f apps/web/package.json",
+        "test -f apps/web/app/welcome/page.tsx",
+        "npm --prefix apps/web run build"
+      ],
+      "result": [
+        "Recovered the live A-machine Next baseline into apps/web",
+        "Excluded .next, node_modules, test-results, tsconfig.tsbuildinfo, and backup files from the recovered baseline",
+        "Verified apps/web builds successfully on the recovered baseline"
+      ],
+      "commit_rule": "Commit only recovered Next web baseline files plus harness tracking."
+    },
+    {
+      "id": "F03",
+      "title": "Smart Cut Next Page Migration",
+      "status": "pending",
+      "goal": "Migrate the Smart Cut Next handover pages into the formal apps/web Next baseline.",
+      "depends_on": [
+        "F02"
+      ],
+      "acceptance": [
+        "apps/web/app/smart-cut/page.tsx exists in the formal web baseline",
+        "apps/web/app/smart-cut/[taskId]/page.tsx exists in the formal web baseline",
+        "Smart Cut components and helper library are migrated without reintroducing the temporary backend shim"
+      ],
+      "branch_name": "feature/0415-smart-cut-next-migration",
+      "write_scope": [
+        "apps/web",
+        "doc/rel-0415-versionbook/handover",
+        "HarnessPlan/rel0415"
+      ],
+      "commit_scope": [
+        "apps/web",
+        "HarnessPlan/rel0415"
+      ],
+      "verification": [
+        "npm --prefix apps/web run build",
+        "test -f apps/web/app/smart-cut/page.tsx",
+        "test -f apps/web/components/smart-cut/workspace.tsx"
+      ],
+      "commit_rule": "Commit only Smart Cut Next page migration plus harness tracking."
+    },
+    {
+      "id": "F04",
+      "title": "Task Center Next Page Migration",
+      "status": "pending",
+      "goal": "Rebuild the task-center handover layout inside the formal Next app instead of copying the original Vite page directly.",
+      "depends_on": [
+        "F02"
+      ],
+      "acceptance": [
+        "A formal Next task center page exists under apps/web",
+        "The page uses the 0415 task-center structure: search, filters, left list, right detail panel",
+        "No Vite-only routing or store assumptions remain in the migrated page"
+      ],
+      "branch_name": "feature/0415-task-center-next-migration",
+      "write_scope": [
+        "apps/web",
+        "doc/rel-0415-versionbook/handover",
+        "HarnessPlan/rel0415"
+      ],
+      "commit_scope": [
+        "apps/web",
+        "HarnessPlan/rel0415"
+      ],
+      "verification": [
+        "npm --prefix apps/web run build",
+        "test -f apps/web/app/tasks/page.tsx"
+      ],
+      "commit_rule": "Commit only task-center Next migration plus harness tracking."
+    },
+    {
+      "id": "F05",
+      "title": "Welcome And Admin Entry Integration",
+      "status": "pending",
+      "goal": "Add real Smart Cut and Task Center entry points to the recovered Next site without disturbing existing admin and TTS behavior.",
+      "depends_on": [
+        "F03",
+        "F04"
+      ],
+      "acceptance": [
+        "Normal users can reach Smart Cut and Task Center from the real welcome page",
+        "Admin can reach Task Center from the admin surface or admin-specific route",
+        "Existing login, welcome redirect, admin, and TTS behavior still works"
+      ],
+      "branch_name": "feature/0415-entry-integration",
+      "write_scope": [
+        "apps/web",
+        "HarnessPlan/rel0415"
+      ],
+      "commit_scope": [
+        "apps/web",
+        "HarnessPlan/rel0415"
+      ],
+      "verification": [
+        "npm --prefix apps/web run build",
+        "npx playwright test --config apps/web/playwright.config.ts"
+      ],
+      "commit_rule": "Commit entry integration only."
+    },
+    {
+      "id": "F06",
+      "title": "Smart Cut API Contract Alignment",
+      "status": "pending",
+      "goal": "Align the migrated Smart Cut page with the real Smart Cut API in this repo instead of the temporary handover shim.",
+      "depends_on": [
+        "F03"
+      ],
+      "acceptance": [
+        "Smart Cut page uses the real create/upload/analyze/preview/finalize API flow",
+        "Temporary handover-only backend shim code is not adopted as the production source of truth",
+        "API contract is explicit enough for frontend wiring without guessing"
+      ],
+      "branch_name": "feature/0415-smart-cut-api-contract",
+      "write_scope": [
+        "apps/api",
+        "apps/models",
+        "apps/services",
+        "apps/scheduler",
+        "configs",
+        "HarnessPlan/rel0415"
+      ],
+      "commit_scope": [
+        "apps/api",
+        "apps/models",
+        "apps/services",
+        "apps/scheduler",
+        "configs",
+        "HarnessPlan/rel0415"
+      ],
+      "verification": [
+        "python -m compileall apps/api apps/models apps/services apps/scheduler configs",
+        "pytest tests -q"
+      ],
+      "commit_rule": "Commit Smart Cut API alignment and harness tracking only."
+    },
+    {
+      "id": "F07",
+      "title": "Task Center User And Admin API",
+      "status": "pending",
+      "goal": "Provide real task-center list and detail APIs for user and admin views using Smart Cut data as the current task source.",
+      "depends_on": [
+        "F04",
+        "F06"
+      ],
+      "acceptance": [
+        "User task-center API returns only the current user's Smart Cut tasks",
+        "Admin task-center API returns a richer task list with additional fields",
+        "Task detail includes stage, status, failure information, and download fields"
+      ],
+      "branch_name": "feature/0415-task-center-api",
+      "write_scope": [
+        "apps/api",
+        "apps/models",
+        "apps/services",
+        "HarnessPlan/rel0415"
+      ],
+      "commit_scope": [
+        "apps/api",
+        "apps/models",
+        "apps/services",
+        "HarnessPlan/rel0415"
+      ],
+      "verification": [
+        "python -m compileall apps/api apps/models apps/services",
+        "pytest tests -q"
+      ],
+      "commit_rule": "Commit task-center API contract and harness tracking only."
+    },
+    {
+      "id": "F08",
+      "title": "Smart Cut To Task Center Transition Wiring",
+      "status": "pending",
+      "goal": "Wire the Smart Cut finalize action so the user continues in Task Center for final tracking and download.",
+      "depends_on": [
+        "F03",
+        "F06",
+        "F07"
+      ],
+      "acceptance": [
+        "After finalize submit, the user is directed to the relevant task-center task view",
+        "Smart Cut page no longer tries to own the final result/download lifecycle",
+        "Task center can render the newly created or advanced Smart Cut task"
+      ],
+      "branch_name": "feature/0415-smart-cut-task-center-transition",
+      "write_scope": [
+        "apps/web",
+        "apps/api",
+        "HarnessPlan/rel0415"
+      ],
+      "commit_scope": [
+        "apps/web",
+        "apps/api",
+        "HarnessPlan/rel0415"
+      ],
+      "verification": [
+        "npm --prefix apps/web run build",
+        "python -m compileall apps/api",
+        "npx playwright test --config apps/web/playwright.config.ts"
+      ],
+      "commit_rule": "Commit transition wiring only."
+    },
+    {
+      "id": "F09",
+      "title": "Frontend Build Green On 0415 Baseline",
+      "status": "pending",
+      "goal": "Make the recovered Next web baseline and new 0415 pages build cleanly in the real repo.",
+      "depends_on": [
+        "F05",
+        "F08"
+      ],
+      "acceptance": [
+        "apps/web build is green on the 0415 branch",
+        "No leftover type or import errors block the 0415 web build",
+        "The new routes are part of the build output"
+      ],
+      "branch_name": "feature/0415-web-build-green",
+      "write_scope": [
+        "apps/web",
+        "HarnessPlan/rel0415"
+      ],
+      "commit_scope": [
+        "apps/web",
+        "HarnessPlan/rel0415"
+      ],
+      "verification": [
+        "npm --prefix apps/web run build"
+      ],
+      "commit_rule": "Commit only build-fix and harness tracking."
+    },
+    {
+      "id": "F10",
+      "title": "Server Deploy To release/0415 Test Slot",
+      "status": "pending",
+      "goal": "Deploy the 0415 site to a real test slot on the servers without replacing the live stable site yet.",
+      "depends_on": [
+        "F09"
+      ],
+      "acceptance": [
+        "release/0415 can be built and deployed on the real server path",
+        "Smart Cut and Task Center are reachable in the test slot",
+        "Live stable admin and TTS are still untouched"
+      ],
+      "branch_name": "feature/0415-server-test-slot",
+      "write_scope": [
+        "apps/web",
+        "apps/api",
+        "deploy",
+        "docker-compose.yml",
+        "docker-compose.*.yml",
+        "HarnessPlan/rel0415"
+      ],
+      "commit_scope": [
+        "apps/web",
+        "apps/api",
+        "deploy",
+        "docker-compose.yml",
+        "docker-compose.*.yml",
+        "HarnessPlan/rel0415"
+      ],
+      "verification": [
+        "docker compose config",
+        "curl -I http://127.0.0.1:3000/login"
+      ],
+      "commit_rule": "Commit only 0415 test-slot deploy changes and harness tracking."
+    },
+    {
+      "id": "F11",
+      "title": "End To End Acceptance For 0415",
+      "status": "pending",
+      "goal": "Run the 0415 user/admin acceptance flow on the real integrated system.",
+      "depends_on": [
+        "F10"
+      ],
+      "acceptance": [
+        "Normal user can log in, enter Smart Cut, finish the three-stage flow, and continue in Task Center",
+        "Admin can open Task Center and see richer task data",
+        "Final video download is reachable from Task Center"
+      ],
+      "branch_name": "feature/0415-e2e-acceptance",
+      "write_scope": [
+        "HarnessPlan/rel0415",
+        "doc/rel-0415-versionbook"
+      ],
+      "commit_scope": [
+        "HarnessPlan/rel0415",
+        "doc/rel-0415-versionbook"
+      ],
+      "verification": [
+        "npx playwright test --config apps/web/playwright.config.ts",
+        "manual server acceptance checklist"
+      ],
+      "commit_rule": "Commit acceptance records and harness tracking only."
+    },
+    {
+      "id": "F12",
+      "title": "Cleanup Temporary Nginx And Static Smart Cut Patch",
+      "status": "pending",
+      "goal": "Remove the temporary Nginx static Smart Cut route and injected welcome entry once the real 0415 routes are live.",
+      "depends_on": [
+        "F11"
+      ],
+      "acceptance": [
+        "The static Smart Cut HTML patch is removed from the server",
+        "The temporary Nginx location for static Smart Cut is removed",
+        "The site still exposes Smart Cut through the real Next route"
+      ],
+      "branch_name": "feature/0415-cleanup-temp-patch",
+      "write_scope": [
+        "deploy",
+        "doc/rel-0415-versionbook",
+        "HarnessPlan/rel0415"
+      ],
+      "commit_scope": [
+        "deploy",
+        "HarnessPlan/rel0415"
+      ],
+      "verification": [
+        "manual nginx config check",
+        "curl -I <smart-cut-route-after-cleanup>"
+      ],
+      "commit_rule": "Commit cleanup notes and harness tracking only."
+    },
+    {
+      "id": "F13",
+      "title": "Release Gate And Handover Closeout",
+      "status": "pending",
+      "goal": "Record the final 0415 release evidence, mark the version ready, and leave the work resumable for post-release changes.",
+      "depends_on": [
+        "F12"
+      ],
+      "acceptance": [
+        "release gate report exists under HarnessPlan/rel0415/reports",
+        "All F01-F12 features are marked done before F13 passes",
+        "Harness notes and handover index reflect the delivered 0415 state"
+      ],
+      "branch_name": "feature/0415-release-gate",
+      "write_scope": [
+        "HarnessPlan/rel0415",
+        "doc/rel-0415-versionbook"
+      ],
+      "commit_scope": [
+        "HarnessPlan/rel0415",
+        "doc/rel-0415-versionbook"
+      ],
+      "verification": [
+        "python HarnessPlan/rel0415/run_release_gate.py",
+        "release_gate_*.md generated under HarnessPlan/rel0415/reports"
+      ],
+      "commit_rule": "Commit only release evidence and harness closeout updates."
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+Project: rel0415
+Mode: long-running harness
+Version target: 0415
+
+Goal
+- Build the real 0415 release by integrating Smart Cut and Task Center into the live A-machine website.
+- Keep current online admin, TTS, login, and SQLite-backed business behavior intact.
+- Replace temporary Nginx/static Smart Cut patches with real Next routes and real backend/API wiring.
+
+Version scope
+- Add two new entry tabs:
+  1. Smart Cut
+  2. Task Center
+- Smart Cut is only for normal users and stays a three-stage work page:
+  - Analyze
+  - Preview
+  - Finalize parameter submit
+- Task Center is a separate entry:
+  - normal users see their own Smart Cut tasks
+  - admin sees the same structure with more fields
+- After "生成视频", task tracking, failure view, and artifact download move to Task Center.
+
+Grounded architecture facts
+- This repo currently does not contain the formal `apps/web` source tree under the main code root.
+- The grounded live Next baseline is stored in:
+  `/Users/malin13/Documents/trae_projects/website_aicut/server_sync/20260415_a_machine_snapshot/code_and_data/apps/web`
+- Smart Cut handover code lives in:
+  `/Users/malin13/Documents/trae_projects/aicut2602/.worktrees/website_aicut-0415-smart-cut/apps/web`
+- Task Center handover code lives in:
+  `/Users/malin13/Documents/trae_projects/aicut2602/frontend`
+- Smart Cut handover is Next-compatible and can be migrated directly.
+- Task Center handover is Vite/React Router and must be re-implemented as a Next page, not copied verbatim.
+- Real backend source of truth for Smart Cut/scheduler/gateway remains this repo's current Python code under `apps/`, `worker/`, and `configs/`, not the old `server_sync/.../apps/api/app/*` tree.
+
+Success criteria
+- Harness artifacts exist and are the only source of feature tracking for 0415.
+- One feature at a time, each finished feature is verified and committed independently.
+- `release/0415` can be used as the integration branch for the full 0415 release.
+- Smart Cut and Task Center become real site routes in the Next app.
+- Temporary Nginx static Smart Cut patching is removed after the real routes are live.
+
+Primary code areas
+- `apps/api`
+- `apps/scheduler`
+- `apps/models`
+- `apps/services`
+- `configs`
+- `server_sync/20260415_a_machine_snapshot/code_and_data/apps/web`
+- `doc/rel-0415-versionbook`
+
+Planning sources
+- `/Users/malin13/Documents/trae_projects/website_aicut/doc/rel-0415-versionbook/版本0415_任务计划书.md`
+- `/Users/malin13/Documents/trae_projects/website_aicut/doc/rel-0415-versionbook/版本0415_三Agent并行开发方案.md`
+- `/Users/malin13/Documents/trae_projects/website_aicut/doc/rel-0415-versionbook/版本0415_任务中心原型与范围说明.md`
+- `/Users/malin13/Documents/trae_projects/website_aicut/doc/rel-0415-versionbook/handover/SmartCut_接手拼装交接说明.md`
+- `/Users/malin13/Documents/trae_projects/website_aicut/doc/rel-0415-versionbook/handover/task-center-handover.md`
+
+Non-goals for harness bootstrap
+- Do not move product code into the harness directory.
+- Do not treat the Vite task-center handover as the final production frontend stack.
+- Do not overwrite existing product progress without recording it in `claude-progress.txt`.

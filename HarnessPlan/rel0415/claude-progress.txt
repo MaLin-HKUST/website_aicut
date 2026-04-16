@@ -1,0 +1,60 @@
+# rel0415 Harness Progress
+
+## Date
+- 2026-04-17
+
+## Mode
+- harness-bootstrap
+
+## Completed
+- F01: Harness Bootstrap And Source Lock
+- F02: Recover Live Next Web Baseline Into Repo
+
+## Grounded status captured in this session
+- `HarnessPlan/rel0415` existed as an empty directory and had no harness artifacts.
+- The grounded A-machine live Next baseline is stored under `server_sync/20260415_a_machine_snapshot/code_and_data/apps/web`.
+- The Smart Cut handover is a Next app and is directly portable into the recovered Next baseline.
+- The Task Center handover is a Vite/React Router page and must be rebuilt as a Next page instead of copied verbatim.
+- The real 0415 target is a usable live version, not a mock/demo preview branch.
+
+## What changed in this session
+- Created the full rel0415 harness scaffold:
+  - `app_spec.txt`
+  - `feature_list.json`
+  - `claude-progress.txt`
+  - `init.sh`
+  - `case_catalog.yaml`
+  - `run_release_gate.py`
+  - `README.md`
+  - `notes/current-status.md`
+  - `handover/README.md`
+  - `reports/RESULT_TEMPLATE.md`
+  - `artifacts/README.md`
+- Reframed 0415 work as a formal feature backlog from F01-F13.
+- Locked `release/0415` as the integration branch and recorded the 3-agent model as the formal collaboration contract for this harness.
+- Recovered the live Next baseline into `apps/web` without copying build caches or local node_modules.
+- Verified the recovered `apps/web` baseline with `npm --prefix apps/web run build`.
+
+## Verification run for F01
+- `bash -n HarnessPlan/rel0415/init.sh`
+- `python -m json.tool HarnessPlan/rel0415/feature_list.json`
+- `./HarnessPlan/rel0415/init.sh status`
+- `./HarnessPlan/rel0415/init.sh feature-check F02`
+- `python HarnessPlan/rel0415/run_release_gate.py`
+- `test -f apps/web/package.json`
+- `test -f apps/web/app/welcome/page.tsx`
+- `npm --prefix apps/web install`
+- `npm --prefix apps/web run build`
+
+## Current blocker summary
+- The formal `apps/web` path now exists and builds successfully.
+- Smart Cut handover still depends on list / edits / upload-direct contracts that do not yet exist in the current backend.
+- Task Center handover is a Vite page and must be reimplemented in Next before API integration.
+
+## Next recommended feature
+- F03: Smart Cut Next Page Migration
+- F04: Task Center Next Page Migration
+
+## Notes
+- This harness is execution state only. Product code still belongs in the main repo, not inside the harness directory.
+- The handover documents remain under `doc/rel-0415-versionbook/handover`; the harness only indexes them.
