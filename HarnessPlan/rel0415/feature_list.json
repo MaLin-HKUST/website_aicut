@@ -125,7 +125,7 @@
     {
       "id": "F03",
       "title": "Smart Cut Next Page Migration",
-      "status": "pending",
+      "status": "done",
       "goal": "Migrate the Smart Cut Next handover pages into the formal apps/web Next baseline.",
       "depends_on": [
         "F02"
@@ -149,6 +149,11 @@
         "npm --prefix apps/web run build",
         "test -f apps/web/app/smart-cut/page.tsx",
         "test -f apps/web/components/smart-cut/workspace.tsx"
+      ],
+      "result": [
+        "Migrated Smart Cut Next routes into apps/web/app/smart-cut",
+        "Migrated Smart Cut workspace, brace-script editor, helper library, and E2E draft",
+        "Verified the migrated Smart Cut frontend compiles on the recovered Next baseline"
       ],
       "commit_rule": "Commit only Smart Cut Next page migration plus harness tracking."
     },

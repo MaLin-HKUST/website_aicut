@@ -30,5 +30,5 @@
 ## Current next move
 
 - `F02` 已完成：现网 Next 基线已经正式回收到 `apps/web`，并通过了 `npm --prefix apps/web run build`。
-- `F03` 直接迁移 Smart Cut Next 页面与组件。
+- `F03` 已完成：Smart Cut Next 页面、组件、前端适配层已经迁入 `apps/web`，并通过了前端构建。
 - `F04` 在 Next 里重建任务中心页面壳，不直接复制 Vite 页面。

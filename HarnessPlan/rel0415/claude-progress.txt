@@ -9,6 +9,7 @@
 ## Completed
 - F01: Harness Bootstrap And Source Lock
 - F02: Recover Live Next Web Baseline Into Repo
+- F03: Smart Cut Next Page Migration
 
 ## Grounded status captured in this session
 - `HarnessPlan/rel0415` existed as an empty directory and had no harness artifacts.
@@ -34,6 +35,8 @@
 - Locked `release/0415` as the integration branch and recorded the 3-agent model as the formal collaboration contract for this harness.
 - Recovered the live Next baseline into `apps/web` without copying build caches or local node_modules.
 - Verified the recovered `apps/web` baseline with `npm --prefix apps/web run build`.
+- Migrated Smart Cut Next routes, components, helper library, and E2E draft into `apps/web`.
+- Verified Smart Cut routes compile on the recovered Next baseline with `npm --prefix apps/web run build`.
 
 ## Verification run for F01
 - `bash -n HarnessPlan/rel0415/init.sh`
@@ -45,15 +48,17 @@
 - `test -f apps/web/app/welcome/page.tsx`
 - `npm --prefix apps/web install`
 - `npm --prefix apps/web run build`
+- `test -f apps/web/app/smart-cut/page.tsx`
+- `test -f apps/web/components/smart-cut/workspace.tsx`
 
 ## Current blocker summary
 - The formal `apps/web` path now exists and builds successfully.
-- Smart Cut handover still depends on list / edits / upload-direct contracts that do not yet exist in the current backend.
+- Smart Cut frontend shell is now present, but it still depends on list / edits / upload-direct contracts that do not yet exist in the current backend.
 - Task Center handover is a Vite page and must be reimplemented in Next before API integration.
 
 ## Next recommended feature
-- F03: Smart Cut Next Page Migration
 - F04: Task Center Next Page Migration
+- F06: Smart Cut API Contract Alignment
 
 ## Notes
 - This harness is execution state only. Product code still belongs in the main repo, not inside the harness directory.
