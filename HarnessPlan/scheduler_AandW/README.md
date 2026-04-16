@@ -111,5 +111,5 @@ cd /Users/malin13/Documents/trae_projects/website_aicut/HarnessPlan/scheduler_Aa
 
 ## 当前阶段
 
-- 已完成：F01-F11
-- 下一步：F12 Finalize End-to-End Through Shared PostgreSQL
+- 已完成：F01-F12
+- 下一步：F13 Heartbeat Timeout And Recovery

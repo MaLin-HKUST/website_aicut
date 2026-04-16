@@ -652,11 +652,10 @@ class FinalizeProcessor(BaseProcessor):
                 business_task.status = TaskStatus.SUCCESS
                 business_task.current_stage = CurrentStage.COMPLETE
                 business_task.final_video_url = result.get("final_video_url")
-                business_task.final_video_bitrate = self._input_data.get("output_bitrate")
                 
                 if result.get("groundtruth_url"):
                     business_task.groundtruth_url = result["groundtruth_url"]
-                    business_task.groundtruth_upload_status = "success"
+                    business_task.groundtruth_upload_status = "completed"
                 
                 logger.info(f"Business task marked as success: {business_task.id}")
             

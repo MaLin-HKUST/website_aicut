@@ -352,6 +352,9 @@ class SchedulerService:
             if scheduler_task.result:
                 if "final_video_url" in scheduler_task.result:
                     business_task.final_video_url = scheduler_task.result["final_video_url"]
+                if "groundtruth_url" in scheduler_task.result:
+                    business_task.groundtruth_url = scheduler_task.result["groundtruth_url"]
+                    business_task.groundtruth_upload_status = "completed"
         
         business_task.updated_at = datetime.utcnow()
         

@@ -433,7 +433,7 @@
     {
       "id": "F12",
       "title": "Finalize End-to-End Through Shared PostgreSQL",
-      "status": "pending",
+      "status": "done",
       "goal": "Run finalize through the full A-machine + Worker gateway + algorithm chain.",
       "depends_on": ["F11"],
       "acceptance": [
@@ -459,6 +459,16 @@
         "configs",
         "tests",
         "HarnessPlan/scheduler_AandW"
+      ],
+      "verification": [
+        "python -m compileall apps/scheduler worker tests/test_finalize_e2e_postgres.py",
+        "pytest tests/test_finalize_e2e_postgres.py tests/test_preview_e2e_postgres.py tests/test_analyze_e2e_postgres.py tests/test_algorithm_runner.py tests/test_worker_gateway_transport.py tests/test_worker_job_contract.py -q",
+        "A-machine server-side: website_aicut-f10test:latest pytest /home/malin/website_aicut_f10_run/tests/test_finalize_e2e_postgres.py -q  # passed"
+      ],
+      "result": [
+        "Finalize scheduler closure now persists groundtruth_url and completed upload status alongside final_video_url",
+        "Finalize processor aligns groundtruth completion state with the task-detail API expectations",
+        "Finalize e2e passed through shared PostgreSQL locally and on the A-machine temporary validation environment"
       ]
     },
     {
