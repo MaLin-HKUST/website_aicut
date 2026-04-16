@@ -515,7 +515,7 @@
     {
       "id": "F14",
       "title": "Artifact Build And Version Recording",
-      "status": "pending",
+      "status": "done",
       "goal": "Create repeatable build/export flows for A-scheduler and Worker gateway images with versioned filenames.",
       "depends_on": ["F04", "F09"],
       "acceptance": [
@@ -535,6 +535,15 @@
         "worker",
         "apps/scheduler",
         "scripts"
+      ],
+      "verification": [
+        "bash -n worker/build.sh scripts/build_a_scheduler_artifact.sh scripts/record_artifact.sh",
+        "pytest tests/test_artifact_build_scripts.py -q"
+      ],
+      "result": [
+        "Worker gateway build script now supports versioned tar export and writes a harness artifact record",
+        "Added a dedicated a-scheduler artifact build/export script with matching naming rules",
+        "Added a shared record_artifact.sh helper and tests covering dry-run naming plus markdown record generation"
       ]
     },
     {
