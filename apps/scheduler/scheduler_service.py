@@ -336,6 +336,10 @@ class SchedulerService:
                     if scheduler_task.result:
                         if "audio_b_url" in scheduler_task.result:
                             edit.audio_b_url = scheduler_task.result["audio_b_url"]
+                        if "edited_delay_cuts_tos_key" in scheduler_task.result:
+                            edit.delay_cuts_tos_key = scheduler_task.result["edited_delay_cuts_tos_key"]
+                        elif "delay_cuts_tos_key" in scheduler_task.result:
+                            edit.delay_cuts_tos_key = scheduler_task.result["delay_cuts_tos_key"]
                         if "pause_cuts_tos_key" in scheduler_task.result:
                             edit.pause_cuts_tos_key = scheduler_task.result["pause_cuts_tos_key"]
         

@@ -101,8 +101,8 @@ class PreviewProcessor(BaseProcessor):
                 "status": "success",
                 "edit_id": self._edit.id if self._edit else None,
                 "audio_b_url": result.get("audio_b_url"),
-                "delay_cuts_url": result.get("delay_cuts_url"),
-                "pause_cuts_url": result.get("pause_cuts_url"),
+                "edited_delay_cuts_tos_key": result.get("edited_delay_cuts_tos_key"),
+                "pause_cuts_tos_key": result.get("pause_cuts_tos_key"),
             }
             
         except Exception as e:
@@ -233,8 +233,8 @@ class PreviewProcessor(BaseProcessor):
                 "pause_cuts_path": Path(manifest_result["outputs"]["pause_cuts_on_original"]["local_path"]),
                 "audio_b_path": Path(manifest_result["outputs"]["audio_b"]["local_path"]),
                 "audio_b_url": None,
-                "delay_cuts_url": None,
-                "pause_cuts_url": None,
+                "edited_delay_cuts_tos_key": None,
+                "pause_cuts_tos_key": None,
             }
         
         # 执行算法
@@ -252,8 +252,8 @@ class PreviewProcessor(BaseProcessor):
             "pause_cuts_path": algorithm_result.get("pause_cuts_path"),
             "audio_b_path": algorithm_result.get("audio_b_path"),
             "audio_b_url": None,  # 将在 upload_output 中设置
-            "delay_cuts_url": None,
-            "pause_cuts_url": None,
+            "edited_delay_cuts_tos_key": None,
+            "pause_cuts_tos_key": None,
         }
     
     async def upload_output(self, result: dict) -> None:
@@ -280,14 +280,14 @@ class PreviewProcessor(BaseProcessor):
             key = f"{base_key}/edited_delay_cuts.json"
             await self._upload_file_async(result["edited_delay_cuts_path"], key)
             upload_results["edited_delay_cuts"] = key
-            result["delay_cuts_url"] = key
+            result["edited_delay_cuts_tos_key"] = key
         
         # 上传 pause_cuts
         if result.get("pause_cuts_path"):
             key = f"{base_key}/pause_cuts_on_original.json"
             await self._upload_file_async(result["pause_cuts_path"], key)
             upload_results["pause_cuts"] = key
-            result["pause_cuts_url"] = key
+            result["pause_cuts_tos_key"] = key
         
         # 上传 audio_b
         if result.get("audio_b_path"):
