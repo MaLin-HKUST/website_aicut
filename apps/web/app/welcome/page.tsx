@@ -53,10 +53,16 @@ export default function WelcomePage() {
                 Hello{user ? `, ${user.username}` : ""}. 把文案直接转成可试听、可下载的音频。
               </h1>
               <p className="mt-5 max-w-xl text-sm leading-7 text-stone-300">
-                这里先开放一个固定 HD 音色工作台。你输入文案，系统会直接调用 MiniMax 生成语音，并显示本次
-                AITOKEN 消耗。
+                这里继续保留现有 TTS 工作台，同时新增 Smart Cut 和统一任务中心入口。Smart Cut 负责三段式粗剪工作流，
+                任务中心负责统一查看状态、失败和最终下载。
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
+                <Button className="h-12 px-6 text-base" onClick={() => router.push("/smart-cut")} variant="secondary">
+                  智能气口剪辑
+                </Button>
+                <Button className="h-12 px-6 text-base" onClick={() => router.push("/tasks")} variant="secondary">
+                  任务中心
+                </Button>
                 <Button className="h-12 px-6 text-base" onClick={() => router.push("/tts")}>
                   文案生成语音
                 </Button>
@@ -71,15 +77,23 @@ export default function WelcomePage() {
               <div className="mt-5 space-y-4">
                 <div className="rounded-[24px] border border-white/10 bg-black/15 p-4">
                   <p className="text-sm text-stone-300">功能</p>
+                  <p className="mt-2 text-xl font-semibold">智能气口剪辑</p>
+                </div>
+                <div className="rounded-[24px] border border-white/10 bg-black/15 p-4">
+                  <p className="text-sm text-stone-300">功能</p>
+                  <p className="mt-2 text-xl font-semibold">任务中心</p>
+                </div>
+                <div className="rounded-[24px] border border-white/10 bg-black/15 p-4">
+                  <p className="text-sm text-stone-300">功能</p>
                   <p className="mt-2 text-xl font-semibold">文案生成语音</p>
                 </div>
                 <div className="rounded-[24px] border border-white/10 bg-black/15 p-4">
                   <p className="text-sm text-stone-300">模式</p>
-                  <p className="mt-2 text-xl font-semibold">MiniMax HD 固定音色</p>
+                  <p className="mt-2 text-xl font-semibold">Smart Cut 三段工作流 + TTS 工作台</p>
                 </div>
                 <div className="rounded-[24px] border border-white/10 bg-black/15 p-4">
                   <p className="text-sm text-stone-300">结果</p>
-                  <p className="mt-2 text-xl font-semibold">在线试听 + 下载音频</p>
+                  <p className="mt-2 text-xl font-semibold">任务跟踪 + 最终下载</p>
                 </div>
               </div>
             </Card>

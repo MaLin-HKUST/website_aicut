@@ -194,7 +194,7 @@
     {
       "id": "F05",
       "title": "Welcome And Admin Entry Integration",
-      "status": "pending",
+      "status": "done",
       "goal": "Add real Smart Cut and Task Center entry points to the recovered Next site without disturbing existing admin and TTS behavior.",
       "depends_on": [
         "F03",
@@ -217,6 +217,11 @@
       "verification": [
         "npm --prefix apps/web run build",
         "npx playwright test --config apps/web/playwright.config.ts"
+      ],
+      "result": [
+        "Added Smart Cut and Task Center launch entries to the recovered welcome page",
+        "Added a dedicated admin task center route at /admin/tasks",
+        "Kept the existing admin and TTS pages in place while extending the site navigation"
       ],
       "commit_rule": "Commit entry integration only."
     },

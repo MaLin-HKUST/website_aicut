@@ -24,7 +24,7 @@ function ProgressBar({ progress, className }: { progress: number; className: str
   );
 }
 
-export function TaskCenterShell() {
+export function TaskCenterShell({ mode = "user" }: { mode?: "user" | "admin" }) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<TaskCenterFilter>("all");
   const [items] = useState<TaskCenterItem[]>(() => getMockTaskCenterItems());
@@ -74,7 +74,9 @@ export function TaskCenterShell() {
                 <p className="text-sm uppercase tracking-[0.3em] text-stone-500">Task Center</p>
                 <h1 className="mt-3 text-4xl font-semibold text-[#231815]">My Job Queue</h1>
                 <p className="mt-3 text-sm leading-7 text-stone-600">
-                  当前版本先承载 Smart Cut 任务，页面结构按未来统一任务队列设计。
+                  {mode === "admin"
+                    ? "Admin 视图和普通用户沿用同一结构，但会额外展示调度和诊断信息。"
+                    : "当前版本先承载 Smart Cut 任务，页面结构按未来统一任务队列设计。"}
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
@@ -267,6 +269,14 @@ export function TaskCenterShell() {
                           </Button>
                         )}
                       </div>
+                      {mode === "admin" ? (
+                        <div className="mt-4 rounded-2xl bg-[#f6efe4] px-4 py-3 text-sm text-stone-600">
+                          <p className="font-semibold text-[#231815]">Admin diagnostics</p>
+                          <p className="mt-2">Task type: {selectedTask.taskType}</p>
+                          <p>Queue position: {selectedTask.queuePosition ?? "n/a"}</p>
+                          <p>Failure hint: {selectedTask.errorMessage ?? "none"}</p>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 </>

@@ -11,6 +11,7 @@
 - F02: Recover Live Next Web Baseline Into Repo
 - F03: Smart Cut Next Page Migration
 - F04: Task Center Next Page Migration
+- F05: Welcome And Admin Entry Integration
 
 ## Grounded status captured in this session
 - `HarnessPlan/rel0415` existed as an empty directory and had no harness artifacts.
@@ -41,6 +42,9 @@
 - Rebuilt the Task Center preview shell as a Next route under `apps/web/app/tasks/page.tsx`.
 - Ported the handover layout concepts into a Next-native `task-center-shell` component and `task-center` view-model helper.
 - Verified the Task Center route compiles on the recovered Next baseline with `npm --prefix apps/web run build`.
+- Added Smart Cut and Task Center entry buttons to the user welcome page.
+- Added a dedicated `/admin/tasks` route and linked the admin surface to it.
+- Verified the new entry routes still compile on the recovered Next baseline with `npm --prefix apps/web run build`.
 
 ## Verification run for F01
 - `bash -n HarnessPlan/rel0415/init.sh`
@@ -56,16 +60,18 @@
 - `test -f apps/web/components/smart-cut/workspace.tsx`
 - `test -f apps/web/app/tasks/page.tsx`
 - `test -f apps/web/components/task-center/task-center-shell.tsx`
+- `test -f apps/web/app/admin/tasks/page.tsx`
 
 ## Current blocker summary
 - The formal `apps/web` path now exists and builds successfully.
 - Smart Cut frontend shell is now present, but it still depends on list / edits / upload-direct contracts that do not yet exist in the current backend.
 - Task Center shell is now Next-native, but it is still using preview/mock data until the real list/detail API is added.
+- The Next proxy still forwards everything to a single API base and cannot yet split live auth/admin traffic from the new Smart Cut API.
 
 ## Next recommended feature
-- F05: Welcome And Admin Entry Integration
 - F06: Smart Cut API Contract Alignment
 - F07: Task Center User And Admin API
+- F08: Smart Cut To Task Center Transition Wiring
 
 ## Notes
 - This harness is execution state only. Product code still belongs in the main repo, not inside the harness directory.

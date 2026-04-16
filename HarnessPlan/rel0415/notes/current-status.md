@@ -32,5 +32,5 @@
 - `F02` 已完成：现网 Next 基线已经正式回收到 `apps/web`，并通过了 `npm --prefix apps/web run build`。
 - `F03` 已完成：Smart Cut Next 页面、组件、前端适配层已经迁入 `apps/web`，并通过了前端构建。
 - `F04` 已完成：任务中心已在 Next 里重建为正式页面壳，不再依赖 Vite 路由、store 或旧 UI 体系。
-- `F05` 接真实入口：welcome 增加 Smart Cut / 任务中心，admin 增加任务中心入口。
+- `F05` 已完成：welcome 已增加 Smart Cut / 任务中心入口，admin 已增加 `/admin/tasks` 入口。
 - `F06` / `F07` 补 Smart Cut 与任务中心所需的真实后端 contract。

@@ -1328,9 +1328,14 @@ export default function AdminPage() {
             <h1 className="mt-3 text-3xl font-semibold">管理后台</h1>
             <p className="mt-2 text-sm text-stone-300">Signed in as {currentUser?.username}</p>
           </div>
-          <Button variant="secondary" onClick={handleLogout}>
-            Logout
-          </Button>
+          <div className="flex flex-wrap gap-3">
+            <Button variant="secondary" onClick={() => router.push("/admin/tasks")}>
+              任务中心
+            </Button>
+            <Button variant="secondary" onClick={handleLogout}>
+              Logout
+            </Button>
+          </div>
         </section>
 
         {/* Tabs */}
