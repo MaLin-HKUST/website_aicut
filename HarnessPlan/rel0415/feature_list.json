@@ -160,7 +160,7 @@
     {
       "id": "F04",
       "title": "Task Center Next Page Migration",
-      "status": "pending",
+      "status": "done",
       "goal": "Rebuild the task-center handover layout inside the formal Next app instead of copying the original Vite page directly.",
       "depends_on": [
         "F02"
@@ -183,6 +183,11 @@
       "verification": [
         "npm --prefix apps/web run build",
         "test -f apps/web/app/tasks/page.tsx"
+      ],
+      "result": [
+        "Built a formal Next task center route at apps/web/app/tasks/page.tsx",
+        "Reimplemented the task-center shell in Next without Vite router/store dependencies",
+        "Preserved the 0415 structure: summary filters, list pane, and detail pane"
       ],
       "commit_rule": "Commit only task-center Next migration plus harness tracking."
     },
