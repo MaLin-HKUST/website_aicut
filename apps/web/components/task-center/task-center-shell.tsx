@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,13 +9,20 @@ import { Input } from "@/components/ui/input";
 import {
   FILTER_OPTIONS,
   formatUpdatedAt,
-  getMockTaskCenterItems,
   getTaskSubtitle,
   getTimelineItems,
+  listTaskCenterItems,
   STATUS_META,
   TaskCenterFilter,
   TaskCenterItem,
 } from "@/lib/task-center";
+
+type AuthResponse = {
+  user: {
+    username: string;
+    role: "admin" | "user";
+  };
+};
 
 function ProgressBar({ progress, className }: { progress: number; className: string }) {
   return (
@@ -25,10 +33,45 @@ function ProgressBar({ progress, className }: { progress: number; className: str
 }
 
 export function TaskCenterShell({ mode = "user" }: { mode?: "user" | "admin" }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<TaskCenterFilter>("all");
-  const [items] = useState<TaskCenterItem[]>(() => getMockTaskCenterItems());
-  const [selectedId, setSelectedId] = useState<string>(() => getMockTaskCenterItems()[0]?.id ?? "");
+  const [items, setItems] = useState<TaskCenterItem[]>([]);
+  const [selectedId, setSelectedId] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function bootstrap() {
+      const authResponse = await fetch("/api/proxy/auth/me");
+      if (!authResponse.ok) {
+        router.replace("/login");
+        return;
+      }
+      const authPayload = (await authResponse.json()) as AuthResponse;
+      if (mode === "admin" && authPayload.user.role !== "admin") {
+        router.replace("/welcome");
+        return;
+      }
+      if (mode === "user" && authPayload.user.role === "admin") {
+        router.replace("/admin/tasks");
+        return;
+      }
+      try {
+        const taskItems = await listTaskCenterItems({
+          mode,
+          userId: mode === "user" ? authPayload.user.username : undefined,
+        });
+        setItems(taskItems);
+        const requestedTaskId = searchParams.get("taskId");
+        setSelectedId((current) => requestedTaskId || current || taskItems[0]?.id || "");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "读取任务中心失败");
+      }
+    }
+
+    void bootstrap();
+  }, [mode, router, searchParams]);
 
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
@@ -80,9 +123,11 @@ export function TaskCenterShell({ mode = "user" }: { mode?: "user" | "admin" }) 
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
-                <Button type="button">Refresh</Button>
-                <Button type="button" variant="secondary">
-                  Export
+                <Button onClick={() => router.refresh()} type="button">
+                  Refresh
+                </Button>
+                <Button onClick={() => router.push(mode === "admin" ? "/admin" : "/smart-cut")} type="button" variant="secondary">
+                  {mode === "admin" ? "Back to Admin" : "Back to Smart Cut"}
                 </Button>
               </div>
             </div>
@@ -118,13 +163,14 @@ export function TaskCenterShell({ mode = "user" }: { mode?: "user" | "admin" }) 
               />
               <div className="flex gap-3">
                 <Button type="button" variant="secondary">
-                  Type: Video
+                  Type: Smart Cut
                 </Button>
                 <Button type="button" variant="secondary">
                   Sort: Latest
                 </Button>
               </div>
             </div>
+            {error ? <p className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
           </section>
 
           <section className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
@@ -258,13 +304,17 @@ export function TaskCenterShell({ mode = "user" }: { mode?: "user" | "admin" }) 
                         <div className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{selectedTask.errorMessage}</div>
                       ) : null}
                       <div className="mt-5 flex flex-wrap gap-3">
-                        <Button type="button">View</Button>
+                        <Button onClick={() => router.push(`/smart-cut/${selectedTask.id}`)} type="button">
+                          View
+                        </Button>
                         {selectedTask.downloadUrl ? (
-                          <Button type="button" variant="secondary">
-                            Download
-                          </Button>
+                          <a className="inline-flex" href={selectedTask.downloadUrl} target="_blank">
+                            <Button type="button" variant="secondary">
+                              Download
+                            </Button>
+                          </a>
                         ) : (
-                          <Button type="button" variant="secondary">
+                          <Button onClick={() => router.push(`/smart-cut/${selectedTask.id}`)} type="button" variant="secondary">
                             Continue
                           </Button>
                         )}
@@ -272,9 +322,10 @@ export function TaskCenterShell({ mode = "user" }: { mode?: "user" | "admin" }) 
                       {mode === "admin" ? (
                         <div className="mt-4 rounded-2xl bg-[#f6efe4] px-4 py-3 text-sm text-stone-600">
                           <p className="font-semibold text-[#231815]">Admin diagnostics</p>
-                          <p className="mt-2">Task type: {selectedTask.taskType}</p>
-                          <p>Queue position: {selectedTask.queuePosition ?? "n/a"}</p>
-                          <p>Failure hint: {selectedTask.errorMessage ?? "none"}</p>
+                          <p className="mt-2">User: {selectedTask.userId ?? "n/a"}</p>
+                          <p>Scheduler task: {selectedTask.schedulerTaskId ?? "n/a"}</p>
+                          <p>Scheduler status: {selectedTask.schedulerStatus ?? "n/a"}</p>
+                          <p>Worker: {selectedTask.workerId ?? "n/a"}</p>
                         </div>
                       ) : null}
                     </div>

@@ -228,7 +228,7 @@
     {
       "id": "F06",
       "title": "Smart Cut API Contract Alignment",
-      "status": "pending",
+      "status": "done",
       "goal": "Align the migrated Smart Cut page with the real Smart Cut API in this repo instead of the temporary handover shim.",
       "depends_on": [
         "F03"
@@ -259,12 +259,17 @@
         "python -m compileall apps/api apps/models apps/services apps/scheduler configs",
         "pytest tests -q"
       ],
+      "result": [
+        "Added Smart Cut summary list, edit history, and direct upload endpoints",
+        "Broadened Smart Cut detail/request schemas to support brace-script frontend usage",
+        "Aligned the migrated Smart Cut frontend helper with the real repo API routes"
+      ],
       "commit_rule": "Commit Smart Cut API alignment and harness tracking only."
     },
     {
       "id": "F07",
       "title": "Task Center User And Admin API",
-      "status": "pending",
+      "status": "done",
       "goal": "Provide real task-center list and detail APIs for user and admin views using Smart Cut data as the current task source.",
       "depends_on": [
         "F04",
@@ -292,12 +297,17 @@
         "python -m compileall apps/api apps/models apps/services",
         "pytest tests -q"
       ],
+      "result": [
+        "Added dedicated user/admin task-center API endpoints backed by Smart Cut data",
+        "Mapped Smart Cut business and scheduler state into task-center list items",
+        "Switched the Next task-center shell from preview/mock data to real API data"
+      ],
       "commit_rule": "Commit task-center API contract and harness tracking only."
     },
     {
       "id": "F08",
       "title": "Smart Cut To Task Center Transition Wiring",
-      "status": "pending",
+      "status": "done",
       "goal": "Wire the Smart Cut finalize action so the user continues in Task Center for final tracking and download.",
       "depends_on": [
         "F03",
@@ -325,12 +335,17 @@
         "python -m compileall apps/api",
         "npx playwright test --config apps/web/playwright.config.ts"
       ],
+      "result": [
+        "Smart Cut finalize now redirects into /tasks with the current taskId",
+        "Task center honors taskId query selection after redirect",
+        "Next proxy now splits legacy auth/admin traffic from Smart Cut API traffic"
+      ],
       "commit_rule": "Commit transition wiring only."
     },
     {
       "id": "F09",
       "title": "Frontend Build Green On 0415 Baseline",
-      "status": "pending",
+      "status": "done",
       "goal": "Make the recovered Next web baseline and new 0415 pages build cleanly in the real repo.",
       "depends_on": [
         "F05",
@@ -352,6 +367,11 @@
       ],
       "verification": [
         "npm --prefix apps/web run build"
+      ],
+      "result": [
+        "The recovered Next baseline plus Smart Cut and Task Center pages now builds successfully",
+        "Resolved the useSearchParams prerender issue by wrapping task-center pages in Suspense",
+        "Locked the current 0415 frontend as build-green before server deployment"
       ],
       "commit_rule": "Commit only build-fix and harness tracking."
     },

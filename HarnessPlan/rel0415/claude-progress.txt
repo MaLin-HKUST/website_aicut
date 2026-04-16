@@ -12,6 +12,10 @@
 - F03: Smart Cut Next Page Migration
 - F04: Task Center Next Page Migration
 - F05: Welcome And Admin Entry Integration
+- F06: Smart Cut API Contract Alignment
+- F07: Task Center User And Admin API
+- F08: Smart Cut To Task Center Transition Wiring
+- F09: Frontend Build Green On 0415 Baseline
 
 ## Grounded status captured in this session
 - `HarnessPlan/rel0415` existed as an empty directory and had no harness artifacts.
@@ -45,6 +49,9 @@
 - Added Smart Cut and Task Center entry buttons to the user welcome page.
 - Added a dedicated `/admin/tasks` route and linked the admin surface to it.
 - Verified the new entry routes still compile on the recovered Next baseline with `npm --prefix apps/web run build`.
+- Added Smart Cut list / edits / upload-direct APIs and aligned the migrated Smart Cut frontend with the real repo routes.
+- Added user/admin task-center APIs, switched the task-center shell from mock data to real API data, and split proxy traffic between legacy and Smart Cut backends.
+- Wired Smart Cut finalize into the task center handoff and kept the overall 0415 frontend build green.
 
 ## Verification run for F01
 - `bash -n HarnessPlan/rel0415/init.sh`
@@ -61,17 +68,19 @@
 - `test -f apps/web/app/tasks/page.tsx`
 - `test -f apps/web/components/task-center/task-center-shell.tsx`
 - `test -f apps/web/app/admin/tasks/page.tsx`
+- `python -m compileall apps/api apps/models apps/services apps/scheduler configs`
+- `pytest tests/test_rel0415_api.py -q`
 
 ## Current blocker summary
 - The formal `apps/web` path now exists and builds successfully.
-- Smart Cut frontend shell is now present, but it still depends on list / edits / upload-direct contracts that do not yet exist in the current backend.
-- Task Center shell is now Next-native, but it is still using preview/mock data until the real list/detail API is added.
-- The Next proxy still forwards everything to a single API base and cannot yet split live auth/admin traffic from the new Smart Cut API.
+- release/0415 测试位还未建立，A 机 legacy API 和新 Smart Cut API 还没有在同一测试部署里联通。
+- 线上 Nginx 的 Smart Cut 临时静态补丁还未移除。
+- 还没有跑服务器侧 0415 端到端验收。
 
 ## Next recommended feature
-- F06: Smart Cut API Contract Alignment
-- F07: Task Center User And Admin API
-- F08: Smart Cut To Task Center Transition Wiring
+- F10: Server Deploy To release/0415 Test Slot
+- F11: End To End Acceptance For 0415
+- F12: Cleanup Temporary Nginx And Static Smart Cut Patch
 
 ## Notes
 - This harness is execution state only. Product code still belongs in the main repo, not inside the harness directory.

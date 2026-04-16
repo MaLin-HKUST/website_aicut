@@ -84,4 +84,8 @@ cd /Users/malin13/Documents/trae_projects/website_aicut/HarnessPlan/rel0415
 - 已完成：F03 Smart Cut Next Page Migration
 - 已完成：F04 Task Center Next Page Migration
 - 已完成：F05 Welcome And Admin Entry Integration
-- 下一步：F06 Smart Cut API Contract Alignment
+- 已完成：F06 Smart Cut API Contract Alignment
+- 已完成：F07 Task Center User And Admin API
+- 已完成：F08 Smart Cut To Task Center Transition Wiring
+- 已完成：F09 Frontend Build Green On 0415 Baseline
+- 下一步：F10 Server Deploy To release/0415 Test Slot

@@ -33,4 +33,8 @@
 - `F03` 已完成：Smart Cut Next 页面、组件、前端适配层已经迁入 `apps/web`，并通过了前端构建。
 - `F04` 已完成：任务中心已在 Next 里重建为正式页面壳，不再依赖 Vite 路由、store 或旧 UI 体系。
 - `F05` 已完成：welcome 已增加 Smart Cut / 任务中心入口，admin 已增加 `/admin/tasks` 入口。
-- `F06` / `F07` 补 Smart Cut 与任务中心所需的真实后端 contract。
+- `F06` 已完成：Smart Cut 已具备 list / edits / upload-direct / detail contract，并完成了前端 helper 对齐。
+- `F07` 已完成：任务中心已具备用户 / admin 两套真实列表接口，前端已切到真实数据适配层。
+- `F08` 已完成：Smart Cut finalize 后会跳转到任务中心，并通过 query 选中对应任务；proxy 已具备 legacy / smart-cut 双后端分流。
+- `F09` 已完成：当前 0415 前端基线 `npm --prefix apps/web run build` 通过。
+- 下一步是 `F10`：把这套前后端代码部署到 `release/0415` 测试位，并接入 A 机与 Worker1 做服务器联调。

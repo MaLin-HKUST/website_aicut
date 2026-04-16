@@ -1,6 +1,6 @@
 export type SmartCutTask = {
   id: string;
-  user_id: number;
+  user_id: string;
   status: string;
   current_stage: string | null;
   error_stage: string | null;
@@ -39,6 +39,7 @@ export type SmartCutEdit = {
   task_id: string;
   edited_script: string;
   status: string;
+  audio_a_url: string | null;
   audio_b_url: string | null;
   audio_b_tos_key: string | null;
   edited_delay_cuts_tos_key: string | null;
@@ -48,7 +49,112 @@ export type SmartCutEdit = {
   updated_at: string;
 };
 
+type SmartCutTaskApi = {
+  id: string;
+  user_id: string;
+  status: string;
+  current_stage: string | null;
+  original_video_url?: string | null;
+  reference_text_url?: string | null;
+  analyze_script?: unknown;
+  asr_result_tos_key?: string | null;
+  active_edit_id?: string | null;
+  current_edited_script?: unknown;
+  audio_b_url?: string | null;
+  final_video_url?: string | null;
+  groundtruth_url?: string | null;
+  error_message?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type SmartCutEditApi = {
+  id: string;
+  task_id: string;
+  edited_script: unknown;
+  status: string;
+  audio_a_url?: string | null;
+  audio_b_url?: string | null;
+  edited_delay_cuts_tos_key?: string | null;
+  pause_cuts_on_original_tos_key?: string | null;
+  error_message?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type TaskCreateApi = {
+  data?: {
+    task_id: string;
+  };
+};
+
 export type DeleteRange = { start: number; end: number };
+
+function toScriptText(value: unknown): string | null {
+  if (value == null) return null;
+  if (typeof value === "string") return value;
+  if (typeof value === "object" && value && Array.isArray((value as { segments?: unknown[] }).segments)) {
+    const parts = (value as { segments: unknown[] }).segments.map((segment) => {
+      if (typeof segment === "string") return segment;
+      if (segment && typeof segment === "object" && "text" in segment) {
+        return String((segment as { text?: unknown }).text ?? "");
+      }
+      return "";
+    });
+    return parts.join("");
+  }
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+
+function normalizeTask(payload: SmartCutTaskApi): SmartCutTask {
+  return {
+    id: payload.id,
+    user_id: payload.user_id,
+    status: payload.status,
+    current_stage: payload.current_stage ?? null,
+    error_stage: null,
+    error_message: payload.error_message ?? null,
+    original_video_url: payload.original_video_url ?? null,
+    original_video_tos_key: payload.original_video_url ?? null,
+    reference_text_url: payload.reference_text_url ?? null,
+    reference_text_tos_key: payload.reference_text_url ?? null,
+    analyze_script: toScriptText(payload.current_edited_script ?? payload.analyze_script),
+    analyze_script_tos_key: null,
+    asr_result_tos_key: payload.asr_result_tos_key ?? null,
+    active_edit_id: payload.active_edit_id ?? null,
+    finalize_source_edit_id: payload.active_edit_id ?? null,
+    final_video_url: payload.final_video_url ?? null,
+    final_video_tos_key: payload.final_video_url ?? null,
+    groundtruth_url: payload.groundtruth_url ?? null,
+    groundtruth_tos_key: payload.groundtruth_url ?? null,
+    feed_to_ai: true,
+    output_mode: "original",
+    last_scheduler_task_id: null,
+    created_at: payload.created_at,
+    updated_at: payload.updated_at,
+  };
+}
+
+function normalizeEdit(payload: SmartCutEditApi): SmartCutEdit {
+  return {
+    id: payload.id,
+    task_id: payload.task_id,
+    edited_script: toScriptText(payload.edited_script) ?? "",
+    status: payload.status,
+    audio_a_url: payload.audio_a_url ?? null,
+    audio_b_url: payload.audio_b_url ?? null,
+    audio_b_tos_key: payload.audio_b_url ?? null,
+    edited_delay_cuts_tos_key: payload.edited_delay_cuts_tos_key ?? null,
+    pause_cuts_on_original_tos_key: payload.pause_cuts_on_original_tos_key ?? null,
+    error_message: payload.error_message ?? null,
+    created_at: payload.created_at,
+    updated_at: payload.updated_at,
+  };
+}
 
 export function mergeRanges(ranges: DeleteRange[]): DeleteRange[] {
   const sorted = [...ranges]
@@ -135,4 +241,66 @@ export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> 
   }
 
   return (await response.json()) as T;
+}
+
+export async function listSmartCutTasks(userId?: string): Promise<SmartCutTaskSummary[]> {
+  const query = userId ? `?user_id=${encodeURIComponent(userId)}` : "";
+  return fetchJson<SmartCutTaskSummary[]>(`/api/proxy/api/smart-cut/tasks${query}`);
+}
+
+export async function getSmartCutTask(taskId: string): Promise<SmartCutTask> {
+  const payload = await fetchJson<SmartCutTaskApi>(`/api/proxy/api/smart-cut/tasks/${taskId}`);
+  return normalizeTask(payload);
+}
+
+export async function getSmartCutEdits(taskId: string): Promise<SmartCutEdit[]> {
+  const payload = await fetchJson<SmartCutEditApi[]>(`/api/proxy/api/smart-cut/tasks/${taskId}/edits`);
+  return payload.map(normalizeEdit);
+}
+
+export async function createSmartCutTask(userId: string): Promise<SmartCutTask> {
+  const payload = await fetchJson<TaskCreateApi>("/api/proxy/api/smart-cut/tasks", {
+    method: "POST",
+    body: JSON.stringify({ user_id: userId }),
+  });
+  const taskId = payload.data?.task_id;
+  if (!taskId) {
+    throw new Error("Task creation did not return task_id");
+  }
+  return getSmartCutTask(taskId);
+}
+
+export async function uploadDirectInputs(taskId: string, videoFile: File, referenceFile: File): Promise<SmartCutTask> {
+  const formData = new FormData();
+  formData.append("video_file", videoFile);
+  formData.append("reference_file", referenceFile);
+  const payload = await fetchJson<SmartCutTaskApi>(`/api/proxy/api/smart-cut/tasks/${taskId}/upload-direct`, {
+    method: "POST",
+    body: formData,
+  });
+  return normalizeTask(payload);
+}
+
+export async function startAnalyze(taskId: string): Promise<SmartCutTask> {
+  await fetchJson(`/api/proxy/api/smart-cut/tasks/${taskId}/analyze`, { method: "POST" });
+  return getSmartCutTask(taskId);
+}
+
+export async function startPreview(taskId: string, editedScript: string): Promise<SmartCutTask> {
+  await fetchJson(`/api/proxy/api/smart-cut/tasks/${taskId}/preview`, {
+    method: "POST",
+    body: JSON.stringify({ edited_script: editedScript }),
+  });
+  return getSmartCutTask(taskId);
+}
+
+export async function startFinalize(
+  taskId: string,
+  params: { outputMode: "original" | "vertical_1080p"; feedToAi: boolean },
+): Promise<SmartCutTask> {
+  await fetchJson(`/api/proxy/api/smart-cut/tasks/${taskId}/finalize`, {
+    method: "POST",
+    body: JSON.stringify({ output_mode: params.outputMode, feed_to_ai: params.feedToAi }),
+  });
+  return getSmartCutTask(taskId);
 }

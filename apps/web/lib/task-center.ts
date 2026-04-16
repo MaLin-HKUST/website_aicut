@@ -1,5 +1,4 @@
 export type TaskCenterStatus = "queued" | "running" | "waiting" | "finished" | "failed";
-
 export type TaskCenterType = "smart_cut" | "tts" | "batch";
 
 export type TaskCenterItem = {
@@ -16,6 +15,31 @@ export type TaskCenterItem = {
   errorMessage?: string | null;
   inputSummary: string[];
   outputSummary?: string[];
+  userId?: string | null;
+  schedulerTaskId?: string | null;
+  schedulerStatus?: string | null;
+  workerId?: string | null;
+};
+
+type TaskCenterApiItem = {
+  id: string;
+  title: string;
+  task_type: string;
+  status: TaskCenterStatus;
+  current_stage: string;
+  progress: number;
+  progress_detail?: string | null;
+  updated_at: string;
+  created_at: string;
+  queue_position?: number | null;
+  download_url?: string | null;
+  error_message?: string | null;
+  input_files?: string[];
+  output_files?: string[];
+  user_id?: string | null;
+  scheduler_task_id?: string | null;
+  scheduler_status?: string | null;
+  worker_id?: string | null;
 };
 
 export const STATUS_META: Record<
@@ -63,26 +87,38 @@ export const FILTER_OPTIONS = [
 
 export type TaskCenterFilter = (typeof FILTER_OPTIONS)[number]["key"];
 
+function normalizeItem(payload: TaskCenterApiItem): TaskCenterItem {
+  return {
+    id: payload.id,
+    title: payload.title,
+    taskType: payload.task_type as TaskCenterType,
+    status: payload.status,
+    progress: payload.progress,
+    currentStage: payload.progress_detail || payload.current_stage,
+    updatedAt: payload.updated_at,
+    createdAt: payload.created_at,
+    queuePosition: payload.queue_position ?? null,
+    downloadUrl: payload.download_url ?? null,
+    errorMessage: payload.error_message ?? null,
+    inputSummary: payload.input_files ?? [],
+    outputSummary: payload.output_files ?? [],
+    userId: payload.user_id ?? null,
+    schedulerTaskId: payload.scheduler_task_id ?? null,
+    schedulerStatus: payload.scheduler_status ?? null,
+    workerId: payload.worker_id ?? null,
+  };
+}
+
 export function getTaskSubtitle(task: TaskCenterItem): string {
-  if (task.status === "waiting" && task.queuePosition) {
-    return `Queue #${task.queuePosition}`;
-  }
-  if (task.status === "finished" && task.downloadUrl) {
-    return "Result ready to download";
-  }
-  if (task.status === "failed" && task.errorMessage) {
-    return task.errorMessage;
-  }
+  if (task.status === "waiting" && task.queuePosition) return `Queue #${task.queuePosition}`;
+  if (task.status === "finished" && task.downloadUrl) return "Result ready to download";
+  if (task.status === "failed" && task.errorMessage) return task.errorMessage;
   return task.currentStage;
 }
 
 export function getTimelineItems(task: TaskCenterItem): string[] {
-  if (task.taskType === "smart_cut") {
-    return ["Upload", "Analyze", "Preview", "Finalize"];
-  }
-  if (task.taskType === "tts") {
-    return ["Submit", "Generate", "Review", "Export"];
-  }
+  if (task.taskType === "smart_cut") return ["Upload", "Analyze", "Preview", "Finalize"];
+  if (task.taskType === "tts") return ["Submit", "Generate", "Review", "Export"];
   return ["Queued", "Running", "Review", "Done"];
 }
 
@@ -99,57 +135,25 @@ export function formatUpdatedAt(value: string): string {
   }
 }
 
-export function getMockTaskCenterItems(): TaskCenterItem[] {
-  return [
-    {
-      id: "sc-0415-001",
-      title: "Kitchen Edit Batch A",
-      taskType: "smart_cut",
-      status: "running",
-      progress: 56,
-      currentStage: "Preview render running",
-      updatedAt: "2026-04-17T08:10:00+08:00",
-      createdAt: "2026-04-17T07:48:00+08:00",
-      inputSummary: ["source_video.mp4", "reference.txt"],
-      outputSummary: ["audio_b.mp3"],
+export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(url, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(init?.headers ?? {}),
     },
-    {
-      id: "sc-0415-002",
-      title: "Live Cut Topic A",
-      taskType: "smart_cut",
-      status: "waiting",
-      progress: 34,
-      currentStage: "Need confirm before finalize",
-      updatedAt: "2026-04-17T07:58:00+08:00",
-      createdAt: "2026-04-17T07:20:00+08:00",
-      queuePosition: 2,
-      inputSummary: ["source_video.mov", "reference.txt"],
-      outputSummary: ["audio_a.mp3", "audio_b.mp3"],
-    },
-    {
-      id: "sc-0415-003",
-      title: "Parent Course Export",
-      taskType: "smart_cut",
-      status: "finished",
-      progress: 100,
-      currentStage: "Done",
-      updatedAt: "2026-04-16T14:22:00+08:00",
-      createdAt: "2026-04-16T13:50:00+08:00",
-      downloadUrl: "/placeholder/final_video.mp4",
-      inputSummary: ["source_video.mp4", "reference.txt"],
-      outputSummary: ["final_video.mp4"],
-    },
-    {
-      id: "sc-0415-004",
-      title: "Bulk Transcode 08",
-      taskType: "smart_cut",
-      status: "failed",
-      progress: 28,
-      currentStage: "Preview failed",
-      updatedAt: "2026-04-16T09:10:00+08:00",
-      createdAt: "2026-04-16T08:55:00+08:00",
-      errorMessage: "Pause cuts parse error",
-      inputSummary: ["source_video.mp4", "reference.txt"],
-    },
-  ];
+  });
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { detail?: string } | null;
+    throw new Error(payload?.detail ?? `Request failed: ${response.status}`);
+  }
+  return (await response.json()) as T;
+}
+
+export async function listTaskCenterItems(opts: { mode: "user" | "admin"; userId?: string }): Promise<TaskCenterItem[]> {
+  const basePath =
+    opts.mode === "admin" ? "/api/proxy/api/admin/task-center/tasks" : "/api/proxy/api/task-center/tasks";
+  const query = opts.mode === "user" && opts.userId ? `?user_id=${encodeURIComponent(opts.userId)}` : "";
+  const payload = await fetchJson<TaskCenterApiItem[]>(`${basePath}${query}`);
+  return payload.map(normalizeItem);
 }

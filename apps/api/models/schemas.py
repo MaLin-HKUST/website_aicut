@@ -4,7 +4,7 @@
 """
 
 from datetime import datetime
-from typing import Optional, Any, List, TypeVar, Generic, Dict
+from typing import Optional, Any, List, TypeVar, Generic
 from pydantic import BaseModel, Field
 
 
@@ -236,13 +236,14 @@ class TaskDetailResponse(BaseModel):
     reference_text_url: Optional[str] = Field(None, description="参考文案URL")
     
     # Analyze 产物
-    analyze_script: Optional[dict[str, Any]] = Field(None, description="分析生成的脚本")
+    analyze_script: Optional[Any] = Field(None, description="分析生成的脚本")
     asr_result_tos_key: Optional[str] = Field(None, description="ASR结果TOS Key")
     
     # 当前 Edit
     active_edit_id: Optional[str] = Field(None, description="当前生效的edit ID")
-    current_edited_script: Optional[dict[str, Any]] = Field(None, description="当前编辑的脚本")
+    current_edited_script: Optional[Any] = Field(None, description="当前编辑的脚本")
     audio_b_url: Optional[str] = Field(None, description="B轨音频URL")
+    error_message: Optional[str] = Field(None, description="当前错误信息")
     
     # Finalize 产物
     final_video_url: Optional[str] = Field(None, description="最终视频URL")
@@ -254,7 +255,7 @@ class TaskDetailResponse(BaseModel):
 
 class PreviewRequest(BaseModel):
     """触发预览请求"""
-    edited_script: dict[str, Any] = Field(..., description="用户编辑后的文案脚本")
+    edited_script: Any = Field(..., description="用户编辑后的文案脚本")
 
 
 class PreviewResponse(BaseModel):
@@ -305,3 +306,54 @@ class TaskNotFoundError(BaseModel):
 class TaskCannotAbandonError(BaseModel):
     """任务无法放弃错误"""
     detail: str = Field(..., description="错误详情")
+
+
+class SmartCutTaskSummaryRead(BaseModel):
+    """Smart Cut 任务摘要 - 用于 landing 页和轻量列表。"""
+
+    id: str = Field(..., description="任务 ID")
+    status: str = Field(..., description="任务状态")
+    current_stage: Optional[str] = Field(None, description="当前阶段")
+    active_edit_id: Optional[str] = Field(None, description="当前 edit ID")
+    created_at: datetime = Field(..., description="创建时间")
+    updated_at: datetime = Field(..., description="更新时间")
+
+
+class SmartCutEditRead(BaseModel):
+    """Smart Cut Edit 只读响应。"""
+
+    id: str = Field(..., description="Edit ID")
+    task_id: str = Field(..., description="任务 ID")
+    edited_script: Any = Field(..., description="编辑后的脚本")
+    status: str = Field(..., description="Edit 状态")
+    audio_a_url: Optional[str] = Field(None, description="Analyze 阶段音频")
+    audio_b_url: Optional[str] = Field(None, description="Preview 阶段音频")
+    edited_delay_cuts_tos_key: Optional[str] = Field(None, description="Preview 阶段 delay cuts")
+    pause_cuts_on_original_tos_key: Optional[str] = Field(None, description="Preview 阶段 pause cuts")
+    error_message: Optional[str] = Field(None, description="错误信息")
+    version_number: int = Field(..., description="版本号")
+    created_at: datetime = Field(..., description="创建时间")
+    updated_at: datetime = Field(..., description="更新时间")
+
+
+class TaskCenterTaskRead(BaseModel):
+    """任务中心列表项。当前版本底层数据源为 Smart Cut。"""
+
+    id: str = Field(..., description="任务 ID")
+    title: str = Field(..., description="任务标题")
+    task_type: str = Field(..., description="任务类型")
+    status: str = Field(..., description="任务中心状态")
+    current_stage: str = Field(..., description="当前阶段")
+    progress: int = Field(..., ge=0, le=100, description="进度百分比")
+    progress_detail: Optional[str] = Field(None, description="详细进度描述")
+    updated_at: datetime = Field(..., description="更新时间")
+    created_at: datetime = Field(..., description="创建时间")
+    queue_position: Optional[int] = Field(None, description="队列位置")
+    download_url: Optional[str] = Field(None, description="下载地址")
+    error_message: Optional[str] = Field(None, description="错误信息")
+    input_files: List[str] = Field(default_factory=list, description="输入文件摘要")
+    output_files: List[str] = Field(default_factory=list, description="输出文件摘要")
+    user_id: Optional[str] = Field(None, description="用户 ID（admin 可见）")
+    scheduler_task_id: Optional[str] = Field(None, description="最近一次调度任务 ID（admin 可见）")
+    scheduler_status: Optional[str] = Field(None, description="最近一次调度任务状态（admin 可见）")
+    worker_id: Optional[str] = Field(None, description="当前/最近一次 Worker（admin 可见）")

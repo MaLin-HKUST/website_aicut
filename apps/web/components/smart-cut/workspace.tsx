@@ -7,7 +7,20 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SmartCutScriptEditor } from "@/components/smart-cut/script-editor";
-import { fetchJson, formatTaskStatus, SmartCutEdit, SmartCutTask, SmartCutTaskSummary } from "@/lib/smart-cut";
+import {
+  createSmartCutTask,
+  formatTaskStatus,
+  getSmartCutEdits,
+  getSmartCutTask,
+  listSmartCutTasks,
+  SmartCutEdit,
+  SmartCutTask,
+  SmartCutTaskSummary,
+  startAnalyze,
+  startFinalize,
+  startPreview,
+  uploadDirectInputs,
+} from "@/lib/smart-cut";
 
 type AuthResponse = {
   user: {
@@ -42,6 +55,7 @@ export function SmartCutLandingPage() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<AuthResponse["user"] | null>(null);
 
   useEffect(() => {
     async function bootstrap() {
@@ -56,9 +70,10 @@ export function SmartCutLandingPage() {
         router.replace("/admin");
         return;
       }
+      setUser(authPayload.user);
 
       try {
-        const taskList = await fetchJson<SmartCutTaskSummary[]>("/api/proxy/api/smart-cut/tasks");
+        const taskList = await listSmartCutTasks(authPayload.user.username);
         setTasks(taskList);
       } catch (err) {
         setError(err instanceof Error ? err.message : "读取任务失败");
@@ -71,15 +86,15 @@ export function SmartCutLandingPage() {
   }, [router]);
 
   async function createTask() {
+    if (!user) return;
     setCreating(true);
     setError(null);
     try {
-      const task = await fetchJson<SmartCutTask>("/api/proxy/api/smart-cut/tasks", {
-        method: "POST",
-      });
+      const task = await createSmartCutTask(user.username);
       router.push(`/smart-cut/${task.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "创建任务失败");
+    } finally {
       setCreating(false);
     }
   }
@@ -189,10 +204,7 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
       return;
     }
 
-    const [taskData, editData] = await Promise.all([
-      fetchJson<SmartCutTask>(`/api/proxy/api/smart-cut/tasks/${taskId}`),
-      fetchJson<SmartCutEdit[]>(`/api/proxy/api/smart-cut/tasks/${taskId}/edits`).catch(() => []),
-    ]);
+    const [taskData, editData] = await Promise.all([getSmartCutTask(taskId), getSmartCutEdits(taskId).catch(() => [])]);
 
     setTask(taskData);
     setEdits(editData);
@@ -223,8 +235,8 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
 
   const canUpload = task && task.status === "waiting_upload";
   const canAnalyze = task && task.status === "ready_analyze";
-  const canPreview = task && ["waiting_user", "ready_finalize"].includes(task.status) && scriptDraft.length > 0;
-  const canFinalize = task && ["ready_finalize", "waiting_user"].includes(task.status);
+  const canPreview = task && ["waiting_user", "preview_failed"].includes(task.status) && scriptDraft.length > 0;
+  const canFinalize = task && ["waiting_user", "finalize_failed"].includes(task.status);
 
   async function handleUpload() {
     if (!task || !videoFile || !referenceFile) return;
@@ -233,13 +245,7 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
     setNotice(null);
 
     try {
-      const formData = new FormData();
-      formData.append("video_file", videoFile);
-      formData.append("reference_file", referenceFile);
-      const nextTask = await fetchJson<SmartCutTask>(`/api/proxy/api/smart-cut/tasks/${task.id}/upload-direct`, {
-        method: "POST",
-        body: formData,
-      });
+      const nextTask = await uploadDirectInputs(task.id, videoFile, referenceFile);
       setTask(nextTask);
       setNotice("输入文件已上传，可以开始分析。");
     } catch (err) {
@@ -255,9 +261,7 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
     setError(null);
     setNotice(null);
     try {
-      const nextTask = await fetchJson<SmartCutTask>(`/api/proxy/api/smart-cut/tasks/${task.id}/analyze`, {
-        method: "POST",
-      });
+      const nextTask = await startAnalyze(task.id);
       setTask(nextTask);
       setNotice("Analyze 已提交，页面会自动刷新结果。");
     } catch (err) {
@@ -273,11 +277,9 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
     setError(null);
     setNotice(null);
     try {
-      const nextTask = await fetchJson<SmartCutTask>(`/api/proxy/api/smart-cut/tasks/${task.id}/preview`, {
-        method: "POST",
-        body: JSON.stringify({ edited_script: scriptDraft }),
-      });
+      const nextTask = await startPreview(task.id, scriptDraft);
       setTask(nextTask);
+      setEdits(await getSmartCutEdits(task.id).catch(() => edits));
       setNotice("试听任务已提交，页面会自动刷新音频结果。");
     } catch (err) {
       setError(err instanceof Error ? err.message : "生成试听失败");
@@ -292,12 +294,10 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
     setError(null);
     setNotice(null);
     try {
-      const nextTask = await fetchJson<SmartCutTask>(`/api/proxy/api/smart-cut/tasks/${task.id}/finalize`, {
-        method: "POST",
-        body: JSON.stringify({ output_mode: outputMode, feed_to_ai: feedToAi }),
-      });
+      const nextTask = await startFinalize(task.id, { outputMode, feedToAi });
       setTask(nextTask);
       setNotice("生成视频任务已提交。按照 0415 规划，最终状态与下载会继续由任务中心接管。");
+      router.push(`/tasks?taskId=${task.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "提交生成视频失败");
     } finally {
