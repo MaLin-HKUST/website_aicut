@@ -7,6 +7,7 @@ import asyncio
 import logging
 import signal
 import socket
+from pathlib import Path
 from typing import Any, Optional
 
 from sqlalchemy import create_engine
@@ -155,6 +156,8 @@ class SmartCutWorker:
             task_type: 任务类型，如 "smart_cut_analyze"
             processor: 处理器实例
         """
+        if hasattr(processor, "set_db_session_factory"):
+            processor.set_db_session_factory(self.SessionLocal)
         self._processors[task_type] = processor
         logger.info(f"Registered processor for {task_type}")
     
@@ -412,10 +415,22 @@ class SmartCutWorker:
         try:
             task_db = db.query(SchedulerTask).filter_by(id=task.id).first()
             if task_db:
-                task_db.result = result
+                task_db.result = self._json_safe(result)
                 db.commit()
         finally:
             db.close()
+
+    def _json_safe(self, value: Any) -> Any:
+        """Convert runtime-only objects into JSON-storable data."""
+        if isinstance(value, Path):
+            return str(value)
+        if isinstance(value, dict):
+            return {key: self._json_safe(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [self._json_safe(item) for item in value]
+        if isinstance(value, tuple):
+            return [self._json_safe(item) for item in value]
+        return value
     
     def _mark_task_failed(self, task: SchedulerTask, error_message: str) -> None:
         """标记任务为失败"""

@@ -45,6 +45,7 @@ class BaseProcessor(ABC):
         )
         self.job_contract = SmartCutJobContract(workspace=workspace)
         self.algorithm_runner = AlgorithmDockerRunner(workspace=workspace)
+        self._db_session_factory: Optional[callable] = None
         
         # 确保工作目录存在
         os.makedirs(workspace, exist_ok=True)
@@ -64,6 +65,15 @@ class BaseProcessor(ABC):
             callback: 进度回调函数，接收 progress: float 参数
         """
         self._progress_callback = callback
+
+    def set_db_session_factory(self, session_factory: callable) -> None:
+        """Provide the worker-owned database session factory to the processor."""
+        self._db_session_factory = session_factory
+
+    def get_db_session(self):
+        if self._db_session_factory is None:
+            raise RuntimeError("Processor database session factory is not configured")
+        return self._db_session_factory()
     
     @abstractmethod
     async def process(self, task: SchedulerTask, workspace: str) -> dict[str, Any]:

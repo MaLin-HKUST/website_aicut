@@ -24,9 +24,12 @@ from worker.stages.run_stage_from_manifest import _load_json, _write_json, run_a
 def test_analyze_e2e_through_shared_postgres(tmp_path: Path, monkeypatch) -> None:
     db_url = os.environ["TEST_DATABASE_URL"]
     monkeypatch.setenv("USE_ALGORITHM_DOCKER_RUNNER", "true")
+    host_workspace_base = Path(os.environ.get("TEST_WORKER_DATA_BASE", str(tmp_path / "worker-jobs")))
+    container_workspace_base = os.environ.get("CONTAINER_WORKER_DATA_BASE", str(host_workspace_base))
 
     fake_tos_root = tmp_path / "fake_tos"
-    workspace = tmp_path / "worker-jobs"
+    workspace = host_workspace_base
+    workspace.mkdir(parents=True, exist_ok=True)
     tos = TOSService(use_fake=True, fake_base_path=str(fake_tos_root))
 
     video_source = tmp_path / "source_video.mp4"
@@ -95,6 +98,12 @@ def test_analyze_e2e_through_shared_postgres(tmp_path: Path, monkeypatch) -> Non
     def fake_docker_run(command, **kwargs):
         task_manifest_path = Path(command[command.index("--task-manifest") + 1])
         result_manifest_path = Path(command[command.index("--result-manifest") + 1])
+        task_manifest_path = Path(
+            str(task_manifest_path).replace(container_workspace_base, str(host_workspace_base), 1)
+        )
+        result_manifest_path = Path(
+            str(result_manifest_path).replace(container_workspace_base, str(host_workspace_base), 1)
+        )
         task_manifest = _load_json(task_manifest_path)
         outputs = run_analyze(task_manifest)
         _write_json(

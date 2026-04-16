@@ -350,7 +350,7 @@
     {
       "id": "F10",
       "title": "Analyze End-to-End Through Shared PostgreSQL",
-      "status": "pending",
+      "status": "done",
       "goal": "Run analyze from A scheduler center through Worker gateway to algorithm image and back.",
       "depends_on": ["F04", "F09"],
       "acceptance": [
@@ -376,6 +376,17 @@
         "configs",
         "tests",
         "HarnessPlan/scheduler_AandW"
+      ],
+      "verification": [
+        "python -m compileall worker apps tests/test_algorithm_runner.py tests/test_worker_gateway_transport.py tests/test_worker_job_contract.py tests/test_analyze_e2e_postgres.py",
+        "pytest tests/test_analyze_e2e_postgres.py tests/test_algorithm_runner.py tests/test_worker_gateway_transport.py tests/test_worker_job_contract.py -q",
+        "A-machine server-side: website_aicut-f10test:latest pytest /home/malin/website_aicut_f10_run/tests/test_analyze_e2e_postgres.py -q  # passed"
+      ],
+      "result": [
+        "Worker now keeps scheduler closure on the A side by storing task results instead of prematurely finishing scheduler_tasks",
+        "Processors now reuse the worker-owned PostgreSQL session factory instead of falling back to default SQLite session state",
+        "Analyze e2e test now handles host/container workdir mapping for algorithm-runner manifest paths",
+        "A-machine server-side analyze e2e passed against temporary PostgreSQL on 127.0.0.1:55432"
       ]
     },
     {

@@ -176,13 +176,11 @@ class FinalizeProcessor(BaseProcessor):
         下载所需文件：原始视频、edited_delay_cuts、pause_cuts
         如果 output_mode == "vertical_1080p": 设置 normalize = True
         """
-        from configs.database import SessionLocal
-        
         if not self._task:
             raise ValueError("Task not set")
         
         payload = self._task.payload
-        db = SessionLocal()
+        db = self.get_db_session()
         
         try:
             # 获取 edit_id 和 output_mode
@@ -647,9 +645,7 @@ class FinalizeProcessor(BaseProcessor):
     
     async def _update_database_async(self, result: dict[str, Any]) -> None:
         """异步更新数据库记录"""
-        from configs.database import SessionLocal
-        
-        db = SessionLocal()
+        db = self.get_db_session()
         try:
             business_task = db.query(BusinessTask).filter_by(id=self._task.business_task_id).first()
             if business_task:
@@ -675,9 +671,7 @@ class FinalizeProcessor(BaseProcessor):
     
     async def _handle_failure_async(self, error_message: str) -> None:
         """异步处理失败情况"""
-        from configs.database import SessionLocal
-        
-        db = SessionLocal()
+        db = self.get_db_session()
         try:
             if self._task:
                 self.job_contract.write_result_manifest(

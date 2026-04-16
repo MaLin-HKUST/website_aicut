@@ -117,8 +117,6 @@ class PreviewProcessor(BaseProcessor):
         2. 下载 original_video, asr_result
         3. 读取 edit.edited_script
         """
-        from configs.database import SessionLocal
-        
         if not self._current_task:
             raise ValueError("No current task set")
         
@@ -129,7 +127,7 @@ class PreviewProcessor(BaseProcessor):
         if not edit_id:
             raise ValueError("Missing edit_id in task payload")
         
-        db = SessionLocal()
+        db = self.get_db_session()
         try:
             # 读取 edit 记录
             edit = db.query(SmartCutEdit).filter_by(id=edit_id).first()
@@ -464,9 +462,7 @@ class PreviewProcessor(BaseProcessor):
     
     def _update_database_sync(self) -> None:
         """同步更新数据库记录"""
-        from configs.database import SessionLocal
-        
-        db = SessionLocal()
+        db = self.get_db_session()
         try:
             edit_id = self._edit.id if self._edit else None
             upload_results = getattr(self, '_upload_results', {})
@@ -506,9 +502,7 @@ class PreviewProcessor(BaseProcessor):
     
     def _handle_failure_sync(self, error_message: str) -> None:
         """同步处理失败情况"""
-        from configs.database import SessionLocal
-        
-        db = SessionLocal()
+        db = self.get_db_session()
         try:
             # 获取 edit_id
             edit_id = None

@@ -47,6 +47,7 @@ class BaseStageProcessor(ABC):
         )
         self.job_contract = SmartCutJobContract(workspace=workspace)
         self.algorithm_runner = AlgorithmDockerRunner(workspace=workspace)
+        self._db_session_factory: Optional[callable] = None
     
     def set_task(self, task: SchedulerTask) -> None:
         """设置当前任务
@@ -64,6 +65,14 @@ class BaseStageProcessor(ABC):
             callback: 进度回调函数，接收 progress: float 参数
         """
         self._progress_callback = callback
+
+    def set_db_session_factory(self, session_factory: callable) -> None:
+        self._db_session_factory = session_factory
+
+    def get_db_session(self):
+        if self._db_session_factory is None:
+            raise RuntimeError("Processor database session factory is not configured")
+        return self._db_session_factory()
     
     def set_work_dir(self, work_dir: Any) -> None:
         """设置工作目录

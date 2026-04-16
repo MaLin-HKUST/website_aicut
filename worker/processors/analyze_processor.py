@@ -380,10 +380,7 @@ class AnalyzeProcessor(BaseStageProcessor):
             result: 产物数据
             upload_results: 上传结果映射
         """
-        from sqlalchemy.orm import Session
-        from configs.database import SessionLocal
-        
-        db = SessionLocal()
+        db = self.get_db_session()
         try:
             # 更新业务任务
             business_task = db.query(BusinessTask).filter_by(id=self._task_id).first()
@@ -421,10 +418,7 @@ class AnalyzeProcessor(BaseStageProcessor):
         Args:
             error_message: 错误信息
         """
-        from sqlalchemy.orm import Session
-        from configs.database import SessionLocal
-        
-        db = SessionLocal()
+        db = self.get_db_session()
         try:
             if self._current_task and self._task_id:
                 self.job_contract.write_result_manifest(
