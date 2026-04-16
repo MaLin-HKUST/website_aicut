@@ -8,7 +8,7 @@ VERSION="${VERSION:-0.0.3}"
 OUTPUT_DIR="${OUTPUT_DIR:-/Volumes/XIAOMA-A-1T/docker_hub/WorkerGateway_and_Ascheduler}"
 ARTIFACTS_DIR="${ARTIFACTS_DIR:-${PROJECT_ROOT}/HarnessPlan/scheduler_AandW/artifacts}"
 TIMESTAMP="$(date +"%Y%m%d_%H%M%S")"
-SHORT_SHA="$(git -C "${PROJECT_ROOT}" rev-parse --short HEAD 2>/dev/null || echo nogit)"
+SHORT_SHA="${SHORT_SHA:-$(git -C "${PROJECT_ROOT}" rev-parse --short HEAD 2>/dev/null || echo nogit)}"
 IMAGE_TAG="${IMAGE_TAG:-smart-cut-worker-gateway:${VERSION}-dev}"
 ARCHIVE_NAME="worker-gateway_${VERSION}_${TIMESTAMP}_${SHORT_SHA}.tar.gz"
 ARCHIVE_PATH="${OUTPUT_DIR}/${ARCHIVE_NAME}"
@@ -49,7 +49,7 @@ echo "=========================================="
 
 docker save "${IMAGE_TAG}" | gzip > "${ARCHIVE_PATH}"
 
-RECORD_PATH="$("${PROJECT_ROOT}/scripts/record_artifact.sh" \
+RECORD_PATH="$(bash "${PROJECT_ROOT}/scripts/record_artifact.sh" \
     "${ARTIFACTS_DIR}" \
     "worker-gateway" \
     "${VERSION}" \

@@ -1,9 +1,9 @@
-# Smart Cut Worker - Minimal Dependencies
-# 基础镜像已包含: sqlalchemy, requests, python-dotenv, loguru, PyYAML
+# Smart Cut Worker - Runtime Dependencies
 
 # Database Migration
 alembic>=1.12.0
 psycopg2-binary>=2.9.9
+sqlalchemy>=2.0.0
 
 # HTTP Client
 httpx>=0.25.0

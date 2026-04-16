@@ -58,7 +58,9 @@
       "title": "A-Scheduler Runtime Entry And Module Wiring",
       "status": "done",
       "goal": "Make the A-machine scheduler center runnable as a real service, not just a service class.",
-      "depends_on": ["F01"],
+      "depends_on": [
+        "F01"
+      ],
       "acceptance": [
         "A dedicated scheduler runtime entry exists and can start the scheduler loop",
         "Scheduler startup uses the intended PostgreSQL scheduler database URL",
@@ -93,7 +95,9 @@
       "title": "A-Scheduler PostgreSQL Schema And Connectivity",
       "status": "done",
       "goal": "Lock the scheduler-center schema and database behavior on the shared PostgreSQL scheduler database.",
-      "depends_on": ["F02"],
+      "depends_on": [
+        "F02"
+      ],
       "acceptance": [
         "scheduler_tasks and smart_cut_devices tables are created and read from PostgreSQL",
         "No default SQLite path remains in the A-scheduler production path",
@@ -131,7 +135,9 @@
       "title": "A-Machine Unified Deployment Compose",
       "status": "done",
       "goal": "Produce the actual A-machine deployment compose for business API/web + PostgreSQL + scheduler center.",
-      "depends_on": ["F03"],
+      "depends_on": [
+        "F03"
+      ],
       "acceptance": [
         "Unified compose is valid and references real Dockerfiles that exist in the repo",
         "Business API uses its business database path intentionally",
@@ -178,7 +184,9 @@
       "title": "Worker Gateway Runtime And Startup Contract",
       "status": "done",
       "goal": "Turn Worker gateway into a clean machine-level runtime with stable startup behavior.",
-      "depends_on": ["F01"],
+      "depends_on": [
+        "F01"
+      ],
       "acceptance": [
         "Worker gateway starts and stays resident",
         "Processor registration and main loop are part of the formal runtime path",
@@ -210,7 +218,9 @@
       "title": "Worker Gateway PostgreSQL Integration",
       "status": "done",
       "goal": "Make Worker gateway read and write the shared A-machine PostgreSQL scheduler database.",
-      "depends_on": ["F05"],
+      "depends_on": [
+        "F05"
+      ],
       "acceptance": [
         "Worker gateway production path no longer defaults to SQLite",
         "Gateway can register, heartbeat, and query assigned tasks against PostgreSQL",
@@ -251,7 +261,9 @@
       "title": "Gateway-TOS Transport Ownership",
       "status": "done",
       "goal": "Implement the rule that Worker gateway owns all TOS download/upload for Smart-Cut execution.",
-      "depends_on": ["F06"],
+      "depends_on": [
+        "F06"
+      ],
       "acceptance": [
         "Gateway downloads all required task inputs from TOS into the shared work directory",
         "Gateway uploads all declared outputs from the shared work directory to TOS",
@@ -286,7 +298,9 @@
       "title": "Gateway-Algorithm Shared Directory Contract",
       "status": "done",
       "goal": "Define and implement the shared-directory contract between Worker gateway and the Smart-Cut algorithm image.",
-      "depends_on": ["F07"],
+      "depends_on": [
+        "F07"
+      ],
       "acceptance": [
         "task_manifest.json contract is fixed",
         "result_manifest.json contract is fixed",
@@ -319,7 +333,9 @@
       "title": "Gateway Docker Runner For Algorithm Image",
       "status": "done",
       "goal": "Make Worker gateway launch the Smart-Cut algorithm image per task/stage instead of embedding scheduler logic into the algorithm image.",
-      "depends_on": ["F08"],
+      "depends_on": [
+        "F08"
+      ],
       "acceptance": [
         "Gateway starts the algorithm container with mounted work directory",
         "Gateway waits for exit status and reads result_manifest.json",
@@ -352,7 +368,10 @@
       "title": "Analyze End-to-End Through Shared PostgreSQL",
       "status": "done",
       "goal": "Run analyze from A scheduler center through Worker gateway to algorithm image and back.",
-      "depends_on": ["F04", "F09"],
+      "depends_on": [
+        "F04",
+        "F09"
+      ],
       "acceptance": [
         "A scheduler assigns analyze task in PostgreSQL",
         "Worker gateway picks it up and executes algorithm container",
@@ -394,7 +413,9 @@
       "title": "Preview End-to-End Through Shared PostgreSQL",
       "status": "done",
       "goal": "Run preview through the full A-machine + Worker gateway + algorithm chain.",
-      "depends_on": ["F10"],
+      "depends_on": [
+        "F10"
+      ],
       "acceptance": [
         "Gateway executes preview container with manifest inputs",
         "audio_b and preview manifests are produced and uploaded",
@@ -435,7 +456,9 @@
       "title": "Finalize End-to-End Through Shared PostgreSQL",
       "status": "done",
       "goal": "Run finalize through the full A-machine + Worker gateway + algorithm chain.",
-      "depends_on": ["F11"],
+      "depends_on": [
+        "F11"
+      ],
       "acceptance": [
         "Gateway executes finalize container with manifest inputs",
         "final_video and optional GroundTruth outputs are uploaded",
@@ -476,7 +499,10 @@
       "title": "Heartbeat Timeout And Recovery",
       "status": "done",
       "goal": "Prove offline detection and task recovery across the shared scheduler database.",
-      "depends_on": ["F06", "F10"],
+      "depends_on": [
+        "F06",
+        "F10"
+      ],
       "acceptance": [
         "Offline workers are marked offline by A-scheduler",
         "Their assigned tasks are reset to pending",
@@ -517,7 +543,10 @@
       "title": "Artifact Build And Version Recording",
       "status": "done",
       "goal": "Create repeatable build/export flows for A-scheduler and Worker gateway images with versioned filenames.",
-      "depends_on": ["F04", "F09"],
+      "depends_on": [
+        "F04",
+        "F09"
+      ],
       "acceptance": [
         "Image tar outputs land in /Volumes/XIAOMA-A-1T/docker_hub/WorkerGateway_and_Ascheduler",
         "Filenames follow version 0.0.3 plus timestamp naming",
@@ -549,9 +578,15 @@
     {
       "id": "F15",
       "title": "Release Gate",
-      "status": "pending",
+      "status": "done",
       "goal": "Verify the full A-machine scheduler center + Worker gateway architecture and record release evidence.",
-      "depends_on": ["F10", "F11", "F12", "F13", "F14"],
+      "depends_on": [
+        "F10",
+        "F11",
+        "F12",
+        "F13",
+        "F14"
+      ],
       "acceptance": [
         "A-scheduler, PostgreSQL, Worker gateway, and algorithm image all run together",
         "Core stage flows pass end-to-end",
@@ -575,6 +610,14 @@
         "apps/models",
         "apps/services",
         "configs"
+      ],
+      "verification": [
+        "python HarnessPlan/scheduler_AandW/run_release_gate.py",
+        "release_gate_*.md generated under HarnessPlan/scheduler_AandW/reports"
+      ],
+      "result": [
+        "Release report now records F01-F14 verification evidence and artifact record links",
+        "Release decision is PASS when all prerequisite features are done and artifact records exist"
       ]
     }
   ]
