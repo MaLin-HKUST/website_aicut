@@ -91,17 +91,17 @@ export function SmartCutScriptEditor({
   const selectedCount = normalizedSelection ? normalizedSelection.end - normalizedSelection.start : 0;
 
   return (
-    <Card className="rounded-[30px] border-[#e8dbca] bg-[#fffaf3] p-5 lg:p-6">
+    <Card className="rounded-[30px] border-[#e8dbca] bg-[linear-gradient(180deg,_rgba(255,255,255,0.96),_rgba(255,250,243,0.96))] p-5 shadow-sm lg:p-6">
       <div className="flex flex-col gap-4 border-b border-dashed border-[#eadfce] pb-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.28em] text-stone-500">Preview Editor</p>
+          <p className="text-xs tracking-[0.24em] text-stone-500">删除线调稿台</p>
           <h3 className="mt-2 text-2xl font-semibold text-[#231815]">删除线脚本调整</h3>
           <p className="mt-2 text-sm leading-7 text-stone-600">
             只调整删除范围，不改写正文。先拖选文字，再点下方按钮把它标为删除或恢复保留。
           </p>
         </div>
         <div className="rounded-[22px] border border-[#eadfce] bg-white px-4 py-3 text-sm text-stone-500">
-          {selectedCount > 0 ? `当前选中 ${selectedCount} 个字符` : "未选中内容"}
+          {selectedCount > 0 ? `当前选中 ${selectedCount} 个字` : "未选中内容"}
         </div>
       </div>
 

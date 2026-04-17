@@ -163,7 +163,7 @@ export default function TTSPage() {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-xs uppercase tracking-[0.24em] text-stone-500">输入文案</p>
-                      <p className="mt-2 text-sm text-stone-500">{characterCount} characters</p>
+                      <p className="mt-2 text-sm text-stone-500">当前字数：{characterCount}</p>
                     </div>
                     <div className="rounded-full bg-[#213c56] px-5 py-3 text-xs font-semibold uppercase tracking-[0.24em] text-white">
                       固定音色
@@ -171,7 +171,7 @@ export default function TTSPage() {
                   </div>
 
                   <div className="mt-5 border-t border-dashed border-[#e8ddcf] pt-5">
-                    <p className="text-xs uppercase tracking-[0.32em] text-stone-500">Script</p>
+                    <p className="text-xs uppercase tracking-[0.32em] text-stone-500">文案内容</p>
                     <textarea
                       id="tts-text"
                       className="mt-4 min-h-[360px] w-full resize-none rounded-[28px] border border-[#d8cebf] bg-[#fffdfa] px-5 py-5 text-[17px] leading-9 text-foreground outline-none transition focus:border-[#213c56] focus:ring-2 focus:ring-[#213c56]/15"
@@ -183,8 +183,8 @@ export default function TTSPage() {
                     />
 
                     <div className="mt-4 flex items-center justify-between text-sm text-stone-500">
-                      <p>{characterCount} characters</p>
-                      <p>Signed in as {user?.username ?? "..."}</p>
+                      <p>已输入 {characterCount} 个字</p>
+                      <p>当前账号：{user?.username ?? "..."}</p>
                     </div>
                   </div>
                 </div>
@@ -242,7 +242,7 @@ export default function TTSPage() {
             </Card>
 
             <Card className="rounded-[32px] border-[#2b201d] bg-[#2b201d] p-6 text-stone-100 shadow-panel">
-              <p className="text-xs uppercase tracking-[0.3em] text-stone-300">Prompt Ideas</p>
+              <p className="text-xs uppercase tracking-[0.3em] text-stone-300">常用文案</p>
               <h3 className="mt-3 text-3xl font-semibold">快速替换常用文案</h3>
               <div className="mt-5 space-y-3">
                 {EXAMPLE_COPY.map((sample) => (

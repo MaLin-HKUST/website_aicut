@@ -72,8 +72,8 @@ export function UserWorkspaceShell({
       <div className="mx-auto flex max-w-[1500px] gap-4">
         <aside className="flex w-[260px] shrink-0 flex-col gap-4">
           <div className="px-2 pt-2">
-            <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-stone-400">Audio Workspace</p>
-            <h2 className="mt-2 text-[22px] font-semibold text-[#241714]">Hello, {currentUser}</h2>
+            <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-stone-400">小马 AI 剪辑</p>
+            <h2 className="mt-2 text-[22px] font-semibold text-[#241714]">你好，{currentUser}</h2>
           </div>
 
           <Card className="flex flex-col gap-1 rounded-[24px] border-[#e5dacd] bg-white p-3 shadow-sm">
