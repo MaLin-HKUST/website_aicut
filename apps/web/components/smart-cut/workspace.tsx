@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { UserWorkspaceShell } from "@/components/navigation/user-workspace-shell";
 import { SmartCutScriptEditor } from "@/components/smart-cut/script-editor";
 import {
   createSmartCutTask,
@@ -85,6 +86,12 @@ export function SmartCutLandingPage() {
     void bootstrap();
   }, [router]);
 
+  async function logout() {
+    await fetch("/api/proxy/auth/logout", { method: "POST" });
+    router.replace("/login");
+    router.refresh();
+  }
+
   async function createTask() {
     if (!user) return;
     setCreating(true);
@@ -100,79 +107,76 @@ export function SmartCutLandingPage() {
   }
 
   return (
-    <main className="min-h-screen p-4 lg:p-8">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <section className="relative overflow-hidden rounded-[40px] border border-[#e5dacd] bg-[#f7efe2] px-5 py-6 shadow-panel lg:px-8 lg:py-8">
-          <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-[radial-gradient(circle_at_top,rgba(196,99,61,0.24),transparent_58%)]" />
-          <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.35em] text-stone-500">Smart Cut</p>
-              <h1 className="mt-3 text-3xl font-semibold leading-tight text-[#241714] lg:text-5xl">三段式智能气口剪辑工作台</h1>
-              <p className="mt-4 max-w-3xl text-sm leading-7 text-stone-600">
-                这里负责上传原视频、调整删除线脚本、生成试听，并把最终视频任务送入统一任务队列。最终下载与结果追踪会继续放在任务中心。
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <Button className="h-11 px-5" disabled={creating} onClick={createTask} type="button">
-                {creating ? "创建中..." : "开始新任务"}
-              </Button>
-              <Button className="h-11 px-5" onClick={() => router.push("/welcome")} type="button" variant="secondary">
-                返回工作台
-              </Button>
-            </div>
+    <UserWorkspaceShell onLogout={logout} title="Audio Workspace">
+      <section className="rounded-[32px] border border-[#e1d7c7] bg-[#fdf9f2] p-6 shadow-panel">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-stone-500">Smart Cut</p>
+            <h1 className="mt-3 text-4xl font-semibold leading-tight text-[#231815]">三段式智能气口剪辑工作台</h1>
+            <p className="mt-4 max-w-3xl text-sm leading-7 text-stone-600">
+              这里负责上传原视频、调整删除线脚本、生成试听，并把最终视频任务送入统一任务队列。最终下载与结果追踪会继续放在任务中心。
+            </p>
           </div>
-        </section>
+          <div className="flex flex-wrap gap-3">
+            <Button className="h-11 px-5" disabled={creating} onClick={createTask} type="button">
+              {creating ? "创建中..." : "开始新任务"}
+            </Button>
+            <Button className="h-11 px-5" onClick={() => router.push("/tasks")} type="button" variant="secondary">
+              打开任务中心
+            </Button>
+          </div>
+        </div>
+      </section>
 
-        <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-          <Card className="rounded-[32px] border-[#eadfce] bg-[#fffaf2] p-6 lg:p-7">
-            <p className="text-xs uppercase tracking-[0.3em] text-stone-500">Workflow</p>
-            <h2 className="mt-3 text-2xl font-semibold text-[#231815]">固定三段</h2>
-            <div className="mt-6 grid gap-4 md:grid-cols-3">
-              {[
-                ["Analyze", "上传视频与标准文案，启动分析，拿到 script。"],
-                ["Preview", "只在前端看删除线并调整，生成试听音轨。"],
-                ["Finalize", "确认输出规格与 AI 投喂，把最终视频任务提交到任务中心。"],
-              ].map(([title, description]) => (
-                <div key={title} className="rounded-[24px] border border-[#eadfce] bg-white p-4">
-                  <p className="text-xs uppercase tracking-[0.28em] text-stone-500">{title}</p>
-                  <p className="mt-3 text-base font-semibold text-[#231815]">{title}</p>
-                  <p className="mt-3 text-sm leading-7 text-stone-600">{description}</p>
-                </div>
-              ))}
-            </div>
-          </Card>
+      <section className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+        <Card className="rounded-[32px] border-[#e1d7c7] bg-[#fdf9f2] p-6 shadow-panel">
+          <p className="text-xs uppercase tracking-[0.3em] text-stone-500">Workflow</p>
+          <h2 className="mt-3 text-2xl font-semibold text-[#231815]">固定三段</h2>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            {[
+              ["Analyze", "上传视频与标准文案，启动分析，拿到 script。"],
+              ["Preview", "只在前端看删除线并调整，生成试听音轨。"],
+              ["Finalize", "确认输出规格与 AI 投喂，把最终视频任务提交到任务中心。"],
+            ].map(([title, description]) => (
+              <div key={title} className="rounded-[24px] border border-[#e1d7c7] bg-white p-4">
+                <p className="text-xs uppercase tracking-[0.28em] text-stone-500">{title}</p>
+                <p className="mt-3 text-base font-semibold text-[#231815]">{title}</p>
+                <p className="mt-3 text-sm leading-7 text-stone-600">{description}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
 
-          <Card className="rounded-[32px] border-[#eadfce] bg-[#2b201d] p-6 text-stone-100 lg:p-7">
-            <p className="text-xs uppercase tracking-[0.3em] text-stone-300">Recent Tasks</p>
-            <h2 className="mt-3 text-2xl font-semibold">最近任务</h2>
-            {error ? <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
-            <div className="mt-5 space-y-3">
-              {loading ? (
-                <p className="text-sm text-stone-300">正在读取任务…</p>
-              ) : tasks.length === 0 ? (
-                <div className="rounded-[24px] border border-white/10 bg-black/15 p-4 text-sm text-stone-300">还没有任务，先创建一个 Smart Cut 任务。</div>
-              ) : (
-                tasks.slice(0, 5).map((task) => (
-                  <button
-                    key={task.id}
-                    className="block w-full rounded-[24px] border border-white/10 bg-black/15 p-4 text-left transition hover:bg-black/25"
-                    onClick={() => router.push(`/smart-cut/${task.id}`)}
-                    type="button"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="font-semibold">{task.id}</p>
-                      <span className={`rounded-full px-3 py-1 text-xs ${statusTone(task.status)}`}>{task.status}</span>
-                    </div>
-                    <p className="mt-2 text-sm text-stone-300">{task.current_stage ?? "pending"}</p>
-                    <p className="mt-3 text-xs uppercase tracking-[0.2em] text-stone-400">{formatTime(task.updated_at)}</p>
-                  </button>
-                ))
-              )}
-            </div>
-          </Card>
-        </section>
-      </div>
-    </main>
+        <Card className="rounded-[32px] border-[#e1d7c7] bg-[#fdf9f2] p-6 shadow-panel">
+          <p className="text-xs uppercase tracking-[0.3em] text-stone-500">Recent Tasks</p>
+          <h2 className="mt-3 text-2xl font-semibold text-[#231815]">最近任务</h2>
+          {error ? <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
+          <div className="mt-5 space-y-3">
+            {loading ? (
+              <p className="text-sm text-stone-500">正在读取任务…</p>
+            ) : tasks.length === 0 ? (
+              <div className="rounded-[24px] border border-[#e1d7c7] bg-white p-4 text-sm text-stone-500">还没有任务，先创建一个 Smart Cut 任务。</div>
+            ) : (
+              tasks.slice(0, 5).map((task) => (
+                <button
+                  key={task.id}
+                  className="block w-full rounded-[24px] border border-[#e1d7c7] bg-white p-4 text-left transition hover:bg-[#faf2e7]"
+                  onClick={() => router.push(`/smart-cut/${task.id}`)}
+                  type="button"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-semibold text-[#231815]">{task.id}</p>
+                    <span className={`rounded-full px-3 py-1 text-xs ${statusTone(task.status)}`}>{task.status}</span>
+                  </div>
+                  <p className="mt-2 text-sm text-stone-500">{task.current_stage ?? "pending"}</p>
+                  <p className="mt-3 text-xs uppercase tracking-[0.2em] text-stone-400">{formatTime(task.updated_at)}</p>
+                </button>
+              ))
+            )}
+          </div>
+        </Card>
+      </section>
+    </UserWorkspaceShell>
   );
 }
 
@@ -190,6 +194,12 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
   const [notice, setNotice] = useState<string | null>(null);
 
   const latestEdit = edits[0] ?? null;
+
+  async function logout() {
+    await fetch("/api/proxy/auth/logout", { method: "POST" });
+    router.replace("/login");
+    router.refresh();
+  }
 
   async function bootstrap() {
     const authResponse = await fetch("/api/proxy/auth/me");
@@ -308,29 +318,27 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
   const headerTitle = useMemo(() => (task ? `任务 ${task.id}` : "Smart Cut"), [task]);
 
   return (
-    <main className="min-h-screen p-4 lg:p-8">
-      <div className="mx-auto max-w-7xl">
-        <section className="relative overflow-hidden rounded-[40px] border border-[#e5dacd] bg-[#f7efe2] px-5 py-6 shadow-panel lg:px-8 lg:py-8">
-          <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-[radial-gradient(circle_at_top,rgba(196,99,61,0.24),transparent_58%)]" />
-          <div className="relative flex flex-col gap-4 border-b border-[#dfcfbe] pb-6 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.35em] text-stone-500">Smart Cut Workspace</p>
-              <h1 className="mt-3 text-3xl font-semibold leading-tight text-[#241714] lg:text-5xl">{headerTitle}</h1>
-              <p className="mt-4 max-w-3xl text-sm leading-7 text-stone-600">
-                Smart Cut 页面只负责三段工作流。点击“生成视频”后，最终状态与下载会转交到任务中心。
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <Button className="h-11 px-5" onClick={() => router.push("/smart-cut")} type="button" variant="secondary">
-                返回任务入口
-              </Button>
-              <Button className="h-11 px-5" onClick={() => void bootstrap()} type="button" variant="ghost">
-                刷新状态
-              </Button>
-            </div>
+    <UserWorkspaceShell onLogout={logout} title="Audio Workspace">
+      <section className="rounded-[32px] border border-[#e1d7c7] bg-[#fdf9f2] p-6 shadow-panel">
+        <div className="flex flex-col gap-4 border-b border-[#e3d8c7] pb-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.35em] text-stone-500">Smart Cut Workspace</p>
+            <h1 className="mt-3 text-3xl font-semibold leading-tight text-[#231815] lg:text-4xl">{headerTitle}</h1>
+            <p className="mt-4 max-w-3xl text-sm leading-7 text-stone-600">
+              Smart Cut 页面只负责三段工作流。点击“生成视频”后，最终状态与下载会转交到任务中心。
+            </p>
           </div>
+          <div className="flex flex-wrap gap-3">
+            <Button className="h-11 px-5" onClick={() => router.push("/smart-cut")} type="button" variant="secondary">
+              返回任务入口
+            </Button>
+            <Button className="h-11 px-5" onClick={() => void bootstrap()} type="button" variant="ghost">
+              刷新状态
+            </Button>
+          </div>
+        </div>
 
-          <div className="relative mt-6 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="mt-6 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
             <div className="space-y-6">
               <Card className="rounded-[32px] border-[#eadfce] bg-[#fffaf2] p-6 lg:p-7">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -436,8 +444,7 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
               {task?.error_message ? <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">后端错误：{task.error_message}</p> : null}
             </div>
           </div>
-        </section>
-      </div>
-    </main>
+      </section>
+    </UserWorkspaceShell>
   );
 }
