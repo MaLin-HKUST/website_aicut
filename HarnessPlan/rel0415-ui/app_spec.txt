@@ -1,0 +1,47 @@
+Project: rel0415-ui
+Mode: long-running harness
+Version target: rel0415-user-ui-redesign
+
+Goal
+- Redesign the rel0415 user-facing web experience to match the accepted screenshot baseline.
+- Keep the current rel0415 routes and business APIs, but replace the current hero/English-heavy UI with the preferred left-rail workspace pattern.
+
+In scope
+- `/login`
+- `/welcome`
+- `/tts`
+- `/smart-cut`
+- `/tasks`
+- Shared user workspace shell, sidebar, summary cards, and page-level Chinese copy cleanup
+
+Out of scope
+- Admin page redesign
+- Backend API contract changes
+- Database/schema changes
+- Scheduler/worker protocol changes
+
+Design baseline
+- Screenshot-led structure:
+  - standalone Chinese login page
+  - left sidebar workspace after login
+  - top summary metrics
+  - center work area
+  - right-side result/status cards where appropriate
+- Style direction:
+  - warm light background
+  - dark brown accent
+  - large rounded cards
+  - low-noise, product-like interface
+
+Current grounded facts
+- `apps/web` is the formal rel0415 frontend codebase in this repo.
+- `login`, `welcome`, `tts`, `smart-cut`, and `tasks` already exist as routes.
+- `admin` is currently separate and should remain separate for this round.
+- Existing user data and task data should continue using current rel0415 APIs.
+
+Success criteria
+- User login lands on `/welcome`.
+- `/welcome`, `/tts`, `/smart-cut`, and `/tasks` share one consistent workspace shell.
+- `TTS` follows the approved screenshot structure.
+- `Smart Cut` and `Tasks` use the same shell and module language instead of separate ad-hoc page shells.
+- Playwright can cover login and route switching across the main user flows.

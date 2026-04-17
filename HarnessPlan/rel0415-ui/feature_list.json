@@ -1,0 +1,321 @@
+{
+  "project": "rel0415-ui",
+  "version": "rel0415-user-ui-redesign",
+  "mode": "harness",
+  "design_baseline": [
+    "/Users/malin13/Documents/trae_projects/website_aicut/HarnessPlan/rel0415/page-pic/5f15a14ef1856ff248de35ac89d089c9.jpg",
+    "/Users/malin13/Documents/trae_projects/website_aicut/HarnessPlan/rel0415/page-pic/376b26375f7e7b5abb329d1e4a7cc090.jpg",
+    "/Users/malin13/Documents/trae_projects/website_aicut/HarnessPlan/rel0415/page-pic/c1445e29a3f3dd380e5224b9059e9422.jpg"
+  ],
+  "development_workflow": {
+    "branch_model": "one-feature-one-branch",
+    "worktree_model": "one-feature-one-worktree-when-parallel",
+    "integration_branch": "release/0415",
+    "commit_policy": [
+      "Feature work happens on its own feature branch.",
+      "Only stage files inside the feature commit_scope.",
+      "Do not use git add . or git commit -a for feature work in this harness.",
+      "Completed UI features merge into release/0415 before final validation."
+    ],
+    "pre_commit_checks": [
+      "git status --short",
+      "git diff --cached --name-only"
+    ]
+  },
+  "features": [
+    {
+      "id": "U01",
+      "title": "Harness Bootstrap",
+      "status": "done",
+      "goal": "Create the rel0415-ui harness and lock the redesign rules.",
+      "depends_on": [],
+      "branch_name": "feature/rel0415-ui-U01-bootstrap",
+      "worktree_name": "website_aicut-rel0415-ui-U01",
+      "owner_role": "leader",
+      "write_scope": [
+        "HarnessPlan/rel0415-ui"
+      ],
+      "commit_scope": [
+        "HarnessPlan/rel0415-ui"
+      ],
+      "verification": [
+        "bash -n HarnessPlan/rel0415-ui/init.sh",
+        "python -m json.tool HarnessPlan/rel0415-ui/feature_list.json",
+        "./HarnessPlan/rel0415-ui/init.sh status"
+      ],
+      "acceptance": [
+        "Harness artifacts exist under HarnessPlan/rel0415-ui",
+        "Harness records the screenshot baseline and UI-only scope",
+        "Harness status reports the next unfinished feature"
+      ],
+      "commit_rule": "Commit only harness files for this feature."
+    },
+    {
+      "id": "U02",
+      "title": "Design Token And Shared Shell",
+      "status": "in_progress",
+      "goal": "Create the unified user workspace shell shared by welcome, tts, smart-cut, and tasks.",
+      "depends_on": [
+        "U01"
+      ],
+      "branch_name": "feature/rel0415-ui-U02-shell",
+      "worktree_name": "website_aicut-rel0415-ui-U02",
+      "owner_role": "executor",
+      "write_scope": [
+        "apps/web/app/layout.tsx",
+        "apps/web/app/globals.css",
+        "apps/web/components/navigation",
+        "apps/web/components/workspace"
+      ],
+      "commit_scope": [
+        "apps/web/app/layout.tsx",
+        "apps/web/app/globals.css",
+        "apps/web/components/navigation",
+        "apps/web/components/workspace",
+        "HarnessPlan/rel0415-ui"
+      ],
+      "verification": [
+        "npm --prefix apps/web run build"
+      ],
+      "acceptance": [
+        "Shared shell renders left sidebar, top summary cards, and a content slot",
+        "Login route remains outside the shared shell",
+        "User pages can reuse the shell without touching admin pages"
+      ],
+      "commit_rule": "Commit shell and design-token files only."
+    },
+    {
+      "id": "U03",
+      "title": "Login Page Restore",
+      "status": "pending",
+      "goal": "Restore the screenshot-style Chinese login page.",
+      "depends_on": [
+        "U01"
+      ],
+      "branch_name": "feature/rel0415-ui-U03-login",
+      "worktree_name": "website_aicut-rel0415-ui-U03",
+      "owner_role": "executor",
+      "write_scope": [
+        "apps/web/app/login/page.tsx"
+      ],
+      "commit_scope": [
+        "apps/web/app/login/page.tsx",
+        "HarnessPlan/rel0415-ui"
+      ],
+      "verification": [
+        "npm --prefix apps/web run build"
+      ],
+      "acceptance": [
+        "Login page matches the Chinese screenshot baseline",
+        "Login still redirects users to /welcome and admins to /admin"
+      ],
+      "commit_rule": "Commit login page files only."
+    },
+    {
+      "id": "U04",
+      "title": "Welcome Redesign",
+      "status": "pending",
+      "goal": "Turn welcome into the empty-state overview workspace.",
+      "depends_on": [
+        "U02"
+      ],
+      "branch_name": "feature/rel0415-ui-U04-welcome",
+      "worktree_name": "website_aicut-rel0415-ui-U04",
+      "owner_role": "executor",
+      "write_scope": [
+        "apps/web/app/welcome/page.tsx"
+      ],
+      "commit_scope": [
+        "apps/web/app/welcome/page.tsx",
+        "HarnessPlan/rel0415-ui"
+      ],
+      "verification": [
+        "npm --prefix apps/web run build"
+      ],
+      "acceptance": [
+        "Welcome uses the shared shell",
+        "Main area is an empty-state guidance workspace rather than a feature hero page"
+      ],
+      "commit_rule": "Commit welcome page files only."
+    },
+    {
+      "id": "U05",
+      "title": "TTS Redesign",
+      "status": "pending",
+      "goal": "Rebuild the TTS workspace to match the approved screenshot modules.",
+      "depends_on": [
+        "U02"
+      ],
+      "branch_name": "feature/rel0415-ui-U05-tts",
+      "worktree_name": "website_aicut-rel0415-ui-U05",
+      "owner_role": "executor",
+      "write_scope": [
+        "apps/web/app/tts/page.tsx"
+      ],
+      "commit_scope": [
+        "apps/web/app/tts/page.tsx",
+        "HarnessPlan/rel0415-ui"
+      ],
+      "verification": [
+        "npm --prefix apps/web run build"
+      ],
+      "acceptance": [
+        "TTS page uses the shared shell",
+        "Center input card and right result cards match the screenshot structure",
+        "Existing TTS API behavior is preserved"
+      ],
+      "commit_rule": "Commit TTS page files only."
+    },
+    {
+      "id": "U06",
+      "title": "Smart Cut Shell Migration",
+      "status": "pending",
+      "goal": "Move Smart Cut pages into the new workspace shell without changing business flow.",
+      "depends_on": [
+        "U02"
+      ],
+      "branch_name": "feature/rel0415-ui-U06-smart-cut",
+      "worktree_name": "website_aicut-rel0415-ui-U06",
+      "owner_role": "executor",
+      "write_scope": [
+        "apps/web/components/smart-cut",
+        "apps/web/app/smart-cut"
+      ],
+      "commit_scope": [
+        "apps/web/components/smart-cut",
+        "apps/web/app/smart-cut",
+        "HarnessPlan/rel0415-ui"
+      ],
+      "verification": [
+        "npm --prefix apps/web run build"
+      ],
+      "acceptance": [
+        "Smart Cut landing and detail pages use the shared shell",
+        "Analyze/Preview/Finalize behavior stays intact"
+      ],
+      "commit_rule": "Commit Smart Cut page files only."
+    },
+    {
+      "id": "U07",
+      "title": "Tasks Redesign",
+      "status": "pending",
+      "goal": "Rebuild the user task page into the shared shell while keeping current task-center data logic.",
+      "depends_on": [
+        "U02"
+      ],
+      "branch_name": "feature/rel0415-ui-U07-tasks",
+      "worktree_name": "website_aicut-rel0415-ui-U07",
+      "owner_role": "executor",
+      "write_scope": [
+        "apps/web/app/tasks/page.tsx",
+        "apps/web/components/task-center",
+        "apps/web/lib/task-center.ts"
+      ],
+      "commit_scope": [
+        "apps/web/app/tasks/page.tsx",
+        "apps/web/components/task-center",
+        "apps/web/lib/task-center.ts",
+        "HarnessPlan/rel0415-ui"
+      ],
+      "verification": [
+        "npm --prefix apps/web run build"
+      ],
+      "acceptance": [
+        "User tasks route uses the shared shell",
+        "Task list and detail area are restyled to the screenshot language",
+        "Admin route remains untouched"
+      ],
+      "commit_rule": "Commit user tasks page files only."
+    },
+    {
+      "id": "U08",
+      "title": "Route Consistency And Copy Cleanup",
+      "status": "pending",
+      "goal": "Remove user-facing English leftovers and unify navigation and empty-state copy.",
+      "depends_on": [
+        "U03",
+        "U04",
+        "U05",
+        "U06",
+        "U07"
+      ],
+      "branch_name": "feature/rel0415-ui-U08-copy-cleanup",
+      "worktree_name": "website_aicut-rel0415-ui-U08",
+      "owner_role": "executor",
+      "write_scope": [
+        "apps/web/app",
+        "apps/web/components/navigation",
+        "apps/web/components/task-center",
+        "apps/web/components/smart-cut"
+      ],
+      "commit_scope": [
+        "apps/web/app",
+        "apps/web/components/navigation",
+        "apps/web/components/task-center",
+        "apps/web/components/smart-cut",
+        "HarnessPlan/rel0415-ui"
+      ],
+      "verification": [
+        "npm --prefix apps/web run build"
+      ],
+      "acceptance": [
+        "User-facing pages no longer expose the current English-heavy headings",
+        "Navigation wording is consistent across all user routes"
+      ],
+      "commit_rule": "Commit user-facing copy cleanup only."
+    },
+    {
+      "id": "U09",
+      "title": "Playwright User Flow Coverage",
+      "status": "pending",
+      "goal": "Cover the redesigned user route flow with Playwright.",
+      "depends_on": [
+        "U08"
+      ],
+      "branch_name": "feature/rel0415-ui-U09-playwright",
+      "worktree_name": "website_aicut-rel0415-ui-U09",
+      "owner_role": "test-engineer",
+      "write_scope": [
+        "apps/web/tests"
+      ],
+      "commit_scope": [
+        "apps/web/tests",
+        "HarnessPlan/rel0415-ui"
+      ],
+      "verification": [
+        "npx playwright test --config apps/web/playwright.config.ts"
+      ],
+      "acceptance": [
+        "Playwright covers login, welcome, tts, smart-cut, and tasks route switching"
+      ],
+      "commit_rule": "Commit Playwright coverage only."
+    },
+    {
+      "id": "U10",
+      "title": "Release Gate And Handover",
+      "status": "pending",
+      "goal": "Run the final UI gate, update progress, and leave the work resumable.",
+      "depends_on": [
+        "U09"
+      ],
+      "branch_name": "feature/rel0415-ui-U10-release-gate",
+      "worktree_name": "website_aicut-rel0415-ui-U10",
+      "owner_role": "leader",
+      "write_scope": [
+        "HarnessPlan/rel0415-ui"
+      ],
+      "commit_scope": [
+        "HarnessPlan/rel0415-ui"
+      ],
+      "verification": [
+        "npm --prefix apps/web run build",
+        "python HarnessPlan/rel0415-ui/run_release_gate.py"
+      ],
+      "acceptance": [
+        "Harness records the final gate result",
+        "The next operator can resume from harness files only"
+      ],
+      "commit_rule": "Commit harness closeout only."
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+# rel0415-ui Harness Progress
+
+## Date
+- 2026-04-18
+
+## Mode
+- initialize-and-implement
+
+## Completed
+- U01: Harness Bootstrap
+
+## Grounded status captured in this session
+- The design baseline is anchored to the 3 screenshot files under `HarnessPlan/rel0415/page-pic/`.
+- The current rel0415 frontend already has `login / welcome / tts / smart-cut / tasks` routes.
+- Current user pages are visually inconsistent and still contain English-heavy UI.
+- Admin is intentionally out of scope for this redesign round.
+
+## What changed in this session
+- Created the dedicated `HarnessPlan/rel0415-ui` harness for the user-facing redesign.
+- Locked the redesign goal, route scope, and git/branch rules for this UI effort.
+- Chose a screenshot-first design baseline rather than reusing the current rel0415 shell.
+
+## Verification run for U01
+- `bash -n HarnessPlan/rel0415-ui/init.sh`
+- `python -m json.tool HarnessPlan/rel0415-ui/feature_list.json`
+- `./HarnessPlan/rel0415-ui/init.sh status`
+
+## Current focus
+- U02: Design Token And Shared Shell
+
+## Next recommended feature
+- U02: Design Token And Shared Shell
