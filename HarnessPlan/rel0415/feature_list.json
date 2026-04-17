@@ -378,7 +378,7 @@
     {
       "id": "F10",
       "title": "Server Deploy To release/0415 Test Slot",
-      "status": "pending",
+      "status": "done",
       "goal": "Deploy the 0415 site to a real test slot on the servers without replacing the live stable site yet.",
       "depends_on": [
         "F09"
@@ -409,12 +409,17 @@
         "docker compose config",
         "curl -I http://127.0.0.1:3000/login"
       ],
+      "result": [
+        "Deployed the 0415 web slot on A-machine port 3001 from the uploaded Next standalone runtime",
+        "Deployed the smart-cut API slot on A-machine port 8001 plus a scheduler and worker runtime",
+        "Kept the live legacy admin/TTS web and API containers on 3000/8000 intact during slot bring-up"
+      ],
       "commit_rule": "Commit only 0415 test-slot deploy changes and harness tracking."
     },
     {
       "id": "F11",
       "title": "End To End Acceptance For 0415",
-      "status": "pending",
+      "status": "done",
       "goal": "Run the 0415 user/admin acceptance flow on the real integrated system.",
       "depends_on": [
         "F10"
@@ -437,12 +442,17 @@
         "npx playwright test --config apps/web/playwright.config.ts",
         "manual server acceptance checklist"
       ],
+      "result": [
+        "Validated one full Smart Cut task from upload -> analyze -> preview -> finalize -> success on A-machine",
+        "Confirmed task-center user view exposes the finished task with download_url",
+        "Recorded acceptance evidence in acceptance_20260417_0415_slot.md"
+      ],
       "commit_rule": "Commit acceptance records and harness tracking only."
     },
     {
       "id": "F12",
       "title": "Cleanup Temporary Nginx And Static Smart Cut Patch",
-      "status": "pending",
+      "status": "done",
       "goal": "Remove the temporary Nginx static Smart Cut route and injected welcome entry once the real 0415 routes are live.",
       "depends_on": [
         "F11"
@@ -466,12 +476,17 @@
         "manual nginx config check",
         "curl -I <smart-cut-route-after-cleanup>"
       ],
+      "result": [
+        "Removed the temporary static /smart-cut HTML routing from nginx",
+        "Removed the /welcome Smart Cut sub_filter injection",
+        "Cut the live domain over to the real Next routes for /welcome, /smart-cut, /tasks, and /admin/tasks"
+      ],
       "commit_rule": "Commit cleanup notes and harness tracking only."
     },
     {
       "id": "F13",
       "title": "Release Gate And Handover Closeout",
-      "status": "pending",
+      "status": "done",
       "goal": "Record the final 0415 release evidence, mark the version ready, and leave the work resumable for post-release changes.",
       "depends_on": [
         "F12"
@@ -494,7 +509,11 @@
         "python HarnessPlan/rel0415/run_release_gate.py",
         "release_gate_*.md generated under HarnessPlan/rel0415/reports"
       ],
-      "commit_rule": "Commit only release evidence and harness closeout updates."
+      "commit_rule": "Commit only release evidence and harness closeout updates.",
+      "result": [
+        "0415 release gate found all prerequisite features complete",
+        "0415 release evidence files are present under HarnessPlan/rel0415/reports"
+      ]
     }
   ]
 }

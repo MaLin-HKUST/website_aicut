@@ -121,7 +121,6 @@ def _build_task_detail(
     if edit:
         current_edited_script = edit.edited_script
         audio_b_url = edit.audio_b_url
-        error_message = edit.error_message
 
     scheduler_task = _latest_scheduler_task(db, task.id)
     error_message = error_message or _task_error_message(task, scheduler_task)

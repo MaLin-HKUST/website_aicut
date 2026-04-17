@@ -16,6 +16,9 @@
 - F07: Task Center User And Admin API
 - F08: Smart Cut To Task Center Transition Wiring
 - F09: Frontend Build Green On 0415 Baseline
+- F10: Server Deploy To release/0415 Test Slot
+- F11: End To End Acceptance For 0415
+- F12: Cleanup Temporary Nginx And Static Smart Cut Patch
 
 ## Grounded status captured in this session
 - `HarnessPlan/rel0415` existed as an empty directory and had no harness artifacts.
@@ -52,6 +55,9 @@
 - Added Smart Cut list / edits / upload-direct APIs and aligned the migrated Smart Cut frontend with the real repo routes.
 - Added user/admin task-center APIs, switched the task-center shell from mock data to real API data, and split proxy traffic between legacy and Smart Cut backends.
 - Wired Smart Cut finalize into the task center handoff and kept the overall 0415 frontend build green.
+- Deployed `release/0415` test-slot services on A-machine: web `3001`, smart-cut API `8001`, scheduler, and worker.
+- Completed server-side happy path for task `0b572a2b-c7cd-45cc-b839-cebb22f0844c` through `success` with `final_video_url`.
+- Cut Nginx over from the temporary static Smart Cut patch to the real Next routes for `/welcome`, `/smart-cut`, `/tasks`, and `/admin/tasks`.
 
 ## Verification run for F01
 - `bash -n HarnessPlan/rel0415/init.sh`
@@ -70,17 +76,19 @@
 - `test -f apps/web/app/admin/tasks/page.tsx`
 - `python -m compileall apps/api apps/models apps/services apps/scheduler configs`
 - `pytest tests/test_rel0415_api.py -q`
+- `ssh malin@14.103.249.104 'curl -k -I https://xiaomajianji.cn/welcome'`
+- `ssh malin@14.103.249.104 'curl -k -I https://xiaomajianji.cn/smart-cut'`
+- `ssh malin@14.103.249.104 'curl -k -I https://xiaomajianji.cn/tasks'`
+- `ssh malin@14.103.249.104 'bash /home/malin/release_0415_slot/finalize_task.sh 0b572a2b-c7cd-45cc-b839-cebb22f0844c'`
 
 ## Current blocker summary
 - The formal `apps/web` path now exists and builds successfully.
-- release/0415 测试位还未建立，A 机 legacy API 和新 Smart Cut API 还没有在同一测试部署里联通。
-- 线上 Nginx 的 Smart Cut 临时静态补丁还未移除。
-- 还没有跑服务器侧 0415 端到端验收。
+- Browser-level login flow was not fully automated with Playwright against the live auth service.
+- The acceptance path used the staged algorithm-container runner (`run_stage_from_manifest.py`) rather than the full real media pipeline.
+- Old failed test tasks remain in the shared PostgreSQL and still appear in task-center history.
 
 ## Next recommended feature
-- F10: Server Deploy To release/0415 Test Slot
-- F11: End To End Acceptance For 0415
-- F12: Cleanup Temporary Nginx And Static Smart Cut Patch
+- F13: Release Gate And Handover Closeout
 
 ## Notes
 - This harness is execution state only. Product code still belongs in the main repo, not inside the harness directory.

@@ -235,12 +235,17 @@ class SmartCutWorker:
             device_service = DeviceService(db)
             
             current_task_id = self._current_task.id if self._current_task else None
-            
-            device = device_service.heartbeat(
-                worker_id=self.worker_id,
-                status=self._status,
-                current_task_id=current_task_id,
-            )
+
+            heartbeat_kwargs: dict[str, object] = {
+                "worker_id": self.worker_id,
+            }
+            # POST 状态下需要保留数据库里已有的 current_task_id，
+            # 否则 A-scheduler 无法根据设备 post 状态推进对应任务。
+            if current_task_id is not None or self._status != DeviceStatus.POST:
+                heartbeat_kwargs["status"] = self._status
+                heartbeat_kwargs["current_task_id"] = current_task_id
+
+            device = device_service.heartbeat(**heartbeat_kwargs)
             
             if device:
                 logger.debug(f"Heartbeat sent: {self.worker_id}, status: {self._status.value}")

@@ -37,4 +37,7 @@
 - `F07` 已完成：任务中心已具备用户 / admin 两套真实列表接口，前端已切到真实数据适配层。
 - `F08` 已完成：Smart Cut finalize 后会跳转到任务中心，并通过 query 选中对应任务；proxy 已具备 legacy / smart-cut 双后端分流。
 - `F09` 已完成：当前 0415 前端基线 `npm --prefix apps/web run build` 通过。
-- 下一步是 `F10`：把这套前后端代码部署到 `release/0415` 测试位，并接入 A 机与 Worker1 做服务器联调。
+- `F10` 已完成：A 机 `3001(web)`、`8001(api)`、`release0415_scheduler`、`release0415_worker` 测试位已部署完成。
+- `F11` 已完成：0415 Smart Cut -> Task Center 的核心 happy path 已在服务器侧跑到 `success`。
+- `F12` 已完成：Nginx 已切掉静态 `/smart-cut` 和 `/welcome` 注入补丁，改为正式 Next 路由转发。
+- 下一步是 `F13`：生成最终 release gate 报告并收口交接状态。
