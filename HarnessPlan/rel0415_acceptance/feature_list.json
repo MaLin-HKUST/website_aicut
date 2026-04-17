@@ -1,0 +1,297 @@
+{
+  "project": "rel0415_acceptance",
+  "version": "0415",
+  "mode": "harness",
+  "source_specs": [
+    "/Users/malin13/Documents/trae_projects/website_aicut/HarnessPlan/rel0415",
+    "/Users/malin13/Documents/trae_projects/website_aicut/tests/test_cujiian/manual_case_config.json",
+    "/Users/malin13/Documents/trae_projects/website_aicut/doc/cujiian/粗剪的调度的测试/真实数据上线验收测试用例清单.md",
+    "/Users/malin13/Documents/trae_projects/website_aicut/doc/cujiian/粗剪的调度的测试/真实数据上线验收执行记录表.md"
+  ],
+  "development_workflow": {
+    "branch_model": "one-feature-one-branch",
+    "worktree_model": "one-feature-one-worktree-when-parallel",
+    "integration_branch": "release/0415",
+    "merge_back_rule": [
+      "Acceptance fixes and reports merge to release/0415 first.",
+      "After acceptance passes, release/0415 is the branch that gets pulled back to master."
+    ],
+    "commit_policy": [
+      "Do not use git add .",
+      "Do not use git commit -a",
+      "Stage only feature commit_scope paths",
+      "Every acceptance feature leaves behind verification evidence and resumable state"
+    ],
+    "pre_commit_checks": [
+      "git status --short",
+      "git diff --cached --name-only"
+    ]
+  },
+  "features": [
+    {
+      "id": "A01",
+      "title": "Harness Bootstrap And Acceptance Scope Lock",
+      "status": "done",
+      "goal": "Create the dedicated rel0415 acceptance harness and lock the final validation definition.",
+      "depends_on": [],
+      "acceptance": [
+        "HarnessPlan/rel0415_acceptance contains the standard harness artifacts",
+        "The acceptance scope explicitly matches the user's 0415 criteria",
+        "The harness records git merge-back rules into release/0415 and master"
+      ],
+      "branch_name": "feature/0415-acceptance-bootstrap",
+      "write_scope": [
+        "HarnessPlan/rel0415_acceptance"
+      ],
+      "commit_scope": [
+        "HarnessPlan/rel0415_acceptance"
+      ],
+      "verification": [
+        "bash -n HarnessPlan/rel0415_acceptance/init.sh",
+        "python -m json.tool HarnessPlan/rel0415_acceptance/feature_list.json",
+        "./HarnessPlan/rel0415_acceptance/init.sh status"
+      ],
+      "result": [
+        "Created a dedicated acceptance harness for the final 0415 validation round",
+        "Locked the new acceptance definition and git merge-back rules"
+      ],
+      "commit_rule": "Commit only acceptance harness bootstrap files."
+    },
+    {
+      "id": "A02",
+      "title": "Real Data Inventory And Path Verification",
+      "status": "done",
+      "goal": "Verify whether the recorded real-data paths are still readable and usable for this acceptance round.",
+      "depends_on": [
+        "A01"
+      ],
+      "acceptance": [
+        "All recorded real-data paths are checked for existence and readability",
+        "Any broken path is replaced or explicitly blocked in the progress log",
+        "The harness notes exactly which data set will be used for acceptance"
+      ],
+      "branch_name": "feature/0415-acceptance-real-data-inventory",
+      "write_scope": [
+        "HarnessPlan/rel0415_acceptance",
+        "tests/test_cujiian"
+      ],
+      "commit_scope": [
+        "HarnessPlan/rel0415_acceptance"
+      ],
+      "verification": [
+        "test -f tests/test_cujiian/manual_case_config.json",
+        "test -r <real-video-path>",
+        "test -r <real-reference-text-path>"
+      ],
+      "result": [
+        "Revalidated the recorded video path /Volumes/XIAOMA-A-1T/wei_videodb/C2384.MP4",
+        "Revalidated the recorded reference text path /Volumes/XIAOMA-A-1T/wei_videodb/ref.txt",
+        "Confirmed the recorded real-data set is still available for the acceptance round"
+      ],
+      "commit_rule": "Commit only acceptance inventory notes and harness tracking."
+    },
+    {
+      "id": "A03",
+      "title": "Playwright Live Route Reachability",
+      "status": "done",
+      "goal": "Add and run Playwright checks that prove the live domain serves the 0415 routes.",
+      "depends_on": [
+        "A01"
+      ],
+      "acceptance": [
+        "Playwright checks /welcome, /smart-cut, /tasks, /tts, and /admin/tasks",
+        "The checks are wired into the acceptance harness",
+        "Failures produce reproducible artifacts or logs"
+      ],
+      "branch_name": "feature/0415-acceptance-playwright-routes",
+      "write_scope": [
+        "apps/web/tests",
+        "HarnessPlan/rel0415_acceptance"
+      ],
+      "commit_scope": [
+        "apps/web/tests",
+        "HarnessPlan/rel0415_acceptance"
+      ],
+      "verification": [
+        "npx playwright test <0415-route-suite>"
+      ],
+      "result": [
+        "Added a dedicated rel0415 live-route Playwright suite",
+        "Executed the suite on A-machine against https://xiaomajianji.cn",
+        "Confirmed /welcome, /smart-cut, /tasks, /tts, and /admin/tasks all respond under the live domain"
+      ],
+      "commit_rule": "Commit only live-route Playwright coverage and acceptance harness updates."
+    },
+    {
+      "id": "A04",
+      "title": "Playwright Smart Cut End To End",
+      "status": "pending",
+      "goal": "Automate the Smart Cut user path in Playwright as far as the current live auth and upload mechanics allow.",
+      "depends_on": [
+        "A02",
+        "A03"
+      ],
+      "acceptance": [
+        "Playwright covers login -> smart-cut entry -> task creation -> key user actions",
+        "The test captures evidence for state changes instead of only checking route existence",
+        "Known auth or upload blockers are recorded explicitly if full browser upload cannot be completed"
+      ],
+      "branch_name": "feature/0415-acceptance-playwright-smart-cut",
+      "write_scope": [
+        "apps/web/tests",
+        "HarnessPlan/rel0415_acceptance"
+      ],
+      "commit_scope": [
+        "apps/web/tests",
+        "HarnessPlan/rel0415_acceptance"
+      ],
+      "verification": [
+        "npx playwright test <0415-smart-cut-suite>"
+      ],
+      "commit_rule": "Commit only Smart Cut Playwright coverage and acceptance tracking."
+    },
+    {
+      "id": "A05",
+      "title": "Real Data Analyze Acceptance",
+      "status": "pending",
+      "goal": "Run the recorded real-data case through analyze and capture real evidence.",
+      "depends_on": [
+        "A02"
+      ],
+      "acceptance": [
+        "A real-data task reaches analyze success or a grounded failure reason is captured",
+        "analyze outputs are recorded",
+        "The run is documented under acceptance reports"
+      ],
+      "branch_name": "feature/0415-acceptance-real-data-analyze",
+      "write_scope": [
+        "HarnessPlan/rel0415_acceptance",
+        "scripts/rel0415",
+        "tests/test_cujiian"
+      ],
+      "commit_scope": [
+        "HarnessPlan/rel0415_acceptance",
+        "scripts/rel0415"
+      ],
+      "verification": [
+        "bash <server acceptance analyze flow>",
+        "capture task detail and logs"
+      ],
+      "commit_rule": "Commit only real-data analyze evidence and harness tracking."
+    },
+    {
+      "id": "A06",
+      "title": "Real Data Preview And Finalize Acceptance",
+      "status": "pending",
+      "goal": "Run preview and finalize on the real-data task and capture the final output evidence.",
+      "depends_on": [
+        "A05"
+      ],
+      "acceptance": [
+        "A real-data task reaches preview success",
+        "A real-data task reaches finalize success",
+        "Final output evidence is recorded"
+      ],
+      "branch_name": "feature/0415-acceptance-real-data-preview-finalize",
+      "write_scope": [
+        "HarnessPlan/rel0415_acceptance",
+        "scripts/rel0415"
+      ],
+      "commit_scope": [
+        "HarnessPlan/rel0415_acceptance",
+        "scripts/rel0415"
+      ],
+      "verification": [
+        "bash <server acceptance preview/finalize flow>",
+        "capture final task detail and output keys"
+      ],
+      "commit_rule": "Commit only real-data preview/finalize evidence and harness tracking."
+    },
+    {
+      "id": "A07",
+      "title": "Task Center Status And Download Assertions",
+      "status": "pending",
+      "goal": "Validate Task Center rendering, status mapping, and final download visibility against real task data.",
+      "depends_on": [
+        "A06"
+      ],
+      "acceptance": [
+        "Task Center shows the accepted task with the expected status progression",
+        "Finished tasks expose download_url or equivalent final download evidence",
+        "The user and admin views are both checked"
+      ],
+      "branch_name": "feature/0415-acceptance-task-center-status-download",
+      "write_scope": [
+        "HarnessPlan/rel0415_acceptance",
+        "apps/web/tests"
+      ],
+      "commit_scope": [
+        "HarnessPlan/rel0415_acceptance",
+        "apps/web/tests"
+      ],
+      "verification": [
+        "npx playwright test <0415-task-center-suite>",
+        "capture task-center API payloads and screenshots"
+      ],
+      "commit_rule": "Commit only task-center acceptance assertions and harness tracking."
+    },
+    {
+      "id": "A08",
+      "title": "Queueing Scenario Verification",
+      "status": "pending",
+      "goal": "Validate that more than one task can be observed in queued/running/waiting/finished states and that queue semantics are visible.",
+      "depends_on": [
+        "A07"
+      ],
+      "acceptance": [
+        "At least two tasks are created close together",
+        "Queue-related visibility is captured in Task Center",
+        "The acceptance report explains what was observed for queue ordering/position"
+      ],
+      "branch_name": "feature/0415-acceptance-queueing",
+      "write_scope": [
+        "HarnessPlan/rel0415_acceptance",
+        "scripts/rel0415",
+        "apps/web/tests"
+      ],
+      "commit_scope": [
+        "HarnessPlan/rel0415_acceptance",
+        "scripts/rel0415",
+        "apps/web/tests"
+      ],
+      "verification": [
+        "run multi-task acceptance scenario",
+        "capture queue/task-center evidence"
+      ],
+      "commit_rule": "Commit only queue verification evidence and harness tracking."
+    },
+    {
+      "id": "A09",
+      "title": "Release Verdict And Merge Back Checklist",
+      "status": "pending",
+      "goal": "Produce the final acceptance verdict and the git merge-back checklist into release/0415 and master.",
+      "depends_on": [
+        "A08"
+      ],
+      "acceptance": [
+        "An acceptance verdict report exists under HarnessPlan/rel0415_acceptance/reports",
+        "All A01-A08 features are marked done before A09 passes",
+        "The harness explicitly records what should be pulled back into release/0415 and master"
+      ],
+      "branch_name": "feature/0415-acceptance-release-verdict",
+      "write_scope": [
+        "HarnessPlan/rel0415_acceptance",
+        "doc/rel-0415-versionbook"
+      ],
+      "commit_scope": [
+        "HarnessPlan/rel0415_acceptance",
+        "doc/rel-0415-versionbook"
+      ],
+      "verification": [
+        "python HarnessPlan/rel0415_acceptance/run_release_gate.py",
+        "acceptance_verdict_*.md generated"
+      ],
+      "commit_rule": "Commit only final verdict and merge-back guidance."
+    }
+  ]
+}

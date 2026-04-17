@@ -1,0 +1,44 @@
+project: rel0415_acceptance
+version: 0415
+mode: harness
+
+goal:
+  Build a dedicated acceptance harness for the final 0415 validation round.
+
+acceptance_definition:
+  1. Playwright end-to-end automation must exist for the 0415 user flow.
+  2. At least one real-data case must be executed and recorded.
+  3. Task Center UI must be validated for queue rendering, status rendering, and final download visibility.
+  4. Queueing behavior must be explicitly validated with more than one task.
+  5. The acceptance result must be strong enough to decide whether 0415 is ready to hand over for use.
+
+grounded_inputs:
+  - Existing implementation harness: /Users/malin13/Documents/trae_projects/website_aicut/HarnessPlan/rel0415
+  - Current version docs: /Users/malin13/Documents/trae_projects/website_aicut/doc/rel-0415-versionbook
+  - Real-data config record: /Users/malin13/Documents/trae_projects/website_aicut/tests/test_cujiian/manual_case_config.json
+  - Real-data acceptance spec: /Users/malin13/Documents/trae_projects/website_aicut/doc/cujiian/粗剪的调度的测试/真实数据上线验收测试用例清单.md
+  - Real-data execution sheet: /Users/malin13/Documents/trae_projects/website_aicut/doc/cujiian/粗剪的调度的测试/真实数据上线验收执行记录表.md
+
+real_data_recorded_paths:
+  video: /Volumes/XIAOMA-A-1T/wei_videodb/C2384.MP4
+  reference_text: /Volumes/XIAOMA-A-1T/wei_videodb/ref.txt
+
+non_goals:
+  - Rebuilding the whole 0415 product plan from scratch
+  - Replacing the existing implementation harness
+  - Treating old fake-tos or unit/e2e smoke tests as sufficient final acceptance
+
+git_contract:
+  stable_branch: master
+  integration_branch: release/0415
+  acceptance_feature_prefix: feature/0415-acceptance-
+  merge_back_rule:
+    - acceptance fixes and reports go back to release/0415 first
+    - final approved 0415 state is merged back into master
+
+success_criteria:
+  - A dedicated acceptance harness exists and is resumable
+  - All acceptance features are tracked in feature_list.json
+  - Progress and blockers are recorded in claude-progress.txt
+  - init.sh can report next acceptance step
+  - release gate can decide pass/fail for the acceptance round

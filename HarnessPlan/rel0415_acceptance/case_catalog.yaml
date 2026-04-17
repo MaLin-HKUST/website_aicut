@@ -1,0 +1,25 @@
+cases:
+  - id: case_real_data_inventory
+    priority: P0
+    description: Verify the recorded real-data paths are still readable and usable.
+  - id: case_playwright_routes
+    priority: P0
+    description: Validate live domain reachability for /welcome, /smart-cut, /tasks, /tts, /admin/tasks.
+  - id: case_playwright_smart_cut
+    priority: P0
+    description: Browser-level Smart Cut user journey evidence.
+  - id: case_real_data_analyze
+    priority: P0
+    description: Analyze with real recorded data.
+  - id: case_real_data_preview_finalize
+    priority: P0
+    description: Preview and finalize with the accepted real-data task.
+  - id: case_task_center_status_download
+    priority: P0
+    description: Validate queue rendering, status mapping, and final download visibility.
+  - id: case_queueing
+    priority: P1
+    description: Validate multiple queued/running/waiting/finished tasks and queue semantics.
+  - id: case_release_verdict
+    priority: P0
+    description: Final acceptance verdict and merge-back guidance.

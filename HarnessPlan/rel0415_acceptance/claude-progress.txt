@@ -1,0 +1,44 @@
+# rel0415 Acceptance Progress
+
+## Date
+- 2026-04-17
+
+## Mode
+- acceptance-harness-bootstrap
+
+## Completed
+- A01 Harness Bootstrap And Acceptance Scope Lock
+- A02 Real Data Inventory And Path Verification
+- A03 Playwright Live Route Reachability
+
+## Grounded status captured in this session
+- The user redefined 0415 acceptance as: Playwright E2E + real data + task queue rendering/status/download + queue verification.
+- The repo still contains recorded real-data entry paths under `tests/test_cujiian/manual_case_config.json`.
+- The current implementation harness for building 0415 already exists under `HarnessPlan/rel0415`.
+- This new harness must track the final validation round, not general implementation work.
+
+## What changed in this session
+- Created a dedicated acceptance harness under `HarnessPlan/rel0415_acceptance`.
+- Locked the acceptance scope and git merge-back rules.
+- Recorded the currently known real-data paths and linked the existing real-data specs.
+- Revalidated the recorded real-data paths from `manual_case_config.json`.
+- Added a dedicated Playwright live-route acceptance suite scaffold for `/welcome`, `/smart-cut`, `/tasks`, `/tts`, and `/admin/tasks`.
+- Executed the live-route Playwright suite on A-machine against `https://xiaomajianji.cn`.
+
+## Verification
+- `bash -n HarnessPlan/rel0415_acceptance/init.sh`
+- `python -m json.tool HarnessPlan/rel0415_acceptance/feature_list.json`
+- `./HarnessPlan/rel0415_acceptance/init.sh status`
+- `test -r /Volumes/XIAOMA-A-1T/wei_videodb/C2384.MP4`
+- `test -r /Volumes/XIAOMA-A-1T/wei_videodb/ref.txt`
+- `ffprobe -v error -show_entries format=duration,size -of json /Volumes/XIAOMA-A-1T/wei_videodb/C2384.MP4`
+- `wc -c /Volumes/XIAOMA-A-1T/wei_videodb/ref.txt`
+- `ssh malin@14.103.249.104 'cd /home/malin/release_0415_slot/src_af30ae1/apps/web && PLAYWRIGHT_BASE_URL=https://xiaomajianji.cn PLAYWRIGHT_SKIP_WEBSERVER=1 npx playwright test tests/rel0415-live-routes.spec.ts --config playwright.config.ts'`
+
+## Current blocker summary
+- Playwright acceptance cases for the full 0415 flow are not yet defined in this harness.
+- Queue-position validation has not been isolated into a dedicated acceptance feature yet.
+- Real-data analyze/preview/finalize acceptance is not yet recorded in this acceptance harness.
+
+## Next recommended feature
+- A04: Playwright Smart Cut End To End
