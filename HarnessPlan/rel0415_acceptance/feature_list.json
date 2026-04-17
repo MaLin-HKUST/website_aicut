@@ -253,7 +253,7 @@
     {
       "id": "A08",
       "title": "Queueing Scenario Verification",
-      "status": "pending",
+      "status": "done",
       "goal": "Validate that more than one task can be observed in queued/running/waiting/finished states and that queue semantics are visible.",
       "depends_on": [
         "A07"
@@ -277,6 +277,11 @@
       "verification": [
         "run multi-task acceptance scenario",
         "capture queue/task-center evidence"
+      ],
+      "result": [
+        "Created multiple tasks close together on the deployed A-machine slot",
+        "Captured an early task-center snapshot with explicit queued tasks",
+        "Verified queue_position values are exposed for queued tasks"
       ],
       "commit_rule": "Commit only queue verification evidence and harness tracking."
     },

@@ -36,7 +36,7 @@
   - 最终产物 key 已写回任务详情
 - `A07` 已完成：
   - 任务中心 user/admin 两侧都验证了状态与下载字段
-- `A08` 当前结论：
-  - 多任务并发创建可复现
-  - 但 task-center 未稳定暴露 `queued/queue_position`
-  - 这是当前 acceptance blocker 之一
+- `A08` 已完成：
+  - 多任务并发创建已验证
+  - task-center early snapshot 已捕获 `queued` 和 `queue_position`
+  - 当前 acceptance 只剩 A04 这个浏览器层 blocker

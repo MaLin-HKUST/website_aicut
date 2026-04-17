@@ -20,7 +20,7 @@
 ## Result
 - Real-data user task-center evidence: PASS
 - Admin task-center richer-field evidence: PASS
-- Queueing visibility evidence: FAIL
+- Queueing visibility evidence: PASS
 
 ## Observed User / Admin Task-Center Evidence
 - User query: `GET /api/task-center/tasks?user_id=rel0415-real-user`
@@ -36,12 +36,13 @@
   - `worker_id = release0415-worker`
 
 ## Queueing Observation
-- Two queue scenarios were executed:
-  - normal rapid creation
-  - worker-forced-offline rapid creation
-- The acceptance goal was to observe explicit `queued` tasks and `queue_position`.
-- The current task-center snapshots instead showed new analyze tasks as `running` without queue positions.
+- The latest queue scenario snapshot (`queue_acceptance_v5/task_center_user_early.json`) shows:
+  - one running task:
+    - `b3ec4942-bf4b-42b6-89aa-ea6ab742b67b`
+  - two queued tasks with explicit positions:
+    - `ef0dfaa8-05f8-4f3e-80ff-0e64dab484a0` -> `queue_position = 2`
+    - `6a9c0353-61c5-4d07-a375-d52910030fde` -> `queue_position = 3`
 
 ## Verdict For A08
-- Current 0415 code does not yet provide strong queue-position evidence in Task Center.
-- This remains an acceptance blocker if queue visibility is part of the release requirement.
+- The current task-center API now exposes explicit queued tasks and queue positions.
+- Queueing is no longer an acceptance blocker.

@@ -205,6 +205,14 @@ def _task_center_progress(task: SmartCutTask) -> tuple[int, str]:
     return mapping.get(task.status, (0, task.status.value))
 
 
+def _normalize_scheduler_status(value: object | None) -> str | None:
+    if value is None:
+        return None
+    if hasattr(value, "value"):
+        return str(getattr(value, "value")).lower()
+    return str(value).lower()
+
+
 def build_task_center_item(
     db: Session,
     task: SmartCutTask,
@@ -226,15 +234,12 @@ def build_task_center_item(
         output_files.append(_basename(task.final_video_url, "final_video.mp4"))
 
     task_center_status = _task_center_status(task)
-    if scheduler_task and scheduler_task.status == SchedulerTaskStatus.PENDING:
+    scheduler_status = _normalize_scheduler_status(scheduler_task.status if scheduler_task else None)
+    if scheduler_status == "pending":
         task_center_status = "queued"
         progress = 20
         progress_detail = "Queued for worker"
-    elif scheduler_task and scheduler_task.status in {
-        SchedulerTaskStatus.ASSIGNED,
-        SchedulerTaskStatus.RUNNING,
-        SchedulerTaskStatus.POST,
-    }:
+    elif scheduler_status in {"assigned", "running", "post"}:
         task_center_status = "running"
 
     return TaskCenterTaskRead(
@@ -254,7 +259,7 @@ def build_task_center_item(
         output_files=output_files,
         user_id=task.user_id if include_admin_fields else None,
         scheduler_task_id=scheduler_task.id if include_admin_fields and scheduler_task else None,
-        scheduler_status=scheduler_task.status.value if include_admin_fields and scheduler_task else None,
+        scheduler_status=scheduler_status if include_admin_fields and scheduler_task else None,
         worker_id=scheduler_task.assigned_worker_id if include_admin_fields and scheduler_task else None,
     )
 

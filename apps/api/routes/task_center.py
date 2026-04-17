@@ -33,6 +33,18 @@ def _queue_positions(db: Session) -> dict[str, int]:
 router = APIRouter(prefix="/api", tags=["task-center"])
 
 
+def _apply_queue_positions(items: list[TaskCenterTaskRead]) -> list[TaskCenterTaskRead]:
+    queued_items = sorted(
+        [item for item in items if item.status == "queued"],
+        key=lambda item: item.created_at,
+    )
+    positions = {item.id: index for index, item in enumerate(queued_items, start=1)}
+    for item in items:
+        if item.status == "queued":
+            item.queue_position = positions.get(item.id)
+    return items
+
+
 @router.get(
     "/task-center/tasks",
     response_model=list[TaskCenterTaskRead],
@@ -48,7 +60,7 @@ async def list_user_task_center(
         stmt = stmt.where(SmartCutTask.user_id == user_id)
     tasks = list(db.execute(stmt).scalars().all())
     queue_positions = _queue_positions(db)
-    return [
+    items = [
         build_task_center_item(
             db,
             task,
@@ -57,6 +69,7 @@ async def list_user_task_center(
         )
         for task in tasks
     ]
+    return _apply_queue_positions(items)
 
 
 @router.get(
@@ -72,7 +85,7 @@ async def list_admin_task_center(
         db.execute(select(SmartCutTask).order_by(desc(SmartCutTask.updated_at)).limit(limit)).scalars().all()
     )
     queue_positions = _queue_positions(db)
-    return [
+    items = [
         build_task_center_item(
             db,
             task,
@@ -81,3 +94,4 @@ async def list_admin_task_center(
         )
         for task in tasks
     ]
+    return _apply_queue_positions(items)

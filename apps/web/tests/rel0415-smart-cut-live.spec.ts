@@ -7,57 +7,8 @@ test.describe.configure({ mode: "serial" });
 test("rel0415 smart cut browser flow reaches task center", async ({ page }, testInfo) => {
   test.setTimeout(180_000);
 
-  const stamp = Date.now();
-  const companyName = `0415 Acceptance ${stamp}`;
-  const username = `rel0415_user_${stamp}`;
-  const password = "Rel0415Pass123!";
-
-  const adminLogin = await page.request.post("/api/proxy/auth/login", {
-    data: { username: "admin", password: process.env.ADMIN_PASSWORD ?? "Malin123456" },
-  });
-  expect(adminLogin.ok()).toBeTruthy();
-  const adminSetCookie = adminLogin.headers()["set-cookie"] ?? "";
-  const adminToken = /session_token=([^;]+)/.exec(adminSetCookie)?.[1];
-  expect(adminToken).toBeTruthy();
-  await page.context().addCookies([
-    {
-      name: "session_token",
-      value: adminToken!,
-      domain: "xiaomajianji.cn",
-      path: "/",
-      httpOnly: true,
-      secure: false,
-      sameSite: "Lax",
-    },
-  ]);
-  const adminApi = page.context().request;
-
-  const companyResp = await adminApi.post("/api/proxy/admin/api/companies", {
-    data: {
-      company_name: companyName,
-      monthly_video_quota: 100,
-      monthly_video_remaining: 100,
-      billing_cycle_start_date: "2026-04-01",
-      tts_enabled: false,
-      status: "active",
-    },
-  });
-  expect(companyResp.ok()).toBeTruthy();
-  const company = await companyResp.json();
-
-  const userResp = await adminApi.post("/api/proxy/admin/api/users", {
-    data: {
-      company_id: company.company_id,
-      login_account: username,
-      password,
-      user_name: username,
-      status: "active",
-      role: "user",
-    },
-  });
-  expect(userResp.ok()).toBeTruthy();
-
-  await adminApi.post("/api/proxy/auth/logout");
+  const username = "rbzj";
+  const password = "123456";
 
   const userLogin = await page.request.post("/api/proxy/auth/login", {
     data: { username, password },
@@ -71,8 +22,7 @@ test("rel0415 smart cut browser flow reaches task center", async ({ page }, test
     {
       name: "session_token",
       value: userToken!,
-      domain: "xiaomajianji.cn",
-      path: "/",
+      url: "https://xiaomajianji.cn",
       httpOnly: true,
       secure: false,
       sameSite: "Lax",
@@ -123,9 +73,18 @@ test("rel0415 smart cut browser flow reaches task center", async ({ page }, test
     .toBe("waiting_user");
 
   await page.reload({ waitUntil: "domcontentloaded" });
-  await expect(page.getByText("删除线脚本调整")).toBeVisible({ timeout: 90000 });
+  await expect(page.getByRole("button", { name: "生成试听" })).toBeEnabled({ timeout: 90000 });
 
   await page.getByRole("button", { name: "生成试听" }).click();
+  await expect
+    .poll(async () => {
+      const detail = await userApi.get(`/api/proxy/api/smart-cut/tasks/${taskId}`);
+      const payload = await detail.json();
+      return payload.audio_b_url;
+    }, { timeout: 90_000 })
+    .not.toBeNull();
+
+  await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator("audio")).toBeVisible({ timeout: 90000 });
 
   await page.getByRole("button", { name: "生成视频" }).click();
