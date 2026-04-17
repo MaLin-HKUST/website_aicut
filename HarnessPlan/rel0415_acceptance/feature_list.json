@@ -125,7 +125,7 @@
     {
       "id": "A04",
       "title": "Playwright Smart Cut End To End",
-      "status": "pending",
+      "status": "done",
       "goal": "Automate the Smart Cut user path in Playwright as far as the current live auth and upload mechanics allow.",
       "depends_on": [
         "A02",
@@ -147,6 +147,11 @@
       ],
       "verification": [
         "npx playwright test <0415-smart-cut-suite>"
+      ],
+      "result": [
+        "Ran a live Playwright Smart Cut flow on A-machine against https://xiaomajianji.cn",
+        "Verified browser-authenticated task creation, preview, finalize, and task-center redirect",
+        "Fixed the deployed 0415 web slot so Next static assets are served and task-page hydration works"
       ],
       "commit_rule": "Commit only Smart Cut Playwright coverage and acceptance tracking."
     },
@@ -288,7 +293,7 @@
     {
       "id": "A09",
       "title": "Release Verdict And Merge Back Checklist",
-      "status": "pending",
+      "status": "done",
       "goal": "Produce the final acceptance verdict and the git merge-back checklist into release/0415 and master.",
       "depends_on": [
         "A08"
@@ -311,7 +316,11 @@
         "python HarnessPlan/rel0415_acceptance/run_release_gate.py",
         "acceptance_verdict_*.md generated"
       ],
-      "commit_rule": "Commit only final verdict and merge-back guidance."
+      "commit_rule": "Commit only final verdict and merge-back guidance.",
+      "result": [
+        "Acceptance gate passed for the 0415 final validation round",
+        "Merge-back checklist can now be executed against release/0415 and master"
+      ]
     }
   ]
 }

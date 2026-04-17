@@ -39,4 +39,11 @@
 - `A08` 已完成：
   - 多任务并发创建已验证
   - task-center early snapshot 已捕获 `queued` 和 `queue_position`
-  - 当前 acceptance 只剩 A04 这个浏览器层 blocker
+- `A04` 已完成：
+  - A-machine live Playwright Smart Cut E2E 已通过
+  - 过程中修复了 `3001` Next web slot 缺失 `/.next/static` 的部署问题
+  - 浏览器已验证任务页 hydration、preview、finalize 和任务中心跳转
+- 当前 acceptance 进入 `A09`：
+  - 重跑 release gate
+  - 生成最终 verdict
+  - 写 merge-back checklist

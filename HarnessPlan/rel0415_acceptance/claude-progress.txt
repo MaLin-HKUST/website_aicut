@@ -10,6 +10,11 @@
 - A01 Harness Bootstrap And Acceptance Scope Lock
 - A02 Real Data Inventory And Path Verification
 - A03 Playwright Live Route Reachability
+- A04 Playwright Smart Cut End To End
+- A05 Real Data Analyze Acceptance
+- A06 Real Data Preview And Finalize Acceptance
+- A07 Task Center Status And Download Assertions
+- A08 Queueing Scenario Verification
 
 ## Grounded status captured in this session
 - The user redefined 0415 acceptance as: Playwright E2E + real data + task queue rendering/status/download + queue verification.
@@ -24,6 +29,10 @@
 - Revalidated the recorded real-data paths from `manual_case_config.json`.
 - Added a dedicated Playwright live-route acceptance suite scaffold for `/welcome`, `/smart-cut`, `/tasks`, `/tts`, and `/admin/tasks`.
 - Executed the live-route Playwright suite on A-machine against `https://xiaomajianji.cn`.
+- Iterated the live Smart Cut Playwright flow until it used browser-authenticated routing plus stable request-side task bootstrap.
+- Fixed the 0415 A-machine web slot packaging so the deployed Next runtime now includes `server.js` and `/.next/static`.
+- Restarted the A-machine `3001` Next slot with the repaired runtime and verified `/_next/static/*` returns `200`.
+- Executed the live Playwright Smart Cut suite on A-machine and got `1 passed`.
 - Ran the deployed 0415 slot with a real recorded sample (`C2384_reencoded.mp4 + ref.txt`) through analyze, preview, and finalize.
 - Captured positive task-center evidence for finished state and download URL from both user and admin APIs.
 - Reran the queue scenario until task-center exposed explicit queued states and queue_position values.
@@ -37,6 +46,7 @@
 - `ffprobe -v error -show_entries format=duration,size -of json /Volumes/XIAOMA-A-1T/wei_videodb/C2384.MP4`
 - `wc -c /Volumes/XIAOMA-A-1T/wei_videodb/ref.txt`
 - `ssh malin@14.103.249.104 'cd /home/malin/release_0415_slot/src_af30ae1/apps/web && PLAYWRIGHT_BASE_URL=https://xiaomajianji.cn PLAYWRIGHT_SKIP_WEBSERVER=1 npx playwright test tests/rel0415-live-routes.spec.ts --config playwright.config.ts'`
+- `ssh malin@14.103.249.104 'cd /home/malin/release_0415_slot/src_af30ae1/apps/web && PLAYWRIGHT_BASE_URL=https://xiaomajianji.cn PLAYWRIGHT_SKIP_WEBSERVER=1 npx playwright test tests/rel0415-smart-cut-live.spec.ts --config playwright.config.ts'`
 - `ssh malin@14.103.249.104 'bash /home/malin/release_0415_slot/run_real_data_server_flow.sh ...'`
 - `ssh malin@14.103.249.104 'bash /home/malin/release_0415_slot/finalize_task.sh 72c84d7c-f9d1-4ea0-b80e-e0a16046b122'`
 - `ssh malin@14.103.249.104 'curl -s http://127.0.0.1:8001/api/task-center/tasks?user_id=rel0415-real-user'`
@@ -44,9 +54,8 @@
 - `ssh malin@14.103.249.104 'bash /home/malin/release_0415_slot/run_queue_scenario.sh /home/malin/release_0415_slot/queue_acceptance_v5 && cat .../task_center_user_early.json'`
 
 ## Current blocker summary
-- A04 browser Smart Cut E2E still does not pass end-to-end; the browser task page does not yet stably reflect the analyze-ready state in this automated flow.
-- A08 is no longer blocked; queued tasks and queue_position are now observable in the acceptance snapshot.
+- No functional blocker remains in A01-A08.
+- The only remaining step is A09: write the final acceptance verdict and merge-back checklist.
 
 ## Next recommended feature
-- A04: Playwright Smart Cut End To End
 - A09: Release Verdict And Merge Back Checklist

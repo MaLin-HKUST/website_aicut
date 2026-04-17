@@ -13,9 +13,9 @@ rm -rf "$WEB_RUNTIME_DIR"
 mkdir -p "$WEB_RUNTIME_DIR"
 tar -xzf "$WEB_RUNTIME_TGZ" -C "$WEB_RUNTIME_DIR"
 
-pkill -f "$WEB_RUNTIME_DIR/.next/standalone/server.js" || true
+pkill -f "$WEB_RUNTIME_DIR/server.js" || true
 
-cd "$WEB_RUNTIME_DIR/.next/standalone"
+cd "$WEB_RUNTIME_DIR"
 nohup env \
   LEGACY_API_BASE_URL="${LEGACY_API_BASE_URL:-http://127.0.0.1:8000}" \
   SMART_CUT_API_BASE_URL="${SMART_CUT_API_BASE_URL:-http://127.0.0.1:8001}" \
