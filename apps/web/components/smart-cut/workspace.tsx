@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { UserWorkspaceShell } from "@/components/navigation/user-workspace-shell";
+import { useUserWorkspaceData } from "@/components/navigation/use-user-workspace-data";
 import { SmartCutScriptEditor } from "@/components/smart-cut/script-editor";
 import {
   createSmartCutTask,
@@ -57,6 +58,7 @@ export function SmartCutLandingPage() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<AuthResponse["user"] | null>(null);
+  const workspace = useUserWorkspaceData(user?.username);
 
   useEffect(() => {
     async function bootstrap() {
@@ -107,7 +109,14 @@ export function SmartCutLandingPage() {
   }
 
   return (
-    <UserWorkspaceShell onLogout={logout} title="Audio Workspace">
+    <UserWorkspaceShell
+      activeItem="smart-cut"
+      currentUser={user?.username ?? "..."}
+      headline={user ? `你好，${user.username}，小马AI准备就绪~` : undefined}
+      metrics={workspace.metrics}
+      onLogout={logout}
+      previewTasks={workspace.previewTasks}
+    >
       <section className="rounded-[32px] border border-[#e1d7c7] bg-[#fdf9f2] p-6 shadow-panel">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -183,6 +192,7 @@ export function SmartCutLandingPage() {
 export function SmartCutWorkspace({ taskId }: { taskId: string }) {
   const router = useRouter();
   const [task, setTask] = useState<SmartCutTask | null>(null);
+  const [currentUser, setCurrentUser] = useState<string>("...");
   const [edits, setEdits] = useState<SmartCutEdit[]>([]);
   const [scriptDraft, setScriptDraft] = useState("");
   const [videoFile, setVideoFile] = useState<File | null>(null);
@@ -192,6 +202,7 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
   const [busyAction, setBusyAction] = useState<"upload" | "analyze" | "preview" | "finalize" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const workspace = useUserWorkspaceData(currentUser);
 
   const latestEdit = edits[0] ?? null;
 
@@ -213,6 +224,7 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
       router.replace("/admin");
       return;
     }
+    setCurrentUser(authPayload.user.username);
 
     const [taskData, editData] = await Promise.all([getSmartCutTask(taskId), getSmartCutEdits(taskId).catch(() => [])]);
 
@@ -318,7 +330,13 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
   const headerTitle = useMemo(() => (task ? `任务 ${task.id}` : "Smart Cut"), [task]);
 
   return (
-    <UserWorkspaceShell onLogout={logout} title="Audio Workspace">
+    <UserWorkspaceShell
+      activeItem="smart-cut"
+      currentUser={currentUser}
+      metrics={workspace.metrics}
+      onLogout={logout}
+      previewTasks={workspace.previewTasks}
+    >
       <section className="rounded-[32px] border border-[#e1d7c7] bg-[#fdf9f2] p-6 shadow-panel">
         <div className="flex flex-col gap-4 border-b border-[#e3d8c7] pb-6 lg:flex-row lg:items-end lg:justify-between">
           <div>

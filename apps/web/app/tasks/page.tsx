@@ -1,11 +1,11 @@
 import { Suspense } from "react";
 
-import { TaskCenterShell } from "@/components/task-center/task-center-shell";
+import { UserTasksShell } from "@/components/task-center/user-tasks-shell";
 
 export default function TasksPage() {
   return (
     <Suspense fallback={null}>
-      <TaskCenterShell />
+      <UserTasksShell />
     </Suspense>
   );
 }

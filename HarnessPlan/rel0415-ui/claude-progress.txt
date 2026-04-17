@@ -8,6 +8,11 @@
 
 ## Completed
 - U01: Harness Bootstrap
+- U02: Design Token And Shared Shell
+- U03: Login Page Restore
+- U04: Welcome Redesign
+- U05: TTS Redesign
+- U07: Tasks Redesign
 
 ## Grounded status captured in this session
 - The design baseline is anchored to the 3 screenshot files under `HarnessPlan/rel0415/page-pic/`.
@@ -19,6 +24,11 @@
 - Created the dedicated `HarnessPlan/rel0415-ui` harness for the user-facing redesign.
 - Locked the redesign goal, route scope, and git/branch rules for this UI effort.
 - Chose a screenshot-first design baseline rather than reusing the current rel0415 shell.
+- Replaced the user workspace shell with a screenshot-led sidebar + summary-metrics layout.
+- Rebuilt the `welcome` page into a shell-led empty-state overview page.
+- Rebuilt the `tts` page into the preferred screenshot-style working layout.
+- Rebuilt the user `tasks` page into a shell-led task list/detail page without changing admin task-center logic.
+- Restored the login page to the Chinese copy baseline and preserved rel0415 auth redirects.
 
 ## Verification run for U01
 - `bash -n HarnessPlan/rel0415-ui/init.sh`
@@ -26,7 +36,7 @@
 - `./HarnessPlan/rel0415-ui/init.sh status`
 
 ## Current focus
-- U02: Design Token And Shared Shell
+- U06: Smart Cut Shell Migration
 
 ## Next recommended feature
-- U02: Design Token And Shared Shell
+- U06: Smart Cut Shell Migration

@@ -53,7 +53,7 @@
     {
       "id": "U02",
       "title": "Design Token And Shared Shell",
-      "status": "in_progress",
+      "status": "done",
       "goal": "Create the unified user workspace shell shared by welcome, tts, smart-cut, and tasks.",
       "depends_on": [
         "U01"
@@ -87,7 +87,7 @@
     {
       "id": "U03",
       "title": "Login Page Restore",
-      "status": "pending",
+      "status": "done",
       "goal": "Restore the screenshot-style Chinese login page.",
       "depends_on": [
         "U01"
@@ -114,7 +114,7 @@
     {
       "id": "U04",
       "title": "Welcome Redesign",
-      "status": "pending",
+      "status": "done",
       "goal": "Turn welcome into the empty-state overview workspace.",
       "depends_on": [
         "U02"
@@ -141,7 +141,7 @@
     {
       "id": "U05",
       "title": "TTS Redesign",
-      "status": "pending",
+      "status": "done",
       "goal": "Rebuild the TTS workspace to match the approved screenshot modules.",
       "depends_on": [
         "U02"
@@ -169,7 +169,7 @@
     {
       "id": "U06",
       "title": "Smart Cut Shell Migration",
-      "status": "pending",
+      "status": "in_progress",
       "goal": "Move Smart Cut pages into the new workspace shell without changing business flow.",
       "depends_on": [
         "U02"
@@ -198,7 +198,7 @@
     {
       "id": "U07",
       "title": "Tasks Redesign",
-      "status": "pending",
+      "status": "done",
       "goal": "Rebuild the user task page into the shared shell while keeping current task-center data logic.",
       "depends_on": [
         "U02"
