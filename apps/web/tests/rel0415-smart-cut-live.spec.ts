@@ -124,6 +124,6 @@ test("rel0415 smart cut browser flow reaches task center", async ({ page }) => {
 
   await page.getByRole("button", { name: "生成视频" }).click();
   await expect(page).toHaveURL(/\/tasks\?taskId=/, { timeout: 15000 });
-  await expect(page.getByText("My Job Queue")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "任务列表" })).toBeVisible();
   await expect(page.getByText(taskId).first()).toBeVisible({ timeout: 90_000 });
 });

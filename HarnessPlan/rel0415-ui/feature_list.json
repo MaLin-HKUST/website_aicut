@@ -169,7 +169,7 @@
     {
       "id": "U06",
       "title": "Smart Cut Shell Migration",
-      "status": "in_progress",
+      "status": "done",
       "goal": "Move Smart Cut pages into the new workspace shell without changing business flow.",
       "depends_on": [
         "U02"
@@ -230,7 +230,7 @@
     {
       "id": "U08",
       "title": "Route Consistency And Copy Cleanup",
-      "status": "pending",
+      "status": "done",
       "goal": "Remove user-facing English leftovers and unify navigation and empty-state copy.",
       "depends_on": [
         "U03",
@@ -267,7 +267,7 @@
     {
       "id": "U09",
       "title": "Playwright User Flow Coverage",
-      "status": "pending",
+      "status": "done",
       "goal": "Cover the redesigned user route flow with Playwright.",
       "depends_on": [
         "U08"
@@ -293,7 +293,7 @@
     {
       "id": "U10",
       "title": "Release Gate And Handover",
-      "status": "pending",
+      "status": "done",
       "goal": "Run the final UI gate, update progress, and leave the work resumable.",
       "depends_on": [
         "U09"

@@ -14,7 +14,7 @@ test("user can enter smart cut workspace and submit preview/finalize actions", a
     });
   });
 
-  await page.route("**/api/proxy/api/smart-cut/tasks", async (route) => {
+  await page.route(/\/api\/proxy\/api\/smart-cut\/tasks(\?.*)?$/, async (route) => {
     if (route.request().method() === "GET") {
       await route.fulfill({
         status: 200,
@@ -160,9 +160,9 @@ test("user can enter smart cut workspace and submit preview/finalize actions", a
   await page.getByRole("button", { name: "智能气口剪辑" }).click();
   await expect(page).toHaveURL(/\/smart-cut$/);
   await expect(page.getByText("三段式智能气口剪辑工作台")).toBeVisible();
-  await expect(page.getByText("smartcut_mock_001")).toBeVisible();
+  await expect(page.getByRole("button", { name: /smartcut_mock_001/ })).toBeVisible();
 
-  await page.getByRole("button", { name: "smartcut_mock_001" }).click();
+  await page.getByTestId("smart-cut-recent-task-smartcut_mock_001").click();
   await expect(page).toHaveURL(/\/smart-cut\/smartcut_mock_001$/);
   await expect(page.getByText("删除线脚本调整")).toBeVisible();
   await expect(page.getByRole("button", { name: "生成试听" })).toBeVisible();

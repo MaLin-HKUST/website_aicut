@@ -12,7 +12,11 @@
 - U03: Login Page Restore
 - U04: Welcome Redesign
 - U05: TTS Redesign
+- U06: Smart Cut Shell Migration
 - U07: Tasks Redesign
+- U08: Route Consistency And Copy Cleanup
+- U09: Playwright User Flow Coverage
+- U10: Release Gate And Handover
 
 ## Grounded status captured in this session
 - The design baseline is anchored to the 3 screenshot files under `HarnessPlan/rel0415/page-pic/`.
@@ -27,8 +31,12 @@
 - Replaced the user workspace shell with a screenshot-led sidebar + summary-metrics layout.
 - Rebuilt the `welcome` page into a shell-led empty-state overview page.
 - Rebuilt the `tts` page into the preferred screenshot-style working layout.
+- Reworked both `smart-cut` pages into the same screenshot-led Chinese workspace shell without touching their API flow.
 - Rebuilt the user `tasks` page into a shell-led task list/detail page without changing admin task-center logic.
 - Restored the login page to the Chinese copy baseline and preserved rel0415 auth redirects.
+- Cleared the remaining user-facing English copy from the shared shell, TTS, and Smart Cut surfaces.
+- Added focused Playwright coverage for rel0415 route smoke, user navigation, and Smart Cut task flow.
+- Added a release gate that runs build plus the rel0415 Playwright suite with an explicit local Chromium path.
 
 ## Verification run for U01
 - `bash -n HarnessPlan/rel0415-ui/init.sh`
@@ -36,7 +44,15 @@
 - `./HarnessPlan/rel0415-ui/init.sh status`
 
 ## Current focus
-- U06: Smart Cut Shell Migration
+- U10 closeout: verified and completed
+
+## Verification run for U06-U10
+- `npm --prefix apps/web run build`
+- `bash -n HarnessPlan/rel0415-ui/init.sh`
+- `python3 -m json.tool HarnessPlan/rel0415-ui/feature_list.json`
+- `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=... npx playwright test tests/rel0415-live-routes.spec.ts tests/rel0415-user-navigation.spec.ts tests/smart-cut.spec.ts`
+- `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=... npx playwright test tests/smart-cut.spec.ts`
+- `python3 HarnessPlan/rel0415-ui/run_release_gate.py`
 
 ## Next recommended feature
-- U06: Smart Cut Shell Migration
+- All rel0415-ui features are complete

@@ -10,9 +10,9 @@ test("admin can complete the bootstrap flow and a normal user is routed to welco
 
   await page.goto("/login");
 
-  await page.getByLabel("Username").fill("admin");
-  await page.getByLabel("Password").fill(process.env.ADMIN_PASSWORD ?? "Malin123456");
-  await page.getByRole("button", { name: "Login" }).click();
+  await page.getByLabel("用户名").fill("admin");
+  await page.getByLabel("密码").fill(process.env.ADMIN_PASSWORD ?? "Malin123456");
+  await page.getByRole("button", { name: "登录" }).click();
 
   await expect(page).toHaveURL(/\/admin$/);
   await expect(page.getByText("Signed in as admin")).toBeVisible();
@@ -38,9 +38,9 @@ test("admin can complete the bootstrap flow and a normal user is routed to welco
   await page.getByRole("button", { name: "Logout" }).click();
   await expect(page).toHaveURL(/\/login$/);
 
-  await page.getByLabel("Username").fill(username);
-  await page.getByLabel("Password").fill(password);
-  await page.getByRole("button", { name: "Login" }).click();
+  await page.getByLabel("用户名").fill(username);
+  await page.getByLabel("密码").fill(password);
+  await page.getByRole("button", { name: "登录" }).click();
 
   await expect(page).toHaveURL(/\/welcome$/);
   await expect(page.getByRole("button", { name: "文案生成语音" })).toBeVisible();
@@ -61,9 +61,9 @@ test("admin can complete the bootstrap flow and a normal user is routed to welco
 
   await page.getByRole("button", { name: "文案生成语音" }).click();
   await expect(page).toHaveURL(/\/tts$/);
-  await expect(page.getByText("音色AITOKEN消耗：30")).toBeVisible();
-  await page.getByLabel("Script").fill("123456789012345678901234567890");
-  await expect(page.getByText("音色AITOKEN消耗：30")).toBeVisible();
+  await expect(page.getByText("本月累计TOKEN：30")).toBeVisible();
+  await page.locator("#tts-text").fill("123456789012345678901234567890");
+  await expect(page.getByText("本月累计TOKEN：30")).toBeVisible();
   await page.getByRole("button", { name: "生成音频" }).click();
   await expect(page.getByText("qa-output.mp3")).toBeVisible();
   await expect(page.getByRole("button", { name: "下载音频" })).toBeVisible();

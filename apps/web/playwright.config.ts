@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 const port = 3000;
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${port}`;
+const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 
 export default defineConfig({
   testDir: "./tests",
@@ -14,7 +15,7 @@ export default defineConfig({
   webServer: process.env.PLAYWRIGHT_SKIP_WEBSERVER
     ? undefined
     : {
-        command: "INTERNAL_API_BASE_URL=http://127.0.0.1:8000 npm run dev",
+        command: "INTERNAL_API_BASE_URL=http://127.0.0.1:8000 npm run dev -- --hostname 127.0.0.1 --port 3000",
         url: baseURL,
         reuseExistingServer: true,
         timeout: 120_000,
@@ -22,7 +23,16 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        ...(executablePath
+          ? {
+              launchOptions: {
+                executablePath,
+              },
+            }
+          : {}),
+      },
     },
   ],
 });

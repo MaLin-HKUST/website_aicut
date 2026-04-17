@@ -1,6 +1,7 @@
 # rel0415-ui Current Status
 
 - The redesign is anchored to the screenshot set under `HarnessPlan/rel0415/page-pic/`.
-- The current rel0415 frontend already contains all target user routes.
-- The current user-facing shell is still inconsistent across pages and still contains English-heavy UI.
-- The current round is UI-only and should not modify admin or backend contracts.
+- The rel0415 frontend now shares one screenshot-led Chinese shell across `welcome`, `tts`, `smart-cut`, and `tasks`.
+- The login page has been restored to the Chinese dual-panel layout while preserving existing auth redirects.
+- User-facing Playwright coverage now exercises route smoke, login-to-workspace navigation, and the Smart Cut task flow.
+- The release gate passes on build and the rel0415 Playwright suite; admin and backend contracts remain intentionally out of scope.
