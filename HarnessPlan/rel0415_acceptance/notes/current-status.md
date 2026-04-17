@@ -28,3 +28,15 @@
   - Playwright live-route suite 已在 A-machine 上执行
   - `/welcome` `/smart-cut` `/tasks` `/tts` `/admin/tasks` 全部通过
 - `A04: Playwright Smart Cut End To End`
+- `A05` 已完成：
+  - 使用真实样本 `C2384_reencoded.mp4 + ref.txt`
+  - 部署侧 analyze 已成功
+- `A06` 已完成：
+  - 真实数据 preview / finalize 最终跑到 `success`
+  - 最终产物 key 已写回任务详情
+- `A07` 已完成：
+  - 任务中心 user/admin 两侧都验证了状态与下载字段
+- `A08` 当前结论：
+  - 多任务并发创建可复现
+  - 但 task-center 未稳定暴露 `queued/queue_position`
+  - 这是当前 acceptance blocker 之一

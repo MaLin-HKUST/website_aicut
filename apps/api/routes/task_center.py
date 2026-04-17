@@ -12,7 +12,22 @@ from sqlalchemy.orm import Session
 from configs.database import get_db
 from apps.api.models.schemas import TaskCenterTaskRead
 from apps.api.routes.tasks import build_task_center_item
+from apps.models.scheduler_task import SchedulerTask, SchedulerTaskStatus
 from apps.models.task import SmartCutTask
+
+
+def _queue_positions(db: Session) -> dict[str, int]:
+    pending_tasks = list(
+        db.execute(
+            select(SchedulerTask)
+            .where(SchedulerTask.status == SchedulerTaskStatus.PENDING)
+            .order_by(SchedulerTask.created_at.asc())
+        ).scalars().all()
+    )
+    positions: dict[str, int] = {}
+    for index, scheduler_task in enumerate(pending_tasks, start=1):
+        positions.setdefault(scheduler_task.business_task_id, index)
+    return positions
 
 
 router = APIRouter(prefix="/api", tags=["task-center"])
@@ -32,7 +47,16 @@ async def list_user_task_center(
     if user_id:
         stmt = stmt.where(SmartCutTask.user_id == user_id)
     tasks = list(db.execute(stmt).scalars().all())
-    return [build_task_center_item(db, task, include_admin_fields=False) for task in tasks]
+    queue_positions = _queue_positions(db)
+    return [
+        build_task_center_item(
+            db,
+            task,
+            include_admin_fields=False,
+            queue_position=queue_positions.get(task.id),
+        )
+        for task in tasks
+    ]
 
 
 @router.get(
@@ -47,4 +71,13 @@ async def list_admin_task_center(
     tasks = list(
         db.execute(select(SmartCutTask).order_by(desc(SmartCutTask.updated_at)).limit(limit)).scalars().all()
     )
-    return [build_task_center_item(db, task, include_admin_fields=True) for task in tasks]
+    queue_positions = _queue_positions(db)
+    return [
+        build_task_center_item(
+            db,
+            task,
+            include_admin_fields=True,
+            queue_position=queue_positions.get(task.id),
+        )
+        for task in tasks
+    ]

@@ -153,7 +153,7 @@
     {
       "id": "A05",
       "title": "Real Data Analyze Acceptance",
-      "status": "pending",
+      "status": "done",
       "goal": "Run the recorded real-data case through analyze and capture real evidence.",
       "depends_on": [
         "A02"
@@ -177,12 +177,17 @@
         "bash <server acceptance analyze flow>",
         "capture task detail and logs"
       ],
+      "result": [
+        "Ran the deployed 0415 slot with a real recorded sample video and reference text",
+        "Analyze reached success for task 72c84d7c-f9d1-4ea0-b80e-e0a16046b122",
+        "Analyze outputs were written back to the deployed system"
+      ],
       "commit_rule": "Commit only real-data analyze evidence and harness tracking."
     },
     {
       "id": "A06",
       "title": "Real Data Preview And Finalize Acceptance",
-      "status": "pending",
+      "status": "done",
       "goal": "Run preview and finalize on the real-data task and capture the final output evidence.",
       "depends_on": [
         "A05"
@@ -205,12 +210,17 @@
         "bash <server acceptance preview/finalize flow>",
         "capture final task detail and output keys"
       ],
+      "result": [
+        "Preview succeeded for the real-data acceptance task",
+        "Finalize succeeded for the same task after preview outputs settled",
+        "Final task detail includes final_video_url and groundtruth_saved=true"
+      ],
       "commit_rule": "Commit only real-data preview/finalize evidence and harness tracking."
     },
     {
       "id": "A07",
       "title": "Task Center Status And Download Assertions",
-      "status": "pending",
+      "status": "done",
       "goal": "Validate Task Center rendering, status mapping, and final download visibility against real task data.",
       "depends_on": [
         "A06"
@@ -232,6 +242,11 @@
       "verification": [
         "npx playwright test <0415-task-center-suite>",
         "capture task-center API payloads and screenshots"
+      ],
+      "result": [
+        "User task-center API showed the real-data task as finished with download_url",
+        "Admin task-center API showed richer scheduler and worker fields for the same task",
+        "Task-center status/download evidence is recorded under acceptance reports"
       ],
       "commit_rule": "Commit only task-center acceptance assertions and harness tracking."
     },

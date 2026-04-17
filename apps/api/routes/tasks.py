@@ -210,6 +210,7 @@ def build_task_center_item(
     task: SmartCutTask,
     *,
     include_admin_fields: bool,
+    queue_position: int | None = None,
 ) -> TaskCenterTaskRead:
     scheduler_task = _latest_scheduler_task(db, task.id)
     progress, progress_detail = _task_center_progress(task)
@@ -223,17 +224,30 @@ def build_task_center_item(
         output_files.append(_basename(task.asr_result_tos_key, "asr_result.json"))
     if task.final_video_url:
         output_files.append(_basename(task.final_video_url, "final_video.mp4"))
+
+    task_center_status = _task_center_status(task)
+    if scheduler_task and scheduler_task.status == SchedulerTaskStatus.PENDING:
+        task_center_status = "queued"
+        progress = 20
+        progress_detail = "Queued for worker"
+    elif scheduler_task and scheduler_task.status in {
+        SchedulerTaskStatus.ASSIGNED,
+        SchedulerTaskStatus.RUNNING,
+        SchedulerTaskStatus.POST,
+    }:
+        task_center_status = "running"
+
     return TaskCenterTaskRead(
         id=task.id,
         title=title,
         task_type="smart_cut",
-        status=_task_center_status(task),
+        status=task_center_status,
         current_stage=task.current_stage.value if task.current_stage else task.status.value,
         progress=progress,
         progress_detail=progress_detail,
         updated_at=task.updated_at,
         created_at=task.created_at,
-        queue_position=None if _task_center_status(task) != "queued" else 1,
+        queue_position=queue_position if task_center_status == "queued" else None,
         download_url=task.final_video_url,
         error_message=_task_error_message(task, scheduler_task),
         input_files=[item for item in input_files if item],
