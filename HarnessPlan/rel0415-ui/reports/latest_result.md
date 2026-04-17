@@ -12,7 +12,7 @@
    ▲ Next.js 15.4.6
 
    Creating an optimized production build ...
- ✓ Compiled successfully in 0ms
+ ✓ Compiled successfully in 1000ms
    Linting and checking validity of types ...
    Collecting page data ...
    Generating static pages (0/12) ...
@@ -50,76 +50,36 @@ Route (app)                                 Size  First Load JS
 ```text
 Running 7 tests using 4 workers
 
-  ✓  2 [chromium] › tests/rel0415-live-routes.spec.ts:79:7 › rel0415 route loads: /login (3.2s)
-  ✓  3 [chromium] › tests/rel0415-live-routes.spec.ts:79:7 › rel0415 route loads: /tts (3.6s)
-  ✓  1 [chromium] › tests/rel0415-live-routes.spec.ts:79:7 › rel0415 route loads: /welcome (3.8s)
-  ✓  4 [chromium] › tests/rel0415-live-routes.spec.ts:79:7 › rel0415 route loads: /smart-cut (3.8s)
-  ✓  5 [chromium] › tests/rel0415-live-routes.spec.ts:79:7 › rel0415 route loads: /tasks (2.8s)
-  ✓  6 [chromium] › tests/rel0415-user-navigation.spec.ts:111:5 › rel0415 user can navigate login welcome tts smart-cut and tasks (5.2s)
-  ✓  7 [chromium] › tests/smart-cut.spec.ts:3:5 › user can enter smart cut workspace and submit preview/finalize actions (5.3s)
+  ✓  1 [chromium] › tests/rel0415-live-routes.spec.ts:79:7 › rel0415 route loads: /welcome (4.2s)
+  ✓  3 [chromium] › tests/rel0415-live-routes.spec.ts:79:7 › rel0415 route loads: /smart-cut (4.2s)
+  ✓  4 [chromium] › tests/rel0415-live-routes.spec.ts:79:7 › rel0415 route loads: /tts (4.5s)
+  ✓  2 [chromium] › tests/rel0415-live-routes.spec.ts:79:7 › rel0415 route loads: /login (4.5s)
+  ✓  5 [chromium] › tests/rel0415-live-routes.spec.ts:79:7 › rel0415 route loads: /tasks (3.4s)
+  ✓  7 [chromium] › tests/smart-cut.spec.ts:3:5 › user can enter smart cut workspace and submit preview/finalize actions (7.2s)
+  ✓  6 [chromium] › tests/rel0415-user-navigation.spec.ts:111:5 › rel0415 user can navigate login welcome tts smart-cut and tasks (7.9s)
 
-  7 passed (18.7s)
-[2m[WebServer] [22m(node:23438) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+  7 passed (23.4s)
+[2m[WebServer] [22m(node:28288) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 [2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
-[2m[WebServer] [22m(node:23582) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(node:28289) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 [2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
-(node:23586) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(node:28435) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
-(node:23586) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(node:28435) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
-(node:23587) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(node:28436) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
-(node:23587) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(node:28436) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
-(node:23584) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(node:28437) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
-(node:23585) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(node:28437) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
-(node:23585) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(node:28434) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
-(node:23584) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(node:28434) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
-[2m[WebServer] [22m(node:23787) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
-[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
-[2m[WebServer] [22mTypeError: fetch failed
-[2m[WebServer] [22m    at async handler (app/api/proxy/[...path]/route.ts:27:19)
-[2m[WebServer] [22m[0m [90m 25 |[39m   }
-[2m[WebServer] [22m [90m 26 |[39m
-[2m[WebServer] [22m[31m[1m>[22m[39m[90m 27 |[39m   [36mconst[39m response [33m=[39m [36mawait[39m fetch(url[33m,[39m init)[33m;[39m
-[2m[WebServer] [22m [90m    |[39m                   [31m[1m^[22m[39m
-[2m[WebServer] [22m [90m 28 |[39m   [36mreturn[39m [36mnew[39m [33mResponse[39m(response[33m.[39mbody[33m,[39m {
-[2m[WebServer] [22m [90m 29 |[39m     status[33m:[39m response[33m.[39mstatus[33m,[39m
-[2m[WebServer] [22m [90m 30 |[39m     statusText[33m:[39m response[33m.[39mstatusText[33m,[39m[0m {
-[2m[WebServer] [22m  [cause]: Error: connect ECONNREFUSED 127.0.0.1:8000
-[2m[WebServer] [22m      at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:8000) {
-[2m[WebServer] [22m    errno: [33m-61[39m,
-[2m[WebServer] [22m    code: [32m'ECONNREFUSED'[39m,
-[2m[WebServer] [22m    syscall: [32m'connect'[39m,
-[2m[WebServer] [22m    address: [32m'127.0.0.1'[39m,
-[2m[WebServer] [22m    port: [33m8000[39m
-[2m[WebServer] [22m  }
-[2m[WebServer] [22m}
-[2m[WebServer] [22mTypeError: fetch failed
-[2m[WebServer] [22m    at async handler (app/api/proxy/[...path]/route.ts:27:19)
-[2m[WebServer] [22m[0m [90m 25 |[39m   }
-[2m[WebServer] [22m [90m 26 |[39m
-[2m[WebServer] [22m[31m[1m>[22m[39m[90m 27 |[39m   [36mconst[39m response [33m=[39m [36mawait[39m fetch(url[33m,[39m init)[33m;[39m
-[2m[WebServer] [22m [90m    |[39m                   [31m[1m^[22m[39m
-[2m[WebServer] [22m [90m 28 |[39m   [36mreturn[39m [36mnew[39m [33mResponse[39m(response[33m.[39mbody[33m,[39m {
-[2m[WebServer] [22m [90m 29 |[39m     status[33m:[39m response[33m.[39mstatus[33m,[39m
-[2m[WebServer] [22m [90m 30 |[39m     statusText[33m:[39m response[33m.[39mstatusText[33m,[39m[0m {
-[2m[WebServer] [22m  [cause]: Error: connect ECONNREFUSED 127.0.0.1:8000
-[2m[WebServer] [22m      at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:8000) {
-[2m[WebServer] [22m    errno: [33m-61[39m,
-[2m[WebServer] [22m    code: [32m'ECONNREFUSED'[39m,
-[2m[WebServer] [22m    syscall: [32m'connect'[39m,
-[2m[WebServer] [22m    address: [32m'127.0.0.1'[39m,
-[2m[WebServer] [22m    port: [33m8000[39m
-[2m[WebServer] [22m  }
-[2m[WebServer] [22m}
-[2m[WebServer] [22m(node:23788) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
-[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
-[2m[WebServer] [22m(node:23789) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(node:28637) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 [2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
 [2m[WebServer] [22mTypeError: fetch failed
 [2m[WebServer] [22m    at async handler (app/api/proxy/[...path]/route.ts:27:19)
@@ -157,6 +117,66 @@ Running 7 tests using 4 workers
 [2m[WebServer] [22m    port: [33m8000[39m
 [2m[WebServer] [22m  }
 [2m[WebServer] [22m}
-[2m[WebServer] [22m(node:23790) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(node:28638) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:28639) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22mTypeError: fetch failed
+[2m[WebServer] [22m    at async handler (app/api/proxy/[...path]/route.ts:27:19)
+[2m[WebServer] [22m[0m [90m 25 |[39m   }
+[2m[WebServer] [22m [90m 26 |[39m
+[2m[WebServer] [22m[31m[1m>[22m[39m[90m 27 |[39m   [36mconst[39m response [33m=[39m [36mawait[39m fetch(url[33m,[39m init)[33m;[39m
+[2m[WebServer] [22m [90m    |[39m                   [31m[1m^[22m[39m
+[2m[WebServer] [22m [90m 28 |[39m   [36mreturn[39m [36mnew[39m [33mResponse[39m(response[33m.[39mbody[33m,[39m {
+[2m[WebServer] [22m [90m 29 |[39m     status[33m:[39m response[33m.[39mstatus[33m,[39m
+[2m[WebServer] [22m [90m 30 |[39m     statusText[33m:[39m response[33m.[39mstatusText[33m,[39m[0m {
+[2m[WebServer] [22m  [cause]: Error: connect ECONNREFUSED 127.0.0.1:8000
+[2m[WebServer] [22m      at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:8000) {
+[2m[WebServer] [22m    errno: [33m-61[39m,
+[2m[WebServer] [22m    code: [32m'ECONNREFUSED'[39m,
+[2m[WebServer] [22m    syscall: [32m'connect'[39m,
+[2m[WebServer] [22m    address: [32m'127.0.0.1'[39m,
+[2m[WebServer] [22m    port: [33m8000[39m
+[2m[WebServer] [22m  }
+[2m[WebServer] [22m}
+[2m[WebServer] [22mTypeError: fetch failed
+[2m[WebServer] [22m    at async handler (app/api/proxy/[...path]/route.ts:27:19)
+[2m[WebServer] [22m[0m [90m 25 |[39m   }
+[2m[WebServer] [22m [90m 26 |[39m
+[2m[WebServer] [22m[31m[1m>[22m[39m[90m 27 |[39m   [36mconst[39m response [33m=[39m [36mawait[39m fetch(url[33m,[39m init)[33m;[39m
+[2m[WebServer] [22m [90m    |[39m                   [31m[1m^[22m[39m
+[2m[WebServer] [22m [90m 28 |[39m   [36mreturn[39m [36mnew[39m [33mResponse[39m(response[33m.[39mbody[33m,[39m {
+[2m[WebServer] [22m [90m 29 |[39m     status[33m:[39m response[33m.[39mstatus[33m,[39m
+[2m[WebServer] [22m [90m 30 |[39m     statusText[33m:[39m response[33m.[39mstatusText[33m,[39m[0m {
+[2m[WebServer] [22m  [cause]: Error: connect ECONNREFUSED 127.0.0.1:8000
+[2m[WebServer] [22m      at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:8000) {
+[2m[WebServer] [22m    errno: [33m-61[39m,
+[2m[WebServer] [22m    code: [32m'ECONNREFUSED'[39m,
+[2m[WebServer] [22m    syscall: [32m'connect'[39m,
+[2m[WebServer] [22m    address: [32m'127.0.0.1'[39m,
+[2m[WebServer] [22m    port: [33m8000[39m
+[2m[WebServer] [22m  }
+[2m[WebServer] [22m}
+[2m[WebServer] [22m(node:28753) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22mTypeError: fetch failed
+[2m[WebServer] [22m    at async handler (app/api/proxy/[...path]/route.ts:27:19)
+[2m[WebServer] [22m[0m [90m 25 |[39m   }
+[2m[WebServer] [22m [90m 26 |[39m
+[2m[WebServer] [22m[31m[1m>[22m[39m[90m 27 |[39m   [36mconst[39m response [33m=[39m [36mawait[39m fetch(url[33m,[39m init)[33m;[39m
+[2m[WebServer] [22m [90m    |[39m                   [31m[1m^[22m[39m
+[2m[WebServer] [22m [90m 28 |[39m   [36mreturn[39m [36mnew[39m [33mResponse[39m(response[33m.[39mbody[33m,[39m {
+[2m[WebServer] [22m [90m 29 |[39m     status[33m:[39m response[33m.[39mstatus[33m,[39m
+[2m[WebServer] [22m [90m 30 |[39m     statusText[33m:[39m response[33m.[39mstatusText[33m,[39m[0m {
+[2m[WebServer] [22m  [cause]: Error: connect ECONNREFUSED 127.0.0.1:8000
+[2m[WebServer] [22m      at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:8000) {
+[2m[WebServer] [22m    errno: [33m-61[39m,
+[2m[WebServer] [22m    code: [32m'ECONNREFUSED'[39m,
+[2m[WebServer] [22m    syscall: [32m'connect'[39m,
+[2m[WebServer] [22m    address: [32m'127.0.0.1'[39m,
+[2m[WebServer] [22m    port: [33m8000[39m
+[2m[WebServer] [22m  }
+[2m[WebServer] [22m}
+[2m[WebServer] [22m(node:28787) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 [2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
 ```
