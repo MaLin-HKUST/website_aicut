@@ -83,9 +83,31 @@ fi
 npm --prefix apps/web install --no-fund --no-audit
 NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=1536}" npm --prefix apps/web run build
 
-TMP_RUNTIME="$PROD_ROOT/backups/web_runtime/release_0415_web_runtime_${BUILD_ID}_${TIMESTAMP}.tgz"
-bash "$REPO_DIR/scripts/rel0415/package_web_runtime.sh" "$BUILD_ID" "$TMP_RUNTIME"
-cp "$TMP_RUNTIME" "$PROD_ROOT/web/release_0415_web_runtime_af30ae1.tgz"
+WEB_RUNTIME_DIR="$PROD_ROOT/web/web_runtime_af30ae1"
+WEB_LOG="$PROD_ROOT/web/web_${WEB_PORT}.log"
+WEB_PID="$PROD_ROOT/web/web_${WEB_PORT}.pid"
+
+if [[ -f "$WEB_PID" ]]; then
+  EXISTING_PID="$(cat "$WEB_PID" 2>/dev/null || true)"
+  if [[ -n "${EXISTING_PID:-}" ]] && kill -0 "$EXISTING_PID" 2>/dev/null; then
+    kill "$EXISTING_PID" || true
+    sleep 1
+  fi
+fi
+
+LISTENER_PID="$(ss -ltnp 2>/dev/null | sed -n "s/.*:${WEB_PORT} .*pid=\([0-9]\+\).*/\1/p" | head -n 1)"
+if [[ -n "${LISTENER_PID:-}" ]] && kill -0 "$LISTENER_PID" 2>/dev/null; then
+  kill "$LISTENER_PID" || true
+  sleep 1
+fi
+
+rm -rf "$WEB_RUNTIME_DIR"
+mkdir -p "$WEB_RUNTIME_DIR/.next"
+cp -R "$REPO_DIR/apps/web/.next/standalone/." "$WEB_RUNTIME_DIR/"
+cp -R "$REPO_DIR/apps/web/.next/static" "$WEB_RUNTIME_DIR/.next/static"
+if [[ -d "$REPO_DIR/apps/web/public" ]]; then
+  cp -R "$REPO_DIR/apps/web/public" "$WEB_RUNTIME_DIR/public"
+fi
 
 docker rm -f "$PG_CONTAINER" "$API_CONTAINER" "$SCHEDULER_CONTAINER" >/dev/null 2>&1 || true
 
@@ -139,10 +161,15 @@ docker run -d \
   "$IMAGE_TAG:$BUILD_ID" \
   python -m apps.scheduler.main
 
-PORT="$WEB_PORT" \
-LEGACY_API_BASE_URL="$LEGACY_API_BASE_URL" \
-SMART_CUT_API_BASE_URL="http://127.0.0.1:${SMART_CUT_API_PORT}" \
-bash "$REPO_DIR/scripts/rel0415/start_web_slot.sh" "$PROD_ROOT/web"
+cd "$WEB_RUNTIME_DIR"
+nohup env \
+  LEGACY_API_BASE_URL="$LEGACY_API_BASE_URL" \
+  SMART_CUT_API_BASE_URL="http://127.0.0.1:${SMART_CUT_API_PORT}" \
+  PORT="$WEB_PORT" \
+  HOSTNAME="${HOSTNAME:-127.0.0.1}" \
+  node server.js >"$WEB_LOG" 2>&1 &
+echo $! >"$WEB_PID"
+sleep 2
 
 wait_http "http://127.0.0.1:${SMART_CUT_API_PORT}/health" "candidate smart-cut api"
 wait_http "http://127.0.0.1:${WEB_PORT}/login" "candidate web login"
