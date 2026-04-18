@@ -29,10 +29,7 @@ else
   git pull --ff-only origin "$CURRENT_BRANCH"
 fi
 
-if [[ ! -x "$REPO_DIR/apps/web/node_modules/.bin/next" ]]; then
-  npm --prefix apps/web install
-fi
-
+npm --prefix apps/web install
 npm --prefix apps/web run build
 
 BUILD_ID="$(git rev-parse --short HEAD)"
