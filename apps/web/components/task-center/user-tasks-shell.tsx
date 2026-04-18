@@ -6,14 +6,8 @@ import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { UserWorkspaceShell } from "@/components/navigation/user-workspace-shell";
 import { useUserWorkspaceData } from "@/components/navigation/use-user-workspace-data";
+import { AuthResponse } from "@/lib/auth";
 import { listTaskCenterItems, TaskCenterItem } from "@/lib/task-center";
-
-type AuthResponse = {
-  user: {
-    username: string;
-    role: "admin" | "user";
-  };
-};
 
 const FILTERS = [
   { key: "all", label: "全部" },
@@ -107,6 +101,7 @@ export function UserTasksShell() {
     <UserWorkspaceShell
       activeItem="tasks"
       currentUser={user?.username ?? "..."}
+      headline={user?.company_name ? `你好，${user.company_name}，小马AI准备就绪~` : undefined}
       metrics={workspace.metrics}
       onLogout={logout}
       previewTasks={workspace.previewTasks}

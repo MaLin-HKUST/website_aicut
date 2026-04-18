@@ -1,8 +1,11 @@
 import { expect, test } from "@playwright/test";
 
 const USER = {
+  id: 2,
   username: "rel0415_qa_user",
   role: "user",
+  company_id: 1,
+  company_name: "日标住建",
 } as const;
 
 const TASK_CENTER_ITEMS = [
@@ -95,8 +98,16 @@ test.beforeEach(async ({ page }) => {
   });
 
   await page.route(/\/api\/proxy\/api\/smart-cut\/tasks(\?.*)?$/, async (route) => {
-    if (route.request().method() !== "GET") {
-      await route.abort();
+    if (route.request().method() === "POST") {
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: {
+            task_id: "smartcut_rel0415_001",
+          },
+        }),
+      });
       return;
     }
 
@@ -104,6 +115,61 @@ test.beforeEach(async ({ page }) => {
       status: 200,
       contentType: "application/json",
       body: JSON.stringify(SMART_CUT_TASKS),
+    });
+  });
+
+  await page.route("**/api/proxy/api/smart-cut/tasks/smartcut_rel0415_001", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        id: "smartcut_rel0415_001",
+        user_id: USER.username,
+        status: "waiting_user",
+        current_stage: "preview",
+        error_stage: null,
+        error_message: null,
+        original_video_url: null,
+        original_video_tos_key: "smart-cut/smartcut_rel0415_001/input/source_video.mp4",
+        reference_text_url: null,
+        reference_text_tos_key: "smart-cut/smartcut_rel0415_001/input/reference.txt",
+        analyze_script: "今天我们{先删掉这句}继续讲重点。",
+        analyze_script_tos_key: "smart-cut/smartcut_rel0415_001/analyze/script.txt",
+        asr_result_tos_key: "smart-cut/smartcut_rel0415_001/analyze/asr.json",
+        active_edit_id: "edit_rel0415_001",
+        finalize_source_edit_id: "edit_rel0415_001",
+        final_video_url: null,
+        final_video_tos_key: null,
+        groundtruth_url: null,
+        groundtruth_tos_key: null,
+        feed_to_ai: true,
+        output_mode: "original",
+        last_scheduler_task_id: "sched_rel0415_001",
+        created_at: "2026-04-18T08:00:00Z",
+        updated_at: "2026-04-18T10:10:00Z",
+      }),
+    });
+  });
+
+  await page.route("**/api/proxy/api/smart-cut/tasks/smartcut_rel0415_001/edits", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([
+        {
+          id: "edit_rel0415_001",
+          task_id: "smartcut_rel0415_001",
+          edited_script: "今天我们{先删掉这句}继续讲重点。",
+          status: "success",
+          audio_b_url: "https://example.com/audio_b.mp3",
+          audio_b_tos_key: "smart-cut/smartcut_rel0415_001/preview/edit_rel0415_001/audio_b.mp3",
+          edited_delay_cuts_tos_key: "smart-cut/smartcut_rel0415_001/preview/edit_rel0415_001/edited_delay_cuts.json",
+          pause_cuts_on_original_tos_key: "smart-cut/smartcut_rel0415_001/preview/edit_rel0415_001/pause_cuts_on_original.json",
+          error_message: null,
+          created_at: "2026-04-18T08:20:00Z",
+          updated_at: "2026-04-18T08:30:00Z",
+        },
+      ]),
     });
   });
 });
@@ -118,7 +184,7 @@ test("rel0415 user can navigate login welcome tts smart-cut and tasks", async ({
   await expect(page).toHaveURL(/\/welcome$/);
   await expect(page.getByText("请点击左侧「文案生成语音」开始使用")).toBeVisible();
   await expect(page.getByRole("button", { name: "文案生成语音" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "智能气口剪辑" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "视频剪辑" })).toBeVisible();
   await expect(page.getByRole("button", { name: "任务列表" })).toBeVisible();
 
   await page.getByRole("button", { name: "文案生成语音" }).click();
@@ -130,11 +196,10 @@ test("rel0415 user can navigate login welcome tts smart-cut and tasks", async ({
   await expect(page.getByText("rel0415-output.mp3")).toBeVisible();
   await expect(page.getByRole("button", { name: "下载音频" })).toBeVisible();
 
-  await page.getByRole("button", { name: "智能气口剪辑" }).click();
-  await expect(page).toHaveURL(/\/smart-cut$/);
-  await expect(page.getByRole("heading", { name: "三段式智能气口剪辑工作台" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "smartcut_rel0415_001" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "打开任务中心" })).toBeVisible();
+  await page.getByRole("button", { name: "视频剪辑" }).click();
+  await expect(page).toHaveURL(/\/smart-cut\/smartcut_rel0415_001$/);
+  await expect(page.getByRole("heading", { name: "上传与分析" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "生成试听" })).toBeVisible();
 
   await page.getByRole("button", { name: "任务列表" }).click();
   await expect(page).toHaveURL(/\/tasks$/);

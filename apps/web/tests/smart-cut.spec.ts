@@ -7,61 +7,34 @@ test("user can enter smart cut workspace and submit preview/finalize actions", a
       contentType: "application/json",
       body: JSON.stringify({
         user: {
+          id: 2,
           username: "qa_user",
           role: "user",
+          company_id: 1,
+          company_name: "日标住建",
         },
       }),
     });
   });
 
   await page.route(/\/api\/proxy\/api\/smart-cut\/tasks(\?.*)?$/, async (route) => {
-    if (route.request().method() === "GET") {
+    if (route.request().method() === "POST") {
       await route.fulfill({
-        status: 200,
+        status: 201,
         contentType: "application/json",
-        body: JSON.stringify([
-          {
-            id: "smartcut_mock_001",
-            status: "ready_finalize",
-            current_stage: "finalize",
-            active_edit_id: "edit_mock_001",
-            created_at: "2026-04-16T08:00:00Z",
-            updated_at: "2026-04-16T09:00:00Z",
+        body: JSON.stringify({
+          data: {
+            task_id: "smartcut_mock_001",
           },
-        ]),
+        }),
       });
       return;
     }
 
     await route.fulfill({
-      status: 201,
+      status: 200,
       contentType: "application/json",
-      body: JSON.stringify({
-        id: "smartcut_mock_002",
-        user_id: 1,
-        status: "waiting_upload",
-        current_stage: null,
-        error_stage: null,
-        error_message: null,
-        original_video_url: null,
-        original_video_tos_key: null,
-        reference_text_url: null,
-        reference_text_tos_key: null,
-        analyze_script: null,
-        analyze_script_tos_key: null,
-        asr_result_tos_key: null,
-        active_edit_id: null,
-        finalize_source_edit_id: null,
-        final_video_url: null,
-        final_video_tos_key: null,
-        groundtruth_url: null,
-        groundtruth_tos_key: null,
-        feed_to_ai: false,
-        output_mode: null,
-        last_scheduler_task_id: null,
-        created_at: "2026-04-16T09:00:00Z",
-        updated_at: "2026-04-16T09:00:00Z",
-      }),
+      body: JSON.stringify([]),
     });
   });
 
@@ -156,13 +129,8 @@ test("user can enter smart cut workspace and submit preview/finalize actions", a
   });
 
   await page.goto("/welcome");
-  await expect(page.getByRole("button", { name: "智能气口剪辑" })).toBeVisible();
-  await page.getByRole("button", { name: "智能气口剪辑" }).click();
-  await expect(page).toHaveURL(/\/smart-cut$/);
-  await expect(page.getByText("三段式智能气口剪辑工作台")).toBeVisible();
-  await expect(page.getByRole("button", { name: /smartcut_mock_001/ })).toBeVisible();
-
-  await page.getByTestId("smart-cut-recent-task-smartcut_mock_001").click();
+  await expect(page.getByRole("button", { name: "视频剪辑" })).toBeVisible();
+  await page.getByRole("button", { name: "视频剪辑" }).click();
   await expect(page).toHaveURL(/\/smart-cut\/smartcut_mock_001$/);
   await expect(page.getByText("删除线脚本调整")).toBeVisible();
   await expect(page.getByRole("button", { name: "生成试听" })).toBeVisible();

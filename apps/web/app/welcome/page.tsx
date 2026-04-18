@@ -6,13 +6,7 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { UserWorkspaceShell } from "@/components/navigation/user-workspace-shell";
 import { useUserWorkspaceData } from "@/components/navigation/use-user-workspace-data";
-
-type AuthResponse = {
-  user: {
-    username: string;
-    role: "admin" | "user";
-  };
-};
+import { AuthResponse } from "@/lib/auth";
 
 export default function WelcomePage() {
   const router = useRouter();
@@ -48,6 +42,7 @@ export default function WelcomePage() {
     <UserWorkspaceShell
       activeItem="tts"
       currentUser={user?.username ?? "..."}
+      headline={user?.company_name ? `你好，${user.company_name}，小马AI准备就绪~` : undefined}
       metrics={workspace.metrics}
       onLogout={logout}
       previewTasks={workspace.previewTasks}
