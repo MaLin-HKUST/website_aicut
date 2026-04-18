@@ -155,6 +155,8 @@ docker run -d \
   "$IMAGE_REF" \
   uvicorn apps.api.main:app --host 0.0.0.0 --port "$SMART_CUT_API_PORT"
 
+wait_http "http://127.0.0.1:${SMART_CUT_API_PORT}/health" "candidate smart-cut api"
+
 docker run -d \
   --name "$SCHEDULER_CONTAINER" \
   --network host \
@@ -173,12 +175,11 @@ nohup env \
   LEGACY_API_BASE_URL="$LEGACY_API_BASE_URL" \
   SMART_CUT_API_BASE_URL="http://127.0.0.1:${SMART_CUT_API_PORT}" \
   PORT="$WEB_PORT" \
-  HOSTNAME="${HOSTNAME:-127.0.0.1}" \
+  HOSTNAME="127.0.0.1" \
   node server.js >"$WEB_LOG" 2>&1 &
 echo $! >"$WEB_PID"
 sleep 2
 
-wait_http "http://127.0.0.1:${SMART_CUT_API_PORT}/health" "candidate smart-cut api"
 wait_http "http://127.0.0.1:${WEB_PORT}/login" "candidate web login"
 
 {
