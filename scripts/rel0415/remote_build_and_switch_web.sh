@@ -29,8 +29,8 @@ else
   git pull --ff-only origin "$CURRENT_BRANCH"
 fi
 
-npm --prefix apps/web install
-npm --prefix apps/web run build
+npm --prefix apps/web install --no-fund --no-audit
+NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=1536}" npm --prefix apps/web run build
 
 BUILD_ID="$(git rev-parse --short HEAD)"
 TMP_RUNTIME="$REPO_DIR/release_0415_web_runtime_${BUILD_ID}.tgz"
