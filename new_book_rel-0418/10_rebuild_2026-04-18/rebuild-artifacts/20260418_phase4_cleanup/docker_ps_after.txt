@@ -1,0 +1,5 @@
+d6162723343e release0415_worker Up 32 hours (healthy) smart-cut-worker-gateway:0.0.3-dev
+7dd7fecdf02e release0415_api Up 32 hours (healthy) a-scheduler:0415-af30ae1
+892ba0be9234 release0415_scheduler Up 37 hours (healthy) a-scheduler:0415-af30ae1
+ad5d3c27e514 pg-f10 Up 4 days postgres:16-alpine
+d5696274088f website_aicut_api_1 Up 5 days website_aicut-api:sqlite-admin

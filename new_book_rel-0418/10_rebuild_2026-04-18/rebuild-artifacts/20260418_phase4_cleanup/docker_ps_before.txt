@@ -1,0 +1,27 @@
+d6162723343e release0415_worker Up 32 hours (healthy) smart-cut-worker-gateway:0.0.3-dev
+7dd7fecdf02e release0415_api Up 32 hours (healthy) a-scheduler:0415-af30ae1
+892ba0be9234 release0415_scheduler Up 37 hours (healthy) a-scheduler:0415-af30ae1
+564e7ff3b20c tender_black Created website_aicut-api:latest
+f219ac1c18e7 pedantic_faraday Created website_aicut-api:latest
+ad5d3c27e514 pg-f10 Up 4 days postgres:16-alpine
+ced53b02223b postgres16 Created postgres:16-alpine
+d5696274088f website_aicut_api_1 Up 5 days website_aicut-api:sqlite-admin
+25304586008d fervent_ardinghelli Created b9a49a3718f3
+22f02f5df0c9 quirky_meninsky Created b9a49a3718f3
+8d00d9596693 festive_gagarin Created b9a49a3718f3
+b124528ce0e4 charming_hertz Created b9a49a3718f3
+c38301fe42b3 infallible_goldberg Created b9a49a3718f3
+c8423098232f lucid_rhodes Created b9a49a3718f3
+43fa9e2bbb98 api-test Exited (3) 10 days ago b9a49a3718f3
+830338341c14 keen_cartwright Created b9a49a3718f3
+42f80731d91a objective_colden Created b9a49a3718f3
+a67f03488e19 awesome_wiles Created b9a49a3718f3
+921ed1a4d8a7 elated_sammet Created b9a49a3718f3
+79720c2f89b4 nifty_pasteur Created b9a49a3718f3
+c42f3d63978b elegant_agnesi Created b9a49a3718f3
+a711d966147a intelligent_tu Created b9a49a3718f3
+bc51e780ef66 festive_taussig Created b9a49a3718f3
+bc1c49558c05 great_williams Created b9a49a3718f3
+5ad2d2b4e64c charming_faraday Created b9a49a3718f3
+fd9479ef64c1 stoic_robinson Created b9a49a3718f3
+fb7e86493b49 tmp_apitest_1 Exited (3) 11 days ago website_aicut-api:sqlite
