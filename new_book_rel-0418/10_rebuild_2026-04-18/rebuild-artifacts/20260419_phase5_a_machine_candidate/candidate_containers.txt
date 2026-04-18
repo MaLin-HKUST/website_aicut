@@ -1,0 +1,3 @@
+a-machine-phase5-scheduler Up 5 minutes (healthy) 
+a-machine-phase5-api Up 11 minutes (healthy) 
+a-machine-phase5-postgres Up 11 minutes 

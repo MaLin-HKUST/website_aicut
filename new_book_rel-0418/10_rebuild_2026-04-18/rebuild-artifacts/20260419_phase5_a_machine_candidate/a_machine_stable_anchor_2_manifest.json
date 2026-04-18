@@ -1,0 +1,50 @@
+{
+  "phase": 5,
+  "status": "candidate-stable",
+  "generated_at": "2026-04-19 00:45:11 +0800",
+  "source_commit": "521a9072d0bef9fa6fa3d1cddc3b4d701779d4df",
+  "a_machine": {
+    "host": "14.103.249.104",
+    "prod_root": "/home/malin/website_aicut_prod"
+  },
+  "runtime": {
+    "legacy_api_base_url": "http://127.0.0.1:8000",
+    "smart_cut_api_base_url": "http://127.0.0.1:18001",
+    "candidate_web_base_url": "http://127.0.0.1:3301",
+    "candidate_postgres_port": 55433
+  },
+  "containers": {
+    "postgres": {
+      "name": "a-machine-phase5-postgres",
+      "image": "postgres:16-alpine"
+    },
+    "smart_cut_api": {
+      "name": "a-machine-phase5-api",
+      "image": "a-scheduler:0415-af30ae1"
+    },
+    "scheduler": {
+      "name": "a-machine-phase5-scheduler",
+      "image": "a-scheduler:0415-af30ae1"
+    }
+  },
+  "web_runtime": {
+    "source": "local-build-uploaded-to-a-machine",
+    "archive_path": "/home/malin/website_aicut_prod/web/release_0415_web_runtime_af30ae1.tgz",
+    "listener": "127.0.0.1:3301"
+  },
+  "formal_tools": {
+    "tos_uploader_dir": "/home/malin/website_aicut_prod/tools/tos_uploader"
+  },
+  "health_evidence": {
+    "containers_file": "candidate_containers.txt",
+    "ports_file": "candidate_ports.txt",
+    "health_file": "candidate_health.txt",
+    "login_markers_file": "candidate_login_markers.txt",
+    "tos_toolchain_file": "tos_toolchain_files.txt"
+  },
+  "notes": [
+    "This anchor keeps the legacy SQLite/admin/auth API on 127.0.0.1:8000 unchanged.",
+    "The candidate smart-cut API and scheduler were started from the cached a-scheduler image to avoid remote registry timeouts during phase 5.",
+    "The candidate web runtime was built locally and uploaded after repeated remote Next build instability."
+  ]
+}

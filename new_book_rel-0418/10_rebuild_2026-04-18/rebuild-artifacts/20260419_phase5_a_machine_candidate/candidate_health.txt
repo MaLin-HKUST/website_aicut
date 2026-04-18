@@ -1,0 +1,16 @@
+{"status":"healthy"}
+HTTP/1.1 200 OK
+Vary: RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch, Accept-Encoding
+x-nextjs-cache: HIT
+x-nextjs-prerender: 1
+x-nextjs-prerender: 1
+x-nextjs-stale-time: 300
+X-Powered-By: Next.js
+Cache-Control: s-maxage=31536000
+ETag: "rskiaq117i5vd"
+Content-Type: text/html; charset=utf-8
+Content-Length: 7735
+Date: Sat, 18 Apr 2026 16:41:35 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+

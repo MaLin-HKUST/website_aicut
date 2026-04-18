@@ -1,0 +1,9 @@
+/home/malin/website_aicut_prod/tools/tos_uploader/config.yaml
+/home/malin/website_aicut_prod/tools/tos_uploader/example_usage.py
+/home/malin/website_aicut_prod/tools/tos_uploader/__pycache__/tos_folder_uploader.cpython-310.pyc
+/home/malin/website_aicut_prod/tools/tos_uploader/__pycache__/tos_folder_uploader.cpython-37.pyc
+/home/malin/website_aicut_prod/tools/tos_uploader/README.md
+/home/malin/website_aicut_prod/tools/tos_uploader/requirements.txt
+/home/malin/website_aicut_prod/tools/tos_uploader/run_upload.command
+/home/malin/website_aicut_prod/tools/tos_uploader/tos_folder_uploader.py
+/home/malin/website_aicut_prod/tools/tos_uploader/upload_cli.py
