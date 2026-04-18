@@ -19,10 +19,10 @@ import httpx
 class GatewayFileTransport:
     """Handle all task file downloads/uploads for the worker gateway."""
 
-    def __init__(self, tos_service: object, workspace: str, bucket: str = "smart-cut"):
+    def __init__(self, tos_service: object, workspace: str, bucket: str | None = None):
         self.tos_service = tos_service
         self.workspace = Path(workspace)
-        self.bucket = bucket
+        self.bucket = bucket or os.environ.get("TOS_BUCKET", "smart-cut")
 
     async def download_input(self, source: str, local_path: Path) -> Path:
         """Download one input into the shared work directory."""

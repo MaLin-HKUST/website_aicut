@@ -6,6 +6,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 import logging
+import os
 
 from apps.models.scheduler_task import SchedulerTask
 from worker.services import AlgorithmDockerRunner, GatewayFileTransport, SmartCutJobContract
@@ -43,7 +44,7 @@ class BaseStageProcessor(ABC):
         self.file_transport = GatewayFileTransport(
             tos_service=tos_service,
             workspace=workspace,
-            bucket=self.BUCKET,
+            bucket=os.environ.get("TOS_BUCKET", self.BUCKET),
         )
         self.job_contract = SmartCutJobContract(workspace=workspace)
         self.algorithm_runner = AlgorithmDockerRunner(workspace=workspace)
