@@ -15,6 +15,8 @@ PG_CONTAINER="${PG_CONTAINER:-a-machine-phase5-postgres}"
 API_CONTAINER="${API_CONTAINER:-a-machine-phase5-api}"
 SCHEDULER_CONTAINER="${SCHEDULER_CONTAINER:-a-machine-phase5-scheduler}"
 IMAGE_TAG="${IMAGE_TAG:-a-machine-phase5-scheduler}"
+SKIP_DOCKER_BUILD="${SKIP_DOCKER_BUILD:-0}"
+PREBUILT_IMAGE_TAG="${PREBUILT_IMAGE_TAG:-a-scheduler:0415-af30ae1}"
 
 POSTGRES_USER="${POSTGRES_USER:-scheduler}"
 POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-scheduler}"
@@ -130,7 +132,12 @@ for _ in $(seq 1 30); do
   sleep 2
 done
 
-docker build -f apps/api/Dockerfile -t "$IMAGE_TAG:$BUILD_ID" .
+if [[ "$SKIP_DOCKER_BUILD" == "1" ]]; then
+  IMAGE_REF="$PREBUILT_IMAGE_TAG"
+else
+  docker build -f apps/api/Dockerfile -t "$IMAGE_TAG:$BUILD_ID" .
+  IMAGE_REF="$IMAGE_TAG:$BUILD_ID"
+fi
 
 CANDIDATE_DB_URL="postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:${PG_PORT}/${POSTGRES_DB}"
 
@@ -145,7 +152,7 @@ docker run -d \
   -e TOS_BUCKET="$TOS_BUCKET" \
   -e TOS_ACCESS_KEY="$TOS_ACCESS_KEY" \
   -e TOS_SECRET_KEY="$TOS_SECRET_KEY" \
-  "$IMAGE_TAG:$BUILD_ID" \
+  "$IMAGE_REF" \
   uvicorn apps.api.main:app --host 0.0.0.0 --port "$SMART_CUT_API_PORT"
 
 docker run -d \
@@ -158,7 +165,7 @@ docker run -d \
   -e TOS_BUCKET="$TOS_BUCKET" \
   -e TOS_ACCESS_KEY="$TOS_ACCESS_KEY" \
   -e TOS_SECRET_KEY="$TOS_SECRET_KEY" \
-  "$IMAGE_TAG:$BUILD_ID" \
+  "$IMAGE_REF" \
   python -m apps.scheduler.main
 
 cd "$WEB_RUNTIME_DIR"
@@ -180,7 +187,7 @@ wait_http "http://127.0.0.1:${WEB_PORT}/login" "candidate web login"
   echo "smart_cut_api=http://127.0.0.1:${SMART_CUT_API_PORT}"
   echo "web=http://127.0.0.1:${WEB_PORT}"
   echo "postgres_port=$PG_PORT"
-  echo "image_tag=$IMAGE_TAG:$BUILD_ID"
+  echo "image_tag=$IMAGE_REF"
   echo "timestamp=$TIMESTAMP"
   echo
   echo "# smart-cut api"
@@ -206,7 +213,7 @@ cat >"$MANIFEST_PATH" <<EOF
     "api": "$API_CONTAINER",
     "scheduler": "$SCHEDULER_CONTAINER"
   },
-  "image_tag": "$IMAGE_TAG:$BUILD_ID",
+  "image_tag": "$IMAGE_REF",
   "healthcheck_path": "$HEALTHCHECK_PATH",
   "tos_tool_dir": "$PROD_ROOT/tools/tos_uploader"
 }
