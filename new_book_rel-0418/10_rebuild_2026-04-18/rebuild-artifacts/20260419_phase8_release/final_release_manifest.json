@@ -1,0 +1,73 @@
+{
+  "phase": "8",
+  "date": "2026-04-19",
+  "public_entry": {
+    "domain": "xiaomajianji.cn",
+    "nginx_upstream": "http://127.0.0.1:3301"
+  },
+  "a_machine": {
+    "host": "14.103.249.104",
+    "web": {
+      "kind": "host_process",
+      "bind": "127.0.0.1:3301",
+      "pid": 1571197
+    },
+    "legacy_api": {
+      "container": "website_aicut_api_1",
+      "bind": "127.0.0.1:8000",
+      "database": "/home/malin/website_aicut/data/website_aicut.db"
+    },
+    "candidate_center": {
+      "postgres_container": "a-machine-phase5-postgres",
+      "postgres_bind": "0.0.0.0:55433",
+      "api_container": "a-machine-phase5-api",
+      "api_bind": "0.0.0.0:18001",
+      "scheduler_container": "a-machine-phase5-scheduler"
+    },
+    "tools": {
+      "tos_uploader_root": "/home/malin/website_aicut_prod/tools/tos_uploader"
+    }
+  },
+  "worker": {
+    "host": "14.103.63.252",
+    "gateway_container": "worker1-phase6-gateway",
+    "worker_id": "worker1-phase6",
+    "tunnel": {
+      "db_local": "127.0.0.1:65433",
+      "api_local": "127.0.0.1:61001"
+    }
+  },
+  "tos": {
+    "bucket": "autocut-malin",
+    "endpoint": "tos-cn-shanghai.volces.com",
+    "region": "cn-shanghai"
+  },
+  "verified_happy_path": {
+    "task_id": "8dd1797a-7999-48ab-a0c7-76c1b523bd2c",
+    "analyze_scheduler_task_id": "4f92151c-e6e4-4d20-a3b2-9852afa61b65",
+    "preview_scheduler_task_id": "7143f582-4835-4572-a044-1ff1b8a26eff",
+    "finalize_scheduler_task_id": "f485b696-8f75-494f-9e6e-bbfcd4f244ba",
+    "active_edit_id": "c1f5751a-3b1d-4448-8384-cdf3a43fc09b",
+    "final_video_tos_key": "smart-cut/8dd1797a-7999-48ab-a0c7-76c1b523bd2c/finalize/final_video.mp4"
+  },
+  "backup_anchor": {
+    "pre_rebuild_prefix": "backup/a-machine/pre_rebuild/pre_rebuild_20260418_224329",
+    "local_backup_root": "/home/malin/website_aicut_backups/pre_rebuild_20260418_224329"
+  },
+  "hot_patches_applied": [
+    "apps/services/tos_service.py",
+    "apps/api/routes/tasks.py"
+  ],
+  "decommissioned_runtime": {
+    "removed_containers": [
+      "release0415_worker",
+      "release0415_api",
+      "release0415_scheduler",
+      "pg-f10"
+    ],
+    "killed_listeners": [
+      "127.0.0.1:3000",
+      "192.168.92.197:3001"
+    ]
+  }
+}

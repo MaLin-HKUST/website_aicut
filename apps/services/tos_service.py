@@ -1,6 +1,6 @@
 """TOS Service - 火山引擎 TOS 对象存储服务封装
 
-提供统一的 TOS 操作接口，支持真实 TOS (S3 兼容) 和本地 Fake 模式。
+提供统一的 TOS 操作接口，支持真实 TOS 和本地 Fake 模式。
 """
 
 import os
@@ -220,7 +220,7 @@ class FakeTOSClient:
 
 
 class RealTOSClient:
-    """真实 TOS 客户端 - 使用 boto3 访问火山引擎 TOS"""
+    """真实 TOS 客户端 - 使用火山引擎官方 tos SDK"""
     
     def __init__(
         self,
@@ -229,38 +229,25 @@ class RealTOSClient:
         access_key: str,
         secret_key: str,
     ):
-        """初始化真实 TOS 客户端
-        
-        Args:
-            endpoint: TOS 服务端点
-            region: 区域
-            access_key: 访问密钥
-            secret_key: 密钥
-        """
+        """初始化真实 TOS 客户端"""
         try:
-            import boto3
-            from botocore.config import Config
+            import tos
+            from tos import HttpMethodType
         except ImportError:
             raise ImportError(
-                "boto3 is required for real TOS mode. "
-                "Install it with: pip install boto3"
+                "tos is required for real TOS mode. "
+                "Install it with: pip install tos"
             )
         
+        self._tos = tos
+        self._http_method_type = HttpMethodType
         self.endpoint = endpoint
         self.region = region
-        
-        # 配置 boto3 客户端
-        config = Config(
-            region_name=region,
-            signature_version='s3v4',
-        )
-        
-        self.client = boto3.client(
-            's3',
-            endpoint_url=endpoint,
-            aws_access_key_id=access_key,
-            aws_secret_access_key=secret_key,
-            config=config,
+        self.client = tos.TosClientV2(
+            access_key,
+            secret_key,
+            endpoint,
+            region,
         )
     
     def generate_presigned_url(
@@ -271,36 +258,35 @@ class RealTOSClient:
         expires: int = 3600,
     ) -> str:
         """生成预签名 URL"""
-        client_method = 'put_object' if operation == 'put_object' else 'get_object'
-        
-        url = self.client.generate_presigned_url(
-            ClientMethod=client_method,
-            Params={
-                'Bucket': bucket,
-                'Key': key,
-            },
-            ExpiresIn=expires,
+        http_method = (
+            self._http_method_type.Http_Method_Put
+            if operation == "put_object"
+            else self._http_method_type.Http_Method_Get
         )
-        return url
+        result = self.client.pre_signed_url(
+            http_method=http_method,
+            bucket=bucket,
+            key=key,
+            expires=expires,
+        )
+        return result.signed_url
     
     def upload_file(self, bucket: str, key: str, file_path: str) -> dict:
         """上传本地文件"""
-        self.client.upload_file(file_path, bucket, key)
-        
-        # 获取对象信息
-        response = self.client.head_object(Bucket=bucket, Key=key)
+        self.client.put_object_from_file(bucket, key, file_path)
+        response = self.client.head_object(bucket, key)
         
         return {
             "bucket": bucket,
             "key": key,
-            "size": response.get('ContentLength', 0),
-            "etag": response.get('ETag', '').strip('"'),
-            "last_modified": response.get('LastModified').isoformat() if response.get('LastModified') else None,
+            "size": getattr(response, "content_length", 0),
+            "etag": (getattr(response, "etag", "") or "").strip('"'),
+            "last_modified": getattr(response, "last_modified", None),
         }
     
     def download_file(self, bucket: str, key: str, file_path: str) -> dict:
         """下载到本地"""
-        self.client.download_file(bucket, key, file_path)
+        self.client.get_object_to_file(bucket, key, file_path)
         
         file_size = Path(file_path).stat().st_size
         
@@ -314,31 +300,31 @@ class RealTOSClient:
     def check_object_exists(self, bucket: str, key: str) -> bool:
         """检查对象是否存在"""
         try:
-            self.client.head_object(Bucket=bucket, Key=key)
+            self.client.head_object(bucket, key)
             return True
         except Exception:
             return False
     
     def list_objects(self, bucket: str, prefix: str = "") -> list[dict]:
         """列出对象"""
-        paginator = self.client.get_paginator('list_objects_v2')
-        
         objects = []
-        for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
-            for obj in page.get('Contents', []):
-                objects.append({
-                    "key": obj['Key'],
-                    "size": obj['Size'],
-                    "last_modified": obj['LastModified'].isoformat(),
-                    "etag": obj['ETag'].strip('"'),
-                })
+        result = self.client.list_objects(bucket=bucket, prefix=prefix, max_keys=1000)
+        for obj in getattr(result, "contents", []) or []:
+            objects.append(
+                {
+                    "key": obj.key,
+                    "size": obj.size,
+                    "last_modified": obj.last_modified,
+                    "etag": (obj.etag or "").strip('"'),
+                }
+            )
         
         return objects
     
     def delete_object(self, bucket: str, key: str) -> bool:
         """删除对象"""
         try:
-            self.client.delete_object(Bucket=bucket, Key=key)
+            self.client.delete_object(bucket, key)
             return True
         except Exception:
             return False

@@ -4,25 +4,26 @@
 
 ## 结论
 
-阶段 6 已完成到“Worker 接回并能被调度中心识别”的程度，但尚未完成到“analyze 成功产出”的程度。
+阶段 6 已完成。
 
 当前状态应定义为：
 
 - Worker 接回：已完成
 - 设备注册与心跳：已完成
 - 调度任务分配：已完成
-- 真实 TOS 输入下载：阻塞
-- analyze 产物生成：阻塞
+- 真实 TOS 输入下载：已完成
+- 真实 TOS 输出上传：已完成
+- `upload-direct`：已恢复
 
-## 已完成的部分
+## 本阶段完成了什么
 
-### 1. Worker 候选部署根已建立
+### 1. Worker 侧正式候选目录已建立
 
-Worker 机器正式候选目录：
+Worker 机器候选部署根：
 
 - `/home/malin/website_aicut_worker_prod`
 
-其中已落地：
+当前保留的关键子目录：
 
 - `code/website_aicut`
 - `code/aicut2602`
@@ -33,192 +34,156 @@ Worker 机器正式候选目录：
 - `manifests/`
 - `worker_data/`
 
-### 2. Worker 与 A 机器 candidate 中心侧已接通
+### 2. Worker 与 A candidate 中心侧已重新接通
 
-由于 Worker 机器无法直接访问：
+由于 Worker 机器无法直接访问 A candidate 的：
 
 - `14.103.249.104:55433`
 - `14.103.249.104:18001`
 - `192.168.92.197:55433`
 - `192.168.92.197:18001`
 
-因此阶段 6 采用了 Worker 本机 SSH tunnel：
+阶段 6 采用了 Worker 本机 SSH tunnel：
 
 - `127.0.0.1:65433 -> A:127.0.0.1:55433`
 - `127.0.0.1:61001 -> A:127.0.0.1:18001`
 
-隧道建立成功，验证结果：
+这条 tunnel 在阶段 6 内保持可用，Worker Gateway 已持续通过它连接 candidate PostgreSQL 与 candidate API。
 
-- `tunnel_ok 127.0.0.1:65433`
-- `tunnel_ok 127.0.0.1:61001`
+### 3. Worker Gateway 已正式跑在 Worker 机器
 
-### 3. Worker Gateway 候选容器已成功启动
-
-容器：
+候选容器：
 
 - `worker1-phase6-gateway`
 
-使用的关键配置：
+关键环境：
 
 - `DATABASE_URL=postgresql+psycopg2://scheduler:scheduler@127.0.0.1:65433/scheduler`
 - `API_BASE_URL=http://127.0.0.1:61001`
-- `TOS_BUCKET=autocut-malin`
 - `USE_FAKE_TOS=false`
+- `TOS_BUCKET=autocut-malin`
 - `ALGORITHM_IMAGE=a-scheduler:0415-af30ae1`
 
-### 4. Worker 已注册到 A 机器 candidate PostgreSQL
+### 4. Worker 已注册并持续发心跳
 
-已验证数据库中的设备记录：
+在 A candidate PostgreSQL 中，设备记录已稳定存在：
 
 - `worker_id = worker1-phase6`
 - `worker_name = Worker 1 Phase 6`
 - `status = IDLE`
-- `heartbeat_at` 持续更新
+- `heartbeat_at` 持续刷新
 
-说明：
+这说明执行面已经从 A 机器接回 Worker 机器。
 
-- 阶段 6 最核心的“Worker 不再留在 A，而是从 Worker 机器接回候选调度中心”已经成立
+## 阶段 6 中解决的关键阻塞
 
-### 5. 调度任务已经成功分配给 Worker
+### 阻塞 1：真实 TOS 适配层错误
 
-通过 `phase6_smoke_via_tos` 验证链，已确认：
+阶段 6 初始状态下：
 
-- A 机器 candidate API 能创建 `smart_cut_tasks`
-- analyze 触发后能创建 `scheduler_tasks`
-- `scheduler_tasks.assigned_worker_id = worker1-phase6`
+- candidate API 的 `upload-direct` 返回 `403 Forbidden`
+- Worker 下载真实 TOS 输入对象时返回 `403 Forbidden`
 
-示例：
+根因不在调度或 Worker 注册，而在当前仓库的 `apps/services/tos_service.py` 真实模式仍停留在 `boto3` / S3 兼容层。
 
-- 业务任务：`8d9d834a-878d-4e0a-b877-c8c47e9e5166`
-- 调度任务：`1c16de11-3064-4673-bf54-4f4ab93a90da`
-- 状态：`FAILED`
-- Worker：`worker1-phase6`
+修复方式：
 
-这说明：
+- 将 `apps/services/tos_service.py` 的 `RealTOSClient` 切换到火山官方 `tos` SDK
+- API 与 Worker 运行环境都补装 `tos>=2.0.0`
+- 将修复后的 `apps/services/tos_service.py` 热补到：
+  - `a-machine-phase5-api`
+  - `worker1-phase6-gateway` 所挂载的代码根
 
-- Scheduler -> Worker 分配路径已经打通
+### 阻塞 2：Worker 默认 bucket 错误
 
-## 阻塞点
+阶段 6 初期 Worker 仍默认读取 `smart-cut` bucket。
 
-### 阻塞点 1：candidate API 的 `upload-direct` 走真实 TOS 时返回 403
-
-验证任务：
-
-- `f319eae9-d540-4723-a054-d257f6d637fa`
-
-现象：
-
-- `POST /api/smart-cut/tasks/{task_id}/upload-direct`
-- 返回 `500`
-- 错误信息为 TOS `403 Forbidden`
-
-这说明：
-
-- 当前 candidate API 使用 `apps/services/tos_service.py` 的真实 TOS 适配层时，`PutObject` 路径不正确
-
-### 阻塞点 2：Worker 下载 TOS 输入时失败
-
-为了绕过 `upload-direct`，阶段 6 用 A 机器上的正式 TOS 工具直传输入文件，再把任务推进到 `READY_ANALYZE`。
-
-这一步验证了：
-
-- 输入对象确实已经写入 `autocut-malin`
-- 上传日志显示 `httpCode: 200`
-
-但 Worker 执行 analyze 时仍失败：
-
-- 初始失败：错 bucket，表现为 `HeadObject 404`
-- 修复 bucket 入口后：变为 `HeadObject 403`
-
-最终错误：
-
-- `Failed to download smart-cut/.../input/source_video.mp4`
-- `An error occurred (403) when calling the HeadObject operation: Forbidden`
-
-这说明：
-
-- Worker 已经开始按正确 bucket 去读
-- 但当前真实 TOS 读取仍然被 `apps/services/tos_service.py` 里的真实模式适配层阻塞
-
-## 阶段 6 中的代码调整
-
-### 1. 新增 Worker 候选部署脚本
-
-- `scripts/rebuild_phase6/remote_build_worker_candidate.sh`
-
-职责：
-
-- 在 Worker 机器建立候选部署根
-- 使用 `sudo docker` 启动 `worker1-phase6-gateway`
-- 指向 A 机器 candidate PostgreSQL 和 API
-- 记录 manifest 和 health 文件
-
-### 2. 新增 Worker -> A candidate tunnel 脚本
-
-- `scripts/rebuild_phase6/worker_open_a_candidate_tunnel.sh`
-
-职责：
-
-- 在 Worker 本机建立到 A 机器 candidate 端口的 SSH tunnel
-
-### 3. 新增阶段 6 smoke 脚本
-
-- `scripts/rebuild_phase6/a_machine_phase6_smoke.sh`
-- `scripts/rebuild_phase6/a_machine_phase6_smoke_via_tos.sh`
-
-职责：
-
-- 第一条路径：验证 candidate API 标准上传链
-- 第二条路径：绕过 candidate API 上传，直接使用正式 TOS 工具上传输入对象，再触发 analyze
-
-### 4. 修复 Worker 侧 bucket 来源
-
-已修改：
+修复方式：
 
 - `worker/services/file_transport.py`
 - `worker/processors/base_stage_processor.py`
 
-修复内容：
+这两处已改为优先读取环境变量 `TOS_BUCKET`。
 
-- Worker 不再硬编码 `smart-cut`
-- 优先读取环境变量 `TOS_BUCKET`
+### 阻塞 3：candidate API 容器中 route 代码滞后
 
-## 直接证据
+热修 TOS 后，candidate API 查询详情一度仍报 `500`，原因是：
 
-### 成功证据
+- 容器内的 `apps/api/routes/tasks.py` 仍是旧版逻辑
 
-- Worker 设备已注册：
-  - `worker1-phase6`
-- Worker 心跳持续更新：
-  - `heartbeat_at` 持续刷新
-- analyze 调度任务已成功创建并分配：
-  - `assigned_worker_id = worker1-phase6`
+修复方式：
 
-### 失败证据
+- 将当前仓库的 `tasks.py` 热补到 `a-machine-phase5-api`
+- 重启 candidate API
 
-- `upload-direct` -> `403 Forbidden`
-- `phase6_smoke_via_tos` 输入上传成功，但 analyze 仍失败
-- 最终任务状态：
-  - `ANALYZE_FAILED`
-- 最终 scheduler task 状态：
-  - `FAILED`
+## 直接成功证据
+
+### 1. via-TOS analyze 全链路成功
+
+业务任务：
+
+- `3bfab3aa-f648-40a2-96a0-333b25f2b699`
+
+调度任务：
+
+- `b5de5aac-ae47-4b22-8196-f08b372970c8`
+
+Worker 日志已证明：
+
+- 从真实 TOS 下载输入成功
+- analyze 产物上传回真实 TOS 成功
+- 任务最终推进到：
+  - `status = waiting_user`
+  - `current_stage = user_select`
+
+### 2. `upload-direct` 已恢复
+
+业务任务：
+
+- `a0e3f1a1-0737-4d32-af47-a65957b6bb67`
+
+当前 `upload-direct` 已能直接把前端上传文件写入真实 TOS，并把任务推进到：
+
+- `status = ready_analyze`
+- `current_stage = analyze`
+
+### 3. Worker 真实 TOS 下载日志
+
+在 `worker1-phase6-gateway` 日志中，已经出现：
+
+- `get_object exec httpCode: 200`
+- `put_object exec httpCode: 200`
+- `head_object exec httpCode: 200`
+
+这说明阶段 6 的真实 TOS 输入输出已经恢复。
+
+## 本阶段涉及的代码与脚本
+
+代码：
+
+- `apps/services/tos_service.py`
+- `apps/api/requirements.txt`
+- `worker/requirements.txt`
+- `worker/services/file_transport.py`
+- `worker/processors/base_stage_processor.py`
+- `apps/api/routes/tasks.py`
+
+脚本：
+
+- `scripts/rebuild_phase6/remote_build_worker_candidate.sh`
+- `scripts/rebuild_phase6/worker_open_a_candidate_tunnel.sh`
+- `scripts/rebuild_phase6/a_machine_phase6_smoke.sh`
+- `scripts/rebuild_phase6/a_machine_phase6_smoke_via_tos.sh`
 
 ## 对下一步的直接指令
 
-下一步不要再继续折腾 Worker 连接和任务分配，它们已经成立。
+阶段 6 已完成，可以进入阶段 7。
 
-下一步应只处理一件事：
+后续不需要再把问题归因到：
 
-- 修复 `apps/services/tos_service.py` 在真实 TOS 模式下的读写实现
+- Worker 接回失败
+- Worker 未注册
+- 调度任务未分配
+- TOS 读写完全不可用
 
-优先级建议：
-
-1. 先在 candidate API / Worker 所用环境里做最小 TOS 读写实验
-2. 判定是：
-   - `boto3` 适配方式错误
-   - 还是必须切到火山官方 `tos` SDK
-3. 修通 `upload-direct`
-4. 修通 Worker 的 `download_file`
-5. 重新跑 `phase6_smoke_via_tos`
-
-在这一步完成前，不要进入阶段 7。
+这些问题都已经在阶段 6 内解决。
