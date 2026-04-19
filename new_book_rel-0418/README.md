@@ -51,6 +51,16 @@
 - [00_system_knowledge/README.md](./00_system_knowledge/README.md)
 - [10_rebuild_2026-04-18/README.md](./10_rebuild_2026-04-18/README.md)
 
+## 当前线上状态快速入口
+
+如果你不是来研究整个重建过程，而是要快速知道“现在系统跑在哪里、谁在提供服务、当前 release 是哪个 commit”，优先读：
+
+1. [10_rebuild_2026-04-18/11_2026-04-19_当前系统状态.md](./10_rebuild_2026-04-18/11_2026-04-19_当前系统状态.md)
+2. [10_rebuild_2026-04-18/12_2026-04-19_当前Release与证据索引.md](./10_rebuild_2026-04-18/12_2026-04-19_当前Release与证据索引.md)
+3. [10_rebuild_2026-04-18/rebuild-artifacts/20260419_phase8_release/final_release_manifest.json](./10_rebuild_2026-04-18/rebuild-artifacts/20260419_phase8_release/final_release_manifest.json)
+
+这三份文档是“当前线上状态”的单一真相入口。
+
 ## 本轮重建的推荐入口
 
 如果你是本轮重建 Agent，建议直接按这个顺序进入：
