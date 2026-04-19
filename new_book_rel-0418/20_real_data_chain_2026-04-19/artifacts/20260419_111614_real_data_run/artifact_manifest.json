@@ -1,0 +1,865 @@
+{
+  "artifact_dir": "/Users/malin13/Documents/trae_projects/website_aicut/new_book_rel-0418/20_real_data_chain_2026-04-19/artifacts/20260419_111614_real_data_run",
+  "task_id": "c10264ad-5f62-4ad9-9731-bffd0e9ce33c",
+  "active_edit_id": "394bd0e7-c7e5-4626-a7fc-588d0b8bbe82",
+  "primary_evidence": [
+    "analyze_real7_complete.json",
+    "artifact_index.md",
+    "artifact_manifest.json",
+    "final_video_range_head_real7.txt",
+    "final_video_upload_result_real7.json",
+    "finalize_real7_complete.json",
+    "local_multipart_smoke.json",
+    "playwright_real_task_ui_check.txt",
+    "preview_real7_complete.json",
+    "sanitized_summary.md",
+    "summary.md",
+    "task_detail_final_real7.json",
+    "tos_objects_real7.txt"
+  ],
+  "sensitive_markers": [
+    "session_cookie",
+    "upload_url",
+    "download_url",
+    "put_url",
+    "put_headers",
+    "put_body"
+  ],
+  "entries": [
+    {
+      "file": "aicut2602_subset_download_url.json",
+      "category": "sensitive",
+      "should_commit": false
+    },
+    {
+      "file": "aicut2602_subset_download_url.txt",
+      "category": "sensitive",
+      "should_commit": false
+    },
+    {
+      "file": "algorithm_runner_download_url.txt",
+      "category": "sensitive",
+      "should_commit": false
+    },
+    {
+      "file": "algorithm_runner_upload_result.json",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "analyze.json",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "analyze_after_real_worker.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "analyze_complete.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "analyze_headers.txt",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "analyze_poll_trace.ndjson",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "analyze_real2.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "analyze_real2_complete.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "analyze_real2_headers.txt",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "analyze_real2_poll_trace.ndjson",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "analyze_real3.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "analyze_real4.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "analyze_real6.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "analyze_real6_poll_trace.ndjson",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "analyze_real7.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "analyze_real7_complete.json",
+      "category": "primary_evidence",
+      "should_commit": true
+    },
+    {
+      "file": "analyze_real7_poll_trace.ndjson",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "analyze_rerun_poll_trace.ndjson",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "analyze_scheduler_task_id_real2.txt",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "analyze_scheduler_task_id_real3.txt",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "analyze_scheduler_task_id_real4.txt",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "analyze_scheduler_task_id_real6.txt",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "analyze_scheduler_task_id_real7.txt",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "api_base.txt",
+      "category": "run_context",
+      "should_commit": false
+    },
+    {
+      "file": "artifact_index.md",
+      "category": "primary_evidence",
+      "should_commit": true
+    },
+    {
+      "file": "artifact_manifest.json",
+      "category": "primary_evidence",
+      "should_commit": true
+    },
+    {
+      "file": "create.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "create_debug_body.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "create_headers.txt",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "create_payload.json",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "create_payload_real2.json",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "create_payload_real3.json",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "create_payload_real4.json",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "create_payload_real6.json",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "create_payload_real7.json",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "create_real2.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "create_real2_headers.txt",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "create_real3.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "create_real4.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "create_real6.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "create_real7.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "final_video_download_url_real7.json",
+      "category": "sensitive",
+      "should_commit": false
+    },
+    {
+      "file": "final_video_head_real7.txt",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "final_video_put_url.txt",
+      "category": "sensitive",
+      "should_commit": false
+    },
+    {
+      "file": "final_video_range_head_real7.txt",
+      "category": "primary_evidence",
+      "should_commit": true
+    },
+    {
+      "file": "final_video_upload_result_real7.json",
+      "category": "primary_evidence",
+      "should_commit": true
+    },
+    {
+      "file": "finalize_real7.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "finalize_real7_complete.json",
+      "category": "primary_evidence",
+      "should_commit": true
+    },
+    {
+      "file": "finalize_real7_poll_trace.ndjson",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "finalize_real7_wait_trace.ndjson",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "finalize_request_real7.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "finalize_scheduler_task_id_real7.txt",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "local_multipart_smoke.json",
+      "category": "primary_evidence",
+      "should_commit": true
+    },
+    {
+      "file": "login.json",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "login_debug_body.json",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "login_headers.txt",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "login_payload.json",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "nginx_upstream.txt",
+      "category": "run_context",
+      "should_commit": false
+    },
+    {
+      "file": "playwright_real_task_ui_check.txt",
+      "category": "primary_evidence",
+      "should_commit": true
+    },
+    {
+      "file": "preflight_a_machine.txt",
+      "category": "run_context",
+      "should_commit": false
+    },
+    {
+      "file": "preflight_domain.txt",
+      "category": "run_context",
+      "should_commit": false
+    },
+    {
+      "file": "preflight_worker.txt",
+      "category": "run_context",
+      "should_commit": false
+    },
+    {
+      "file": "preview_edit_id_real7.txt",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "preview_real7.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "preview_real7_complete.json",
+      "category": "primary_evidence",
+      "should_commit": true
+    },
+    {
+      "file": "preview_real7_poll_trace.ndjson",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "preview_request_real7.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "preview_scheduler_task_id_real7.txt",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "real_worker_image_download_url.json",
+      "category": "sensitive",
+      "should_commit": false
+    },
+    {
+      "file": "real_worker_image_download_url.txt",
+      "category": "sensitive",
+      "should_commit": false
+    },
+    {
+      "file": "real_worker_image_load.txt",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "real_worker_image_upload_result.json",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "run_context.txt",
+      "category": "run_context",
+      "should_commit": false
+    },
+    {
+      "file": "sample_ffprobe.txt",
+      "category": "run_context",
+      "should_commit": false
+    },
+    {
+      "file": "sample_info.txt",
+      "category": "run_context",
+      "should_commit": false
+    },
+    {
+      "file": "sample_text_preview.txt",
+      "category": "run_context",
+      "should_commit": false
+    },
+    {
+      "file": "sanitized_summary.md",
+      "category": "primary_evidence",
+      "should_commit": true
+    },
+    {
+      "file": "session_cookie.txt",
+      "category": "sensitive",
+      "should_commit": false
+    },
+    {
+      "file": "stage_runner_download_url.txt",
+      "category": "sensitive",
+      "should_commit": false
+    },
+    {
+      "file": "stage_runner_upload_result.json",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "summary.md",
+      "category": "primary_evidence",
+      "should_commit": true
+    },
+    {
+      "file": "task_detail_after_create.json",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "task_detail_after_create_headers.txt",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "task_detail_after_upload.json",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "task_detail_after_upload_complete.json",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "task_detail_after_upload_complete_headers.txt",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "task_detail_after_upload_headers.txt",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "task_detail_after_upload_real2.json",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "task_detail_after_upload_real3.json",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "task_detail_final_real7.json",
+      "category": "primary_evidence",
+      "should_commit": true
+    },
+    {
+      "file": "task_id.txt",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "task_id_real2.txt",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "task_id_real3.txt",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "task_id_real4.txt",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "task_id_real6.txt",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "task_id_real7.txt",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "text_key.txt",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "text_key_real2.txt",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "text_key_real3.txt",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "text_key_real4.txt",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "text_key_real6.txt",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "text_key_real7.txt",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "text_put_body.txt",
+      "category": "sensitive",
+      "should_commit": false
+    },
+    {
+      "file": "text_put_headers.txt",
+      "category": "sensitive",
+      "should_commit": false
+    },
+    {
+      "file": "text_put_real2_headers.txt",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "text_upload_url.txt",
+      "category": "sensitive",
+      "should_commit": false
+    },
+    {
+      "file": "text_upload_url_real2.txt",
+      "category": "sensitive",
+      "should_commit": false
+    },
+    {
+      "file": "text_upload_url_real3.txt",
+      "category": "sensitive",
+      "should_commit": false
+    },
+    {
+      "file": "text_upload_url_real4.txt",
+      "category": "sensitive",
+      "should_commit": false
+    },
+    {
+      "file": "text_upload_url_real6.txt",
+      "category": "sensitive",
+      "should_commit": false
+    },
+    {
+      "file": "text_upload_url_real7.txt",
+      "category": "sensitive",
+      "should_commit": false
+    },
+    {
+      "file": "tos_objects_real7.txt",
+      "category": "primary_evidence",
+      "should_commit": true
+    },
+    {
+      "file": "tos_upload_result.json",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "tos_upload_result.txt",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "upload.json",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "upload_attempt_debug.txt",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "upload_complete.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "upload_complete_headers.txt",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "upload_complete_payload.json",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "upload_complete_real2.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "upload_complete_real2_headers.txt",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "upload_complete_real2_payload.json",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "upload_complete_real3.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "upload_complete_real3_payload.json",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "upload_complete_real4.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "upload_complete_real4_payload.json",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "upload_complete_real6.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "upload_complete_real6_payload.json",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "upload_complete_real7.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "upload_complete_real7_payload.json",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "upload_headers.txt",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "upload_prepare.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "upload_prepare_headers.txt",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "upload_prepare_payload.json",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "upload_prepare_real2.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "upload_prepare_real2_headers.txt",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "upload_prepare_real2_payload.json",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "upload_prepare_real3.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "upload_prepare_real3_payload.json",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "upload_prepare_real4.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "upload_prepare_real4_payload.json",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "upload_prepare_real6.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "upload_prepare_real6_payload.json",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "upload_prepare_real7.json",
+      "category": "step_output",
+      "should_commit": false
+    },
+    {
+      "file": "upload_prepare_real7_payload.json",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "video_key.txt",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "video_key_real2.txt",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "video_key_real3.txt",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "video_key_real4.txt",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "video_key_real6.txt",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "video_key_real7.txt",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "video_put_body.txt",
+      "category": "sensitive",
+      "should_commit": false
+    },
+    {
+      "file": "video_put_headers.txt",
+      "category": "sensitive",
+      "should_commit": false
+    },
+    {
+      "file": "video_put_real2_headers.txt",
+      "category": "request_trace",
+      "should_commit": false
+    },
+    {
+      "file": "video_upload_url.txt",
+      "category": "sensitive",
+      "should_commit": false
+    },
+    {
+      "file": "video_upload_url_real2.txt",
+      "category": "sensitive",
+      "should_commit": false
+    },
+    {
+      "file": "video_upload_url_real3.txt",
+      "category": "sensitive",
+      "should_commit": false
+    },
+    {
+      "file": "video_upload_url_real4.txt",
+      "category": "sensitive",
+      "should_commit": false
+    },
+    {
+      "file": "video_upload_url_real6.txt",
+      "category": "sensitive",
+      "should_commit": false
+    },
+    {
+      "file": "video_upload_url_real7.txt",
+      "category": "sensitive",
+      "should_commit": false
+    },
+    {
+      "file": "worker_logs_analyze_complete.txt",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "worker_logs_analyze_real2_start.txt",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "worker_logs_analyze_start.txt",
+      "category": "debug",
+      "should_commit": false
+    },
+    {
+      "file": "worker_restart_real_algo.txt",
+      "category": "debug",
+      "should_commit": false
+    }
+  ]
+}

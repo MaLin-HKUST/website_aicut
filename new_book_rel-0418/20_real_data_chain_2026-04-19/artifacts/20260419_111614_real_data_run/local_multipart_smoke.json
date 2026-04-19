@@ -1,0 +1,10 @@
+{
+  "success": true,
+  "data": {
+    "exists": true,
+    "bucket": "autocut-malin",
+    "key": "tmp/smoke/local-multipart-smoke.bin"
+  },
+  "error": null,
+  "metadata": {}
+}

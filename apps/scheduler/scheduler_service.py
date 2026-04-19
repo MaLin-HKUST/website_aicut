@@ -6,6 +6,7 @@
 
 import asyncio
 import logging
+import os
 from datetime import datetime, timedelta
 from typing import Optional, Any
 
@@ -48,6 +49,7 @@ class SchedulerService:
         self.db = db_session
         self.device_service = device_service
         self.check_interval = check_interval
+        self.worker_timeout_seconds = int(os.environ.get("SCHEDULER_WORKER_TIMEOUT_SECONDS", "300"))
         self._running = False
         self._task: Optional[asyncio.Task] = None
 
@@ -60,7 +62,7 @@ class SchedulerService:
         assigned_count = self.schedule_pending_tasks()
         advanced_count = self.check_device_status_and_advance()
         timeout_count = self.handle_timeouts()
-        offline_count = self.check_worker_heartbeats()
+        offline_count = self.check_worker_heartbeats(timeout_seconds=self.worker_timeout_seconds)
 
         cycle_stats = {
             "assigned": assigned_count,

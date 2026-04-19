@@ -1,0 +1,10 @@
+
+Running 1 test using 1 worker
+
+(node:18445) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:18445) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [chromium] › tests/rel0415-smart-cut-real-task.spec.ts:5:5 › real-data smart cut task is visible and downloadable in the live UI (3.1s)
+
+  1 passed (4.0s)

@@ -5,6 +5,7 @@
 
 import os
 import shutil
+import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, Any
@@ -249,6 +250,13 @@ class RealTOSClient:
             endpoint,
             region,
         )
+        self.multipart_threshold_bytes = int(
+            os.environ.get("TOS_MULTIPART_THRESHOLD_BYTES", str(32 * 1024 * 1024))
+        )
+        self.multipart_part_size = int(
+            os.environ.get("TOS_MULTIPART_PART_SIZE_BYTES", str(20 * 1024 * 1024))
+        )
+        self.multipart_task_num = int(os.environ.get("TOS_MULTIPART_TASK_NUM", "4"))
     
     def generate_presigned_url(
         self,
@@ -273,7 +281,29 @@ class RealTOSClient:
     
     def upload_file(self, bucket: str, key: str, file_path: str) -> dict:
         """上传本地文件"""
-        self.client.put_object_from_file(bucket, key, file_path)
+        file_size = Path(file_path).stat().st_size
+        checkpoint_file: str | None = None
+
+        try:
+            if file_size >= self.multipart_threshold_bytes:
+                with tempfile.NamedTemporaryFile(prefix="tos-upload-", suffix=".checkpoint", delete=False) as handle:
+                    checkpoint_file = handle.name
+
+                self.client.upload_file(
+                    bucket,
+                    key,
+                    file_path,
+                    part_size=self.multipart_part_size,
+                    task_num=self.multipart_task_num,
+                    enable_checkpoint=True,
+                    checkpoint_file=checkpoint_file,
+                )
+            else:
+                self.client.put_object_from_file(bucket, key, file_path)
+        finally:
+            if checkpoint_file and os.path.exists(checkpoint_file):
+                os.unlink(checkpoint_file)
+
         response = self.client.head_object(bucket, key)
         
         return {
@@ -282,6 +312,7 @@ class RealTOSClient:
             "size": getattr(response, "content_length", 0),
             "etag": (getattr(response, "etag", "") or "").strip('"'),
             "last_modified": getattr(response, "last_modified", None),
+            "upload_strategy": "multipart" if file_size >= self.multipart_threshold_bytes else "single_put",
         }
     
     def download_file(self, bucket: str, key: str, file_path: str) -> dict:

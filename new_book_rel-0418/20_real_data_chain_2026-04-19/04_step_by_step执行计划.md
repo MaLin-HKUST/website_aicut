@@ -72,7 +72,7 @@
 
 ## 阶段概览
 
-本 runbook 固定分为 11 步：
+本 runbook 固定分为 12 步：
 
 0. 确认前置状态
 1. 固定真实样本
@@ -85,6 +85,7 @@
 8. 校验最终产物
 9. 落档并回写当前状态文档
 10. 把真实数据证据转入后续热补收口
+11. 对真实任务执行 Playwright UI 观测验收
 
 ---
 
@@ -711,6 +712,57 @@
 
 ---
 
+## Step 11：对真实任务执行 Playwright UI 观测验收
+
+### 目标
+
+验证正式站已经能对一条真实任务展示正确的试听和下载区域，不再只停留在 API / TOS 证据层。
+
+### 需要的资源
+
+- `apps/web/tests/rel0415-smart-cut-real-task.spec.ts`
+- 正式站上可用的真实任务 ID
+- Playwright 浏览器运行环境
+
+### 要做什么
+
+1. 准备 `PLAYWRIGHT_REAL_DATA_TASK_ID`
+2. 指向正式域名运行 Playwright：
+   - `PLAYWRIGHT_BASE_URL=https://xiaomajianji.cn`
+   - `PLAYWRIGHT_SKIP_WEBSERVER=1`
+3. 验证：
+   - `/tasks` 页面可打开
+   - `/smart-cut/<task_id>` 可打开
+   - 试听播放器可见
+   - 下载区域可见
+
+### 本步产物
+
+- `playwright_real_task_ui_check.txt`
+
+### 做到什么算完成
+
+以下条件同时满足才算完成：
+
+- Playwright 用例返回 `passed`
+- 用例针对的是正式站上的真实任务，不是 mock task
+- 产出文件已写入本轮 artifacts 目录
+
+### 怎么检查做完了做对了
+
+至少验证：
+
+- `playwright_real_task_ui_check.txt` 中显示 `1 passed`
+- 用例里使用的任务 ID 与本轮真实任务或已确认成功的真实任务一致
+
+### 失败分叉
+
+- 如果失败是浏览器环境缺失，先补 Playwright 浏览器，不改业务代码。
+- 如果失败是 UI 选择器漂移，先核对正式页面结构，再调整用例，不要误判为后端链路失败。
+- 如果失败是任务本身没有成功态或没有下载区域，回到前面的业务链路步骤继续排查。
+
+---
+
 ## 一次完整运行的判定标准
 
 只有同时满足下列条件，这次真实数据联调才算“完整通过”：
@@ -726,6 +778,7 @@
 7. TOS 中存在本轮完整对象链
 8. 最终视频对象存在且已校验
 9. 文档与证据全部落档
+10. Playwright UI 观测验收通过
 
 ## 不允许的做法
 
