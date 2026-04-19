@@ -20,6 +20,11 @@
 - 解释当前线上为什么混乱、当前有哪些运行面、为什么要重建、怎么重建、怎么验收、怎么回滚
 - 只有参与本轮重建或后续清尾的 Agent 需要阅读这一层
 
+3. `20_real_data_chain_2026-04-19/`
+- 真实数据链路专项层
+- 解释如何在当前正式运行面上，用真实样本跑通 Smart Cut 全链路，并把这轮结果沉淀为后续可复用的执行与证据规范
+- 只有参与真实数据联调、证据落档、热补收口与发布收口的 Agent 需要阅读这一层
+
 ## 阅读入口
 
 ### 普通功能开发 Agent
@@ -40,6 +45,15 @@
 2. [10_rebuild_2026-04-18/README.md](./10_rebuild_2026-04-18/README.md)
 3. `10_rebuild_2026-04-18/` 下的当前现状、重建目标、重建步骤、验收回滚
 
+### 真实数据联调 / 发布收口 Agent
+
+按这个顺序阅读：
+
+1. `00_system_knowledge/` 核心文档
+2. [10_rebuild_2026-04-18/11_2026-04-19_当前系统状态.md](./10_rebuild_2026-04-18/11_2026-04-19_当前系统状态.md)
+3. [10_rebuild_2026-04-18/12_2026-04-19_当前Release与证据索引.md](./10_rebuild_2026-04-18/12_2026-04-19_当前Release与证据索引.md)
+4. [20_real_data_chain_2026-04-19/README.md](./20_real_data_chain_2026-04-19/README.md)
+
 ## 与旧文档的关系
 
 - 旧 `book/` 目录保留为历史参考
@@ -50,6 +64,7 @@
 
 - [00_system_knowledge/README.md](./00_system_knowledge/README.md)
 - [10_rebuild_2026-04-18/README.md](./10_rebuild_2026-04-18/README.md)
+- [20_real_data_chain_2026-04-19/README.md](./20_real_data_chain_2026-04-19/README.md)
 
 ## 当前线上状态快速入口
 
@@ -60,6 +75,20 @@
 3. [10_rebuild_2026-04-18/rebuild-artifacts/20260419_phase8_release/final_release_manifest.json](./10_rebuild_2026-04-18/rebuild-artifacts/20260419_phase8_release/final_release_manifest.json)
 
 这三份文档是“当前线上状态”的单一真相入口。
+
+## 当前真实数据专项入口
+
+如果你下一步的任务是：
+
+- 用真实样本跑 Smart Cut
+- 补真实数据证据
+- 把当前热补链路继续收口
+
+优先读：
+
+1. [20_real_data_chain_2026-04-19/README.md](./20_real_data_chain_2026-04-19/README.md)
+2. [20_real_data_chain_2026-04-19/04_step_by_step执行计划.md](./20_real_data_chain_2026-04-19/04_step_by_step执行计划.md)
+3. [20_real_data_chain_2026-04-19/05_证据清单与产物目录.md](./20_real_data_chain_2026-04-19/05_证据清单与产物目录.md)
 
 ## 本轮重建的推荐入口
 
