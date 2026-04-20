@@ -68,7 +68,7 @@ test("rel0415 smart cut browser flow reaches task center", async ({ page }) => {
 
   await page.goto(`/smart-cut/${taskId}`, { waitUntil: "networkidle", timeout: 60_000 });
   await expect(page).toHaveURL(/\/smart-cut\/[0-9a-f-]+$/, { timeout: 30_000 });
-  await expect(page.getByText("上传输入并开始分析")).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByText("请上传你要处理的视频和标准文案")).toBeVisible({ timeout: 60_000 });
 
   await expect
     .poll(async () => {
@@ -106,6 +106,9 @@ test("rel0415 smart cut browser flow reaches task center", async ({ page }) => {
 
   await page.reload({ waitUntil: "networkidle" });
   await expect(page.getByRole("heading", { name: "删除线脚本调整" })).toBeVisible({ timeout: 90_000 });
+  await expect(page.getByRole("button", { name: "标记删除" })).toBeVisible({ timeout: 90_000 });
+  await expect(page.getByRole("button", { name: "恢复保留" })).toBeVisible({ timeout: 90_000 });
+  await expect(page.getByRole("button", { name: "清空删除标记" })).toBeVisible({ timeout: 90_000 });
   await expect(page.getByRole("button", { name: "生成试听" })).toBeEnabled({ timeout: 90_000 });
 
   await page.getByRole("button", { name: "生成试听" }).click();

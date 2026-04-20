@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -8,13 +8,12 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { UserWorkspaceShell } from "@/components/navigation/user-workspace-shell";
 import { useUserWorkspaceData } from "@/components/navigation/use-user-workspace-data";
-import { SmartCutScriptEditor } from "@/components/smart-cut/script-editor";
+import { SmartCutScriptEditor, SmartCutScriptEditorHandle } from "@/components/smart-cut/script-editor";
 import { AuthResponse } from "@/lib/auth";
 import {
   createSmartCutTask,
   getSmartCutEdits,
   getSmartCutTask,
-  listSmartCutTasks,
   SmartCutEdit,
   SmartCutTask,
   startAnalyze,
@@ -76,6 +75,16 @@ function labelStage(stage: string | null | undefined) {
   return STAGE_LABELS[stage] ?? "处理中";
 }
 
+function formatPercent(value: number) {
+  return `${Math.max(0, Math.min(100, Math.round(value)))}%`;
+}
+
+function summarizeUploadName(value: string | null | undefined) {
+  if (!value) return "尚未上传";
+  const cleaned = value.split("?")[0]?.split("#")[0] ?? value;
+  return cleaned.split("/").filter(Boolean).pop() ?? "尚未上传";
+}
+
 export function SmartCutLandingPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -128,10 +137,19 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
   const [outputMode, setOutputMode] = useState<"original" | "vertical_1080p">("original");
   const [feedToAi, setFeedToAi] = useState(true);
   const [editorTab, setEditorTab] = useState<"script" | "groundtruth">("script");
+  const [editorControls, setEditorControls] = useState({
+    canMarkDelete: false,
+    canRestore: false,
+    canClear: false,
+    selectedCount: 0,
+  });
   const [busyAction, setBusyAction] = useState<"upload" | "analyze" | "preview" | "finalize" | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadState, setUploadState] = useState<"idle" | "uploading" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const workspace = useUserWorkspaceData(currentUser?.username);
+  const scriptEditorRef = useRef<SmartCutScriptEditorHandle>(null);
 
   const latestEdit = edits[0] ?? null;
 
@@ -189,17 +207,31 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
   const canPreview = task && ["waiting_user", "preview_failed"].includes(task.status) && scriptDraft.length > 0;
   const canFinalize = task && ["waiting_user", "finalize_failed"].includes(task.status);
 
+  useEffect(() => {
+    if (!task?.id || !canUpload || busyAction !== null || uploadState !== "idle" || !videoFile || !referenceFile) return;
+    void handleUpload().catch(() => undefined);
+  }, [busyAction, canUpload, referenceFile, task?.id, uploadState, videoFile]);
+
   async function handleUpload() {
     if (!task || !videoFile || !referenceFile) return;
     setBusyAction("upload");
+    setUploadProgress(0);
+    setUploadState("uploading");
     setError(null);
     setNotice(null);
 
     try {
-      const nextTask = await uploadDirectInputs(task.id, videoFile, referenceFile);
+      const nextTask = await uploadDirectInputs(task.id, videoFile, referenceFile, {
+        onProgress: (progress) => {
+          setUploadProgress(progress.percent);
+        },
+      });
       setTask(nextTask);
+      setUploadProgress(100);
+      setUploadState("success");
       setNotice("输入文件已上传，可以开始分析。");
     } catch (err) {
+      setUploadState("error");
       setError(err instanceof Error ? err.message : "上传失败");
     } finally {
       setBusyAction(null);
@@ -258,12 +290,52 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
 
   const taskStatusLabel = task ? labelStatus(task.status) : "待同步";
   const taskStageLabel = task ? labelStage(task.current_stage) : "等待推进";
-  const uploadSummary = videoFile?.name ?? task?.original_video_tos_key ?? "尚未上传";
-  const referenceSummary = referenceFile?.name ?? task?.reference_text_tos_key ?? "尚未上传";
+  const uploadSummary = videoFile?.name ?? summarizeUploadName(task?.original_video_tos_key ?? task?.original_video_url);
+  const referenceSummary = referenceFile?.name ?? summarizeUploadName(task?.reference_text_tos_key ?? task?.reference_text_url);
   const previewReady = Boolean(latestEdit?.audio_b_url);
   const downloadReady = Boolean(task?.final_video_url);
   const stageOneLabel = canPreview ? "可生成试听" : canAnalyze ? "待开始分析" : "待上传素材";
   const stageTwoLabel = canFinalize ? "可生成视频" : previewReady ? "待确认规格" : "等待试听完成";
+  const uploadProgressText = formatPercent(uploadProgress);
+  const uploadInFlight = uploadState === "uploading";
+  const scriptActionsVisible = editorTab === "script";
+  const scriptActionsDisabled = !scriptActionsVisible || busyAction === "preview" || task?.status === "previewing" || task?.status === "finalizing";
+  const videoUploaded = Boolean(task?.original_video_tos_key);
+  const referenceUploaded = Boolean(task?.reference_text_tos_key);
+  const videoStatus = videoUploaded
+    ? "已上传"
+    : uploadInFlight && videoFile && referenceFile
+      ? `正在上传中 ${uploadProgressText}`
+      : uploadState === "error" && videoFile
+        ? "上传失败，请重试"
+        : videoFile
+          ? "已选择，等待上传"
+          : "待上传";
+  const referenceStatus = referenceUploaded
+    ? "已上传"
+    : uploadInFlight && videoFile && referenceFile
+      ? `正在上传中 ${uploadProgressText}`
+      : uploadState === "error" && referenceFile
+        ? "上传失败，请重试"
+        : referenceFile
+          ? "已选择，等待上传"
+          : "待上传";
+  const videoProgressValue = videoUploaded ? 100 : uploadInFlight && videoFile && referenceFile ? uploadProgress : 0;
+  const referenceProgressValue = referenceUploaded ? 100 : uploadInFlight && videoFile && referenceFile ? uploadProgress : 0;
+  const videoProgressHint = videoUploaded
+    ? "视频素材已进入任务输入区。"
+    : uploadInFlight && videoFile && referenceFile
+      ? `multipart 上传进度 ${uploadProgressText}`
+      : videoFile
+        ? "视频已选中，等待标准文案后自动上传。"
+        : "请先选择你要处理的视频。";
+  const referenceProgressHint = referenceUploaded
+    ? "标准文案已进入任务输入区。"
+    : uploadInFlight && videoFile && referenceFile
+      ? `multipart 上传进度 ${uploadProgressText}`
+      : referenceFile
+        ? "标准文案已选中，等待视频后自动上传。"
+        : "请再上传一份标准文案。";
 
   return (
     <UserWorkspaceShell
@@ -278,38 +350,76 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
         <div className="grid gap-6 xl:grid-cols-[1.7fr_0.62fr]">
           <div className="space-y-5">
             <Card className="rounded-[30px] border-[#dbe4f4] bg-white p-5 shadow-sm">
-              <p className="text-sm font-semibold text-[#243444]">左侧主工作区</p>
+              <p className="text-sm font-semibold text-[#243444]">请上传你要处理的视频和标准文案</p>
               <div className="mt-4 grid gap-4 md:grid-cols-3">
-                <label className="flex cursor-pointer flex-col items-center justify-center rounded-[22px] border border-[#8bc0ff] bg-[#edf5ff] px-4 py-5 text-center text-[18px] font-semibold leading-snug text-[#3e86f6]">
+                <label className="flex min-h-[84px] cursor-pointer items-center justify-center rounded-full border border-[#ddcfbe] bg-[#fffdf8] px-4 py-3 text-center text-[17px] font-semibold tracking-[0.02em] text-[#302520] transition hover:border-[#c8b49b] hover:bg-[#fff8ec]">
                   上传视频
-                  <span className="mt-1 text-[15px] font-semibold">（前端直传 TOS）</span>
-                  <Input className="hidden" disabled={busyAction === "upload"} onChange={(event) => setVideoFile(event.target.files?.[0] ?? null)} type="file" />
+                  <Input
+                    className="hidden"
+                    disabled={busyAction === "upload"}
+                    onChange={(event) => {
+                      setVideoFile(event.target.files?.[0] ?? null);
+                      setUploadProgress(0);
+                      setUploadState("idle");
+                    }}
+                    type="file"
+                  />
                 </label>
-                <label className="flex cursor-pointer flex-col items-center justify-center rounded-[22px] border border-[#8bc0ff] bg-[#edf5ff] px-4 py-5 text-center text-[18px] font-semibold leading-snug text-[#3e86f6]">
+                <label className="flex min-h-[84px] cursor-pointer items-center justify-center rounded-full border border-[#ddcfbe] bg-[#fffdf8] px-4 py-3 text-center text-[17px] font-semibold tracking-[0.02em] text-[#302520] transition hover:border-[#c8b49b] hover:bg-[#fff8ec]">
                   上传标准文案
-                  <Input className="hidden" disabled={busyAction === "upload"} onChange={(event) => setReferenceFile(event.target.files?.[0] ?? null)} type="file" />
+                  <Input
+                    className="hidden"
+                    disabled={busyAction === "upload"}
+                    onChange={(event) => {
+                      setReferenceFile(event.target.files?.[0] ?? null);
+                      setUploadProgress(0);
+                      setUploadState("idle");
+                    }}
+                    type="file"
+                  />
                 </label>
                 <button
-                  className="rounded-[22px] border border-[#c9b8ff] bg-[#f7f1ff] px-4 py-5 text-center text-[18px] font-semibold leading-snug text-[#7c57f4] transition disabled:cursor-not-allowed disabled:opacity-60"
+                  className="min-h-[84px] rounded-full border border-[#2f2520] bg-[#2f2520] px-4 py-3 text-center text-[17px] font-semibold tracking-[0.02em] text-white transition hover:bg-[#3a2d27] disabled:cursor-not-allowed disabled:border-[#c9beb0] disabled:bg-[#ded5ca] disabled:text-[#fffaf3]"
                   disabled={!canAnalyze || busyAction !== null}
                   onClick={handleAnalyze}
                   type="button"
                 >
                   开始分析
-                  <span className="mt-1 block text-[15px] font-semibold">（生成 script 预览）</span>
                 </button>
               </div>
 
               <div className="mt-5 space-y-3">
-                <div className="flex flex-wrap items-center gap-4 rounded-[18px] border border-[#d9dee8] bg-white px-5 py-3 text-[15px]">
-                  <span className="font-medium text-[#394150]">视频文件：{uploadSummary}</span>
-                  <span className="text-[#4ec28c]">状态：{task?.original_video_tos_key || videoFile ? "已上传到 TOS" : "待上传"}</span>
-                  <span className="ml-auto text-[#f1a33e]">{videoFile ? "重新上传 / 删除" : "选择文件"}</span>
+                <div className="rounded-[20px] border border-[#d9dee8] bg-white px-5 py-4">
+                  <div className="flex flex-wrap items-center gap-3 text-[15px]">
+                    <span className="font-semibold text-[#394150]">视频文件</span>
+                    <span className="min-w-0 flex-1 truncate text-[#4d5a6a]">{uploadSummary}</span>
+                    <span className={`rounded-full px-3 py-1 text-[13px] font-semibold ${videoUploaded ? "bg-[#eef9f3] text-[#29a768]" : uploadInFlight ? "bg-[#fff5e6] text-[#d98a1d]" : "bg-[#f4f6f9] text-[#6c7788]"}`}>
+                      {videoStatus}
+                    </span>
+                  </div>
+                  <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-[#edf1f6]">
+                    <div
+                      className="h-full rounded-full bg-[linear-gradient(90deg,#f6b24f_0%,#ffcf7e_100%)] transition-[width] duration-300"
+                      style={{ width: `${videoProgressValue}%` }}
+                    />
+                  </div>
+                  <p className="mt-2 text-xs text-[#7a8494]">{videoProgressHint}</p>
                 </div>
-                <div className="flex flex-wrap items-center gap-4 rounded-[18px] border border-[#d9dee8] bg-white px-5 py-3 text-[15px]">
-                  <span className="font-medium text-[#394150]">标准文案：{referenceSummary}</span>
-                  <span className="text-[#4ec28c]">状态：{task?.reference_text_tos_key || referenceFile ? "已上传" : "待上传"}</span>
-                  <span className="ml-auto text-[#f1a33e]">{referenceFile ? "重新上传 / 删除" : "选择文件"}</span>
+                <div className="rounded-[20px] border border-[#d9dee8] bg-white px-5 py-4">
+                  <div className="flex flex-wrap items-center gap-3 text-[15px]">
+                    <span className="font-semibold text-[#394150]">标准文案</span>
+                    <span className="min-w-0 flex-1 truncate text-[#4d5a6a]">{referenceSummary}</span>
+                    <span className={`rounded-full px-3 py-1 text-[13px] font-semibold ${referenceUploaded ? "bg-[#eef9f3] text-[#29a768]" : uploadInFlight ? "bg-[#fff5e6] text-[#d98a1d]" : "bg-[#f4f6f9] text-[#6c7788]"}`}>
+                      {referenceStatus}
+                    </span>
+                  </div>
+                  <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-[#edf1f6]">
+                    <div
+                      className="h-full rounded-full bg-[linear-gradient(90deg,#f6b24f_0%,#ffcf7e_100%)] transition-[width] duration-300"
+                      style={{ width: `${referenceProgressValue}%` }}
+                    />
+                  </div>
+                  <p className="mt-2 text-xs text-[#7a8494]">{referenceProgressHint}</p>
                 </div>
               </div>
             </Card>
@@ -317,7 +427,7 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
             <Card className="rounded-[30px] border-[#c9dcff] bg-white p-5 shadow-sm">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <h2 className="text-[18px] font-semibold text-[#2f3848]">脚本预览与编辑（前端显示删除线；后端转为大括号）</h2>
+                  <h2 className="text-[18px] font-semibold text-[#2f3848]">你可以手动修改识别结果，选择删除线即可</h2>
                 </div>
                 <label className="flex items-center gap-3 text-sm text-[#465067]">
                   <input checked={feedToAi} className="h-4 w-4 accent-[#4b86ff]" onChange={(event) => setFeedToAi(event.target.checked)} type="checkbox" />
@@ -325,56 +435,87 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
                 </label>
               </div>
 
-              <div className="mt-4 flex gap-3">
+              <div className="mt-4 flex flex-wrap items-center gap-3">
                 <button
                   className={`rounded-full px-4 py-2 text-sm font-medium ${editorTab === "script" ? "bg-[#eaf3ff] text-[#4a85f6]" : "border border-[#dde4ef] bg-white text-stone-500"}`}
                   onClick={() => setEditorTab("script")}
                   type="button"
                 >
-                  script 预览
+                  识别结果
                 </button>
                 <button
                   className={`rounded-full px-4 py-2 text-sm font-medium ${editorTab === "groundtruth" ? "bg-[#eef2f7] text-[#667085]" : "border border-[#dde4ef] bg-white text-stone-500"}`}
                   onClick={() => setEditorTab("groundtruth")}
                   type="button"
                 >
-                  GroundTruth
+                  标准文案
                 </button>
+                <div className="flex flex-wrap items-center gap-2 md:ml-3">
+                  <Button
+                    className="h-10 px-4"
+                    disabled={scriptActionsDisabled || !editorControls.canMarkDelete}
+                    onClick={() => scriptEditorRef.current?.markDelete()}
+                    type="button"
+                  >
+                    标记删除
+                  </Button>
+                  <Button
+                    className="h-10 px-4"
+                    disabled={scriptActionsDisabled || !editorControls.canRestore}
+                    onClick={() => scriptEditorRef.current?.restoreSelection()}
+                    type="button"
+                    variant="secondary"
+                  >
+                    恢复保留
+                  </Button>
+                  <Button
+                    className="h-10 px-4"
+                    disabled={scriptActionsDisabled || !editorControls.canClear}
+                    onClick={() => scriptEditorRef.current?.clearMarks()}
+                    type="button"
+                    variant="ghost"
+                  >
+                    清空删除标记
+                  </Button>
+                </div>
+                <span className="text-xs text-[#7a8494]">
+                  {scriptActionsVisible
+                    ? editorControls.selectedCount > 0
+                      ? `当前选中 ${editorControls.selectedCount} 个字`
+                      : "请先在识别结果中拖选文字"
+                    : "标准文案模式下仅展示，不可编辑"}
+                </span>
               </div>
 
-              <div className="mt-4 grid gap-4 xl:grid-cols-[1.28fr_0.72fr]">
-                <div className="rounded-[22px] border border-[#dbe4f4] bg-[#fcfdff] p-4">
-                  {editorTab === "script" ? (
-                    task?.analyze_script ? (
-                      <SmartCutScriptEditor
-                        disabled={busyAction === "preview" || task.status === "previewing" || task.status === "finalizing"}
-                        onScriptChange={setScriptDraft}
-                        script={scriptDraft || task.analyze_script}
-                      />
-                    ) : (
-                      <div className="min-h-[260px] rounded-[18px] border border-[#dfe6f2] bg-white px-5 py-5 text-[16px] leading-9 text-[#313b4a]">
-                        <p className="text-stone-400">示例：</p>
-                        <p className="mt-3">今天我来讲一下这个功能，</p>
-                        <p className="line-through decoration-2">这个地方先删了要删掉，</p>
-                        <p>后面这一句保留继续生成试听。</p>
-                      </div>
-                    )
+              <div className="mt-4 rounded-[22px] border border-[#dbe4f4] bg-[#fcfdff] p-4">
+                {editorTab === "script" ? (
+                  task?.analyze_script ? (
+                    <SmartCutScriptEditor
+                      disabled={busyAction === "preview" || task.status === "previewing" || task.status === "finalizing"}
+                      onStateChange={setEditorControls}
+                      onScriptChange={setScriptDraft}
+                      ref={scriptEditorRef}
+                      script={scriptDraft || task.analyze_script}
+                    />
                   ) : (
-                    <div className="min-h-[260px] rounded-[18px] border border-[#dfe6f2] bg-white px-5 py-5 text-[15px] leading-8 text-stone-500">
-                      GroundTruth 结果会在后端产物可用时展示。
+                    <div className="min-h-[420px] rounded-[18px] border border-[#dfe6f2] bg-white px-5 py-5 text-[16px] leading-9 text-[#313b4a]">
+                      <p className="text-stone-400">示例：</p>
+                      <p className="mt-3">今天我来讲一下这个功能，</p>
+                      <p className="line-through decoration-2">这个地方先删了要删掉，</p>
+                      <p>后面这一句保留继续生成试听。</p>
                     </div>
-                  )}
-                </div>
-
-                <div className="rounded-[22px] border border-[#ffd978] bg-[#fff7da] px-5 py-5">
-                  <p className="text-[18px] font-semibold text-[#f2a11f]">交互说明</p>
-                  <ul className="mt-3 space-y-2 text-sm leading-7 text-[#535b69]">
-                    <li>用户可直接调整删除范围</li>
-                    <li>生成试听前：删除线 -&gt; 大括号</li>
-                    <li>生成视频时记录 Pair 数据</li>
-                    <li>生成完成后回传 TOS 下载链接</li>
-                  </ul>
-                </div>
+                  )
+                ) : (
+                  <div className="min-h-[420px] rounded-[18px] border border-[#dfe6f2] bg-white px-5 py-5 text-[16px] leading-8 text-stone-500">
+                    {task?.groundtruth_url ? (
+                      <a className="text-[#4a85f6] underline" href={task.groundtruth_url} rel="noreferrer" target="_blank">
+                        查看标准文案
+                      </a>
+                    ) : (
+                      <p>这里将显示标准</p>
+                    )}
+                  </div>
+                )}
               </div>
             </Card>
           </div>
@@ -443,10 +584,6 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
             {task?.error_message ? <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">后端错误：{task.error_message}</p> : null}
           </div>
         </div>
-
-        <p className="mt-5 text-xs leading-6 text-stone-400">
-          数据记录：标准文案 / 输入视频 / 输入视频 ASR / 输出 script / 用户修改后 script，在点击“生成视频”时写入公司专属 TOS 路径。
-        </p>
       </section>
     </UserWorkspaceShell>
   );

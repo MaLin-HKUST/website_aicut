@@ -133,6 +133,11 @@ test("user can enter smart cut workspace and submit preview/finalize actions", a
   await page.getByRole("button", { name: "视频剪辑" }).click();
   await expect(page).toHaveURL(/\/smart-cut\/smartcut_mock_001$/);
   await expect(page.getByText("删除线脚本调整")).toBeVisible();
+  await expect(page.getByRole("button", { name: "识别结果" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "标准文案" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "标记删除" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "恢复保留" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "清空删除标记" })).toBeVisible();
   await expect(page.getByRole("button", { name: "生成试听" })).toBeVisible();
   await expect(page.getByRole("button", { name: "生成视频" })).toBeVisible();
 });

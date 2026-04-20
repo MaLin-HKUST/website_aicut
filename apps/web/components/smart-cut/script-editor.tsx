@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from "react";
 
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { applyRangesToScript, DeleteRange, mergeRanges, parseBraceScript, rangeContainsIndex } from "@/lib/smart-cut";
 
 type Selection = { start: number; end: number } | null;
+type NormalizedSelection = { start: number; end: number } | null;
 
-function normalizeSelection(selection: Selection): Selection {
+function normalizeSelection(selection: Selection): NormalizedSelection {
   if (!selection) return null;
   const start = Math.min(selection.start, selection.end);
   const end = Math.max(selection.start, selection.end) + 1;
@@ -43,15 +43,45 @@ function removeRange(ranges: DeleteRange[], selection: Selection): DeleteRange[]
   return mergeRanges(next);
 }
 
-export function SmartCutScriptEditor({
-  script,
-  disabled = false,
-  onScriptChange,
-}: {
+function selectionFullyDeleted(ranges: DeleteRange[], selection: Selection): boolean {
+  const normalized = normalizeSelection(selection);
+  if (!normalized) return false;
+
+  for (let index = normalized.start; index < normalized.end; index += 1) {
+    if (!rangeContainsIndex(ranges, index)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+export type SmartCutScriptEditorHandle = {
+  canMarkDelete: boolean;
+  canRestore: boolean;
+  canClear: boolean;
+  markDelete: () => void;
+  restoreSelection: () => void;
+  clearMarks: () => void;
+};
+
+type SmartCutScriptEditorProps = {
   script: string;
   disabled?: boolean;
   onScriptChange: (nextScript: string) => void;
-}) {
+  onStateChange?: (state: {
+    canMarkDelete: boolean;
+    canRestore: boolean;
+    canClear: boolean;
+    selectedCount: number;
+  }) => void;
+};
+
+export const SmartCutScriptEditor = forwardRef<SmartCutScriptEditorHandle, SmartCutScriptEditorProps>(function SmartCutScriptEditor({
+  script,
+  disabled = false,
+  onScriptChange,
+  onStateChange,
+}, ref) {
   const [{ visibleText, ranges }, setEditorState] = useState(() => parseBraceScript(script));
   const [dragging, setDragging] = useState(false);
   const [selection, setSelection] = useState<Selection>(null);
@@ -63,6 +93,9 @@ export function SmartCutScriptEditor({
   }, [script]);
 
   const normalizedSelection = useMemo(() => normalizeSelection(selection), [selection]);
+  const canMarkDelete = !disabled && normalizedSelection !== null;
+  const canRestore = !disabled && normalizedSelection !== null;
+  const canClear = !disabled && ranges.length > 0;
 
   function commit(nextRanges: DeleteRange[]) {
     const merged = mergeRanges(nextRanges);
@@ -70,6 +103,18 @@ export function SmartCutScriptEditor({
     onScriptChange(applyRangesToScript(visibleText, merged));
     setSelection(null);
     setDragging(false);
+  }
+
+  function markDeleteSelection() {
+    if (!normalizedSelection) return;
+    const nextRanges = addRange(ranges, normalizedSelection);
+    commit(nextRanges);
+  }
+
+  function restoreSelection() {
+    if (!normalizedSelection) return;
+    const nextRanges = removeRange(ranges, normalizedSelection);
+    commit(nextRanges);
   }
 
   function beginSelection(index: number) {
@@ -89,6 +134,29 @@ export function SmartCutScriptEditor({
   }
 
   const selectedCount = normalizedSelection ? normalizedSelection.end - normalizedSelection.start : 0;
+  const selectionAlreadyDeleted = normalizedSelection ? selectionFullyDeleted(ranges, normalizedSelection) : false;
+
+  useEffect(() => {
+    onStateChange?.({
+      canMarkDelete,
+      canRestore,
+      canClear,
+      selectedCount,
+    });
+  }, [canClear, canMarkDelete, canRestore, onStateChange, selectedCount]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      canMarkDelete,
+      canRestore,
+      canClear,
+      markDelete: markDeleteSelection,
+      restoreSelection,
+      clearMarks: () => commit([]),
+    }),
+    [canClear, canMarkDelete, canRestore, commit, markDeleteSelection, restoreSelection],
+  );
 
   return (
     <Card className="rounded-[30px] border-[#e8dbca] bg-[linear-gradient(180deg,_rgba(255,255,255,0.96),_rgba(255,250,243,0.96))] p-5 shadow-sm lg:p-6">
@@ -97,11 +165,11 @@ export function SmartCutScriptEditor({
           <p className="text-xs tracking-[0.24em] text-stone-500">删除线调稿台</p>
           <h3 className="mt-2 text-2xl font-semibold text-[#231815]">删除线脚本调整</h3>
           <p className="mt-2 text-sm leading-7 text-stone-600">
-            只调整删除范围，不改写正文。先拖选文字，再点下方按钮把它标为删除或恢复保留。
+            只调整删除范围，不改写正文。先拖选文字，再用上方按钮执行“标记删除 / 恢复保留 / 清空删除标记”。
           </p>
         </div>
         <div className="rounded-[22px] border border-[#eadfce] bg-white px-4 py-3 text-sm text-stone-500">
-          {selectedCount > 0 ? `当前选中 ${selectedCount} 个字` : "未选中内容"}
+          {selectedCount > 0 ? `当前选中 ${selectedCount} 个字${selectionAlreadyDeleted ? "（已全删）" : ""}` : "未选中内容"}
         </div>
       </div>
 
@@ -139,35 +207,7 @@ export function SmartCutScriptEditor({
           })}
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-3">
-          <Button
-            className="h-11 px-5"
-            disabled={disabled || !normalizedSelection}
-            onClick={() => commit(addRange(ranges, normalizedSelection))}
-            type="button"
-          >
-            标记删除
-          </Button>
-          <Button
-            className="h-11 px-5"
-            disabled={disabled || !normalizedSelection}
-            onClick={() => commit(removeRange(ranges, normalizedSelection))}
-            type="button"
-            variant="secondary"
-          >
-            恢复保留
-          </Button>
-          <Button
-            className="h-11 px-5"
-            disabled={disabled || ranges.length === 0}
-            onClick={() => commit([])}
-            type="button"
-            variant="ghost"
-          >
-            清空删除标记
-          </Button>
-        </div>
       </div>
     </Card>
   );
-}
+});

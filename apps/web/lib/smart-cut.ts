@@ -270,15 +270,79 @@ export async function createSmartCutTask(userId: string): Promise<SmartCutTask> 
   return getSmartCutTask(taskId);
 }
 
-export async function uploadDirectInputs(taskId: string, videoFile: File, referenceFile: File): Promise<SmartCutTask> {
+type UploadDirectProgress = {
+  loaded: number;
+  total: number;
+  percent: number;
+};
+
+function parseXhrPayload<T>(xhr: XMLHttpRequest): T | null {
+  if (xhr.response && typeof xhr.response === "object") {
+    return xhr.response as T;
+  }
+
+  if (!xhr.responseText) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(xhr.responseText) as T;
+  } catch {
+    return null;
+  }
+}
+
+export async function uploadDirectInputs(
+  taskId: string,
+  videoFile: File,
+  referenceFile: File,
+  options?: {
+    onProgress?: (progress: UploadDirectProgress) => void;
+  },
+): Promise<SmartCutTask> {
   const formData = new FormData();
   formData.append("video_file", videoFile);
   formData.append("reference_file", referenceFile);
-  const payload = await fetchJson<SmartCutTaskApi>(`/api/proxy/api/smart-cut/tasks/${taskId}/upload-direct`, {
-    method: "POST",
-    body: formData,
+
+  if (!options?.onProgress) {
+    const payload = await fetchJson<SmartCutTaskApi>(`/api/proxy/api/smart-cut/tasks/${taskId}/upload-direct`, {
+      method: "POST",
+      body: formData,
+    });
+    return normalizeTask(payload);
+  }
+
+  return await new Promise<SmartCutTask>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+
+    xhr.open("POST", `/api/proxy/api/smart-cut/tasks/${taskId}/upload-direct`);
+    xhr.responseType = "json";
+
+    xhr.upload.onprogress = (event) => {
+      if (!event.lengthComputable) return;
+      options.onProgress?.({
+        loaded: event.loaded,
+        total: event.total,
+        percent: Math.max(0, Math.min(100, Math.round((event.loaded / event.total) * 100))),
+      });
+    };
+
+    xhr.onerror = () => {
+      reject(new Error("上传请求失败，请检查网络后重试"));
+    };
+
+    xhr.onload = () => {
+      const payload = parseXhrPayload<SmartCutTaskApi & { detail?: string }>(xhr);
+      if (xhr.status >= 200 && xhr.status < 300 && payload) {
+        resolve(normalizeTask(payload));
+        return;
+      }
+
+      reject(new Error(payload?.detail ?? `Request failed: ${xhr.status}`));
+    };
+
+    xhr.send(formData);
   });
-  return normalizeTask(payload);
 }
 
 export async function startAnalyze(taskId: string): Promise<SmartCutTask> {
