@@ -109,9 +109,9 @@ test("rel0415 smart cut browser flow reaches task center", async ({ page }) => {
   await expect(page.getByRole("button", { name: "标记删除" })).toBeVisible({ timeout: 90_000 });
   await expect(page.getByRole("button", { name: "恢复保留" })).toBeVisible({ timeout: 90_000 });
   await expect(page.getByRole("button", { name: "清空删除标记" })).toBeVisible({ timeout: 90_000 });
-  await expect(page.getByRole("button", { name: "生成试听" })).toBeEnabled({ timeout: 90_000 });
+  await expect(page.getByRole("button", { name: "开始生成试听" })).toBeEnabled({ timeout: 90_000 });
 
-  await page.getByRole("button", { name: "生成试听" }).click();
+  await page.getByRole("button", { name: "开始生成试听" }).click();
   await expect
     .poll(async () => {
       return page.evaluate(async (id) => {
@@ -125,7 +125,7 @@ test("rel0415 smart cut browser flow reaches task center", async ({ page }) => {
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator("audio")).toBeVisible({ timeout: 90000 });
 
-  await page.getByRole("button", { name: "生成视频" }).click();
+  await page.getByRole("button", { name: "开始生成视频" }).click();
   await expect(page).toHaveURL(/\/tasks\?taskId=/, { timeout: 15000 });
   await expect(page.getByRole("heading", { name: "任务列表" })).toBeVisible();
   await expect(page.getByText(taskId).first()).toBeVisible({ timeout: 90_000 });

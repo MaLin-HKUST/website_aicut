@@ -184,7 +184,7 @@ test("rel0415 user can navigate login welcome tts smart-cut and tasks", async ({
   await expect(page).toHaveURL(/\/welcome$/);
   await expect(page.getByText("请点击左侧「文案生成语音」开始使用")).toBeVisible();
   await expect(page.getByRole("button", { name: "文案生成语音" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "视频剪辑" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "智能剪气口" })).toBeVisible();
   await expect(page.getByRole("button", { name: "任务列表" })).toBeVisible();
 
   await page.getByRole("button", { name: "文案生成语音" }).click();
@@ -196,10 +196,10 @@ test("rel0415 user can navigate login welcome tts smart-cut and tasks", async ({
   await expect(page.getByText("rel0415-output.mp3")).toBeVisible();
   await expect(page.getByRole("button", { name: "下载音频" })).toBeVisible();
 
-  await page.getByRole("button", { name: "视频剪辑" }).click();
+  await page.getByRole("button", { name: "智能剪气口" }).click();
   await expect(page).toHaveURL(/\/smart-cut\/smartcut_rel0415_001$/);
-  await expect(page.getByRole("heading", { name: "上传与分析" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "生成试听" })).toBeVisible();
+  await expect(page.getByText("请上传你要处理的视频和标准文案")).toBeVisible();
+  await expect(page.getByRole("button", { name: "开始生成试听" })).toBeVisible();
 
   await page.getByRole("button", { name: "任务列表" }).click();
   await expect(page).toHaveURL(/\/tasks$/);

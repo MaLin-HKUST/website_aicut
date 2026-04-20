@@ -129,8 +129,8 @@ test("user can enter smart cut workspace and submit preview/finalize actions", a
   });
 
   await page.goto("/welcome");
-  await expect(page.getByRole("button", { name: "视频剪辑" })).toBeVisible();
-  await page.getByRole("button", { name: "视频剪辑" }).click();
+  await expect(page.getByRole("button", { name: "智能剪气口" })).toBeVisible();
+  await page.getByRole("button", { name: "智能剪气口" }).click();
   await expect(page).toHaveURL(/\/smart-cut\/smartcut_mock_001$/);
   await expect(page.getByText("删除线脚本调整")).toBeVisible();
   await expect(page.getByRole("button", { name: "识别结果" })).toBeVisible();
@@ -138,6 +138,6 @@ test("user can enter smart cut workspace and submit preview/finalize actions", a
   await expect(page.getByRole("button", { name: "标记删除" })).toBeVisible();
   await expect(page.getByRole("button", { name: "恢复保留" })).toBeVisible();
   await expect(page.getByRole("button", { name: "清空删除标记" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "生成试听" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "生成视频" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "开始生成试听" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "开始生成视频" })).toBeVisible();
 });

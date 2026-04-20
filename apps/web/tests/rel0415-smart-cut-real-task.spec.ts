@@ -52,8 +52,8 @@ test("real-data smart cut task is visible and downloadable in the live UI", asyn
 
   await page.goto(`/smart-cut/${taskId}`, { waitUntil: "networkidle", timeout: 60_000 });
   await expect(page).toHaveURL(new RegExp(`/smart-cut/${taskId}$`), { timeout: 30_000 });
-  await expect(page.getByText("阶段 1：生成试听")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("输出音频预览")).toBeVisible({ timeout: 30_000 });
   await expect(page.locator("audio")).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByText("下载视频")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("button", { name: "开始生成视频" })).toBeVisible({ timeout: 30_000 });
   await expect(page.locator("a[href*='smart-cut/']").first()).toBeVisible({ timeout: 30_000 });
 });

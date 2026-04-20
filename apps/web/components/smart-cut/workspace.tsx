@@ -521,63 +521,65 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
           </div>
 
           <div className="space-y-4">
-            <button
-              className="w-full rounded-[22px] border border-[#ffbb5f] bg-[#fff8ed] px-5 py-4 text-[18px] font-semibold text-[#f2a11f] transition disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={!canPreview || busyAction !== null}
-              onClick={handlePreview}
-              type="button"
-            >
-              阶段 1：生成试听
-            </button>
-
-            <Card className="rounded-[24px] border-[#cfb9ff] bg-[#f6f2ff] p-5 shadow-sm">
-              <p className="text-[18px] font-semibold text-[#7c57f4]">试听播放器</p>
-              <p className="mt-2 text-sm text-stone-500">Step A 音频 / Step B 剪气口后音频</p>
-              <div className="mt-4">
+            <Card className="rounded-[26px] border-[#e6ddd2] bg-white p-5 shadow-sm">
+              <div className="flex items-start justify-between gap-4">
+                <p className="text-[20px] font-semibold text-[#241714]">输出音频预览</p>
+                <Button
+                  className="h-10 rounded-full bg-[#2f3945] px-5 text-white hover:bg-[#39444f]"
+                  disabled={!canPreview || busyAction !== null}
+                  onClick={handlePreview}
+                  type="button"
+                >
+                  开始生成试听
+                </Button>
+              </div>
+              <div className="mt-5 rounded-[24px] border border-dashed border-[#ddd2c4] bg-[#fffdfa] p-6">
                 {latestEdit?.audio_b_url ? (
                   <audio className="w-full" controls src={latestEdit.audio_b_url} />
                 ) : (
-                  <div className="rounded-[16px] bg-white px-4 py-5 text-sm text-stone-500">生成试听后，这里显示播放器。</div>
+                  <div className="flex min-h-[240px] flex-col items-center justify-center text-center">
+                    <p className="text-[24px] font-semibold text-[#241714]">还没有生成音频</p>
+                    <p className="mt-6 max-w-[280px] text-[16px] leading-9 text-[#7b7267]">
+                      点击上方生成试听后，这里会显示播放器。
+                    </p>
+                  </div>
                 )}
               </div>
             </Card>
 
-            <Card className="rounded-[24px] border-[#d9dee8] bg-white p-5 shadow-sm">
-              <p className="text-[18px] font-semibold text-[#2f3848]">输出视频规格</p>
-              <div className="mt-4 space-y-3 text-[16px] text-[#465067]">
-                <label className="flex items-center gap-3">
-                  <input checked={outputMode === "vertical_1080p"} className="h-4 w-4 accent-[#4b86ff]" onChange={() => setOutputMode("vertical_1080p")} type="radio" />
-                  1080P 竖屏（生成前做 normalize）
+            <Card className="rounded-[24px] border-[#e6ddd2] bg-white p-5 shadow-sm">
+              <p className="text-[20px] font-semibold text-[#2f3848]">输出视频规格</p>
+              <div className="mt-5 space-y-5 text-[18px] leading-10 text-[#465067]">
+                <label className="flex items-center gap-4">
+                  <input checked={outputMode === "vertical_1080p"} className="h-5 w-5 accent-[#2d6cff]" onChange={() => setOutputMode("vertical_1080p")} type="radio" />
+                  <span>1080P竖屏高清</span>
                 </label>
-                <label className="flex items-center gap-3">
-                  <input checked={outputMode === "original"} className="h-4 w-4 accent-[#4b86ff]" onChange={() => setOutputMode("original")} type="radio" />
-                  原始尺寸（不做 normalize）
+                <label className="flex items-center gap-4">
+                  <input checked={outputMode === "original"} className="h-5 w-5 accent-[#2d6cff]" onChange={() => setOutputMode("original")} type="radio" />
+                  <span>持输入视频尺寸</span>
                 </label>
               </div>
             </Card>
 
-            <button
-              className="w-full rounded-[22px] border border-[#ffbb5f] bg-[#fff8ed] px-5 py-4 text-[18px] font-semibold text-[#f2a11f] transition disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={!canFinalize || busyAction !== null}
-              onClick={handleFinalize}
-              type="button"
-            >
-              阶段 2：生成视频
-            </button>
-
-            <Card className="rounded-[24px] border-[#96edc4] bg-[#edfff5] p-5 shadow-sm">
-              <p className="text-[18px] font-semibold text-[#18b667]">下载视频</p>
-              <p className="mt-2 text-sm text-stone-500">生成完成后显示 TOS 下载链接</p>
-              <div className="mt-4 text-sm leading-7 text-[#248a60]">
-                {downloadReady ? (
-                  <a className="underline" href={task?.final_video_url ?? "#"} target="_blank">
-                    {task?.final_video_tos_key ?? "点击下载"}
-                  </a>
-                ) : (
-                  <span>当前还没有可下载的视频结果。</span>
-                )}
-              </div>
-            </Card>
+            <div className="space-y-3">
+              <Button
+                className="h-[88px] w-full rounded-full bg-[#2f3945] text-[26px] font-semibold text-white hover:bg-[#39444f]"
+                disabled={!canFinalize || busyAction !== null}
+                onClick={handleFinalize}
+                type="button"
+              >
+                开始生成视频
+              </Button>
+              {downloadReady ? (
+                <a
+                  className="block text-center text-sm font-medium text-[#23835f] underline underline-offset-4"
+                  href={task?.final_video_url ?? "#"}
+                  target="_blank"
+                >
+                  下载已生成视频
+                </a>
+              ) : null}
+            </div>
 
             {notice ? <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{notice}</p> : null}
             {error ? <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
