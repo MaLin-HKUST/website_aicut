@@ -36,8 +36,9 @@
 3. [00_system_knowledge/02_系统架构与职责边界.md](./00_system_knowledge/02_系统架构与职责边界.md)
 4. [00_system_knowledge/06_Agent工作规则与禁区.md](./00_system_knowledge/06_Agent工作规则与禁区.md)
 5. 如果要协作前端 coding agent，先读 [00_system_knowledge/08_前端协作模板.md](./00_system_knowledge/08_前端协作模板.md)
-6. 如果要做前端上线、截图验收、Playwright 线上验收，读 [00_system_knowledge/09_前端页面修改上线Runbook.md](./00_system_knowledge/09_前端页面修改上线Runbook.md)
-7. 如果要直接复制给前端 coding agent 的任务模板或交付模板，读 [00_system_knowledge/10_前端CodingAgent交付纯模板.md](./00_system_knowledge/10_前端CodingAgent交付纯模板.md)
+6. 如果要理解前端上线唯一规则，读 [00_system_knowledge/11_前端发布单一路径.md](./00_system_knowledge/11_前端发布单一路径.md)
+7. 如果要做前端上线、截图验收、Playwright 线上验收，读 [00_system_knowledge/09_前端页面修改上线Runbook.md](./00_system_knowledge/09_前端页面修改上线Runbook.md)
+8. 如果要直接复制给前端 coding agent 的任务模板或交付模板，读 [00_system_knowledge/10_前端CodingAgent交付纯模板.md](./00_system_knowledge/10_前端CodingAgent交付纯模板.md)
 6. 按任务需要继续读发布、备份、代码结构、术语表
 
 ### 架构、运维、发布、重建 Agent
@@ -71,6 +72,7 @@
 - [00_system_knowledge/08_前端协作模板.md](./00_system_knowledge/08_前端协作模板.md)
 - [00_system_knowledge/09_前端页面修改上线Runbook.md](./00_system_knowledge/09_前端页面修改上线Runbook.md)
 - [00_system_knowledge/10_前端CodingAgent交付纯模板.md](./00_system_knowledge/10_前端CodingAgent交付纯模板.md)
+- [00_system_knowledge/11_前端发布单一路径.md](./00_system_knowledge/11_前端发布单一路径.md)
 
 ## 当前线上状态快速入口
 
@@ -114,4 +116,4 @@
 - 如果你要改动系统边界、发布流程、备份流程，必须先更新本目录的相关文档。
 - 本轮执行类 Agent 需要额外读取 `基础网络信息和账号信息.md`，它是网络与账号的单一真相入口。
 - 如果你要把页面截图交给前端 coding agent 改版，先看 `00_system_knowledge/08_前端协作模板.md`，实际复制时直接使用 `00_system_knowledge/10_前端CodingAgent交付纯模板.md`。
-- 如果你要把前端修改真正上线，并确认用户在正式站看到什么，按 `00_system_knowledge/09_前端页面修改上线Runbook.md` 执行。
+- 如果你要把前端修改真正上线，并确认用户在正式站看到什么，先按 `00_system_knowledge/11_前端发布单一路径.md` 确认原则，再按 `00_system_knowledge/09_前端页面修改上线Runbook.md` 执行。
