@@ -83,6 +83,12 @@ type SmartCutEditApi = {
 };
 
 type TaskCreateApi = {
+  id?: string;
+  user_id?: string | number;
+  status?: string;
+  current_stage?: string | null;
+  created_at?: string;
+  updated_at?: string;
   data?: {
     task_id: string;
   };
@@ -263,10 +269,15 @@ export async function createSmartCutTask(userId: string): Promise<SmartCutTask> 
     method: "POST",
     body: JSON.stringify({ user_id: userId }),
   });
-  const taskId = payload.data?.task_id;
+  const taskId = payload.data?.task_id ?? payload.id;
   if (!taskId) {
     throw new Error("Task creation did not return task_id");
   }
+
+  if (payload.id && payload.status && payload.created_at && payload.updated_at) {
+    return normalizeTask(payload as SmartCutTaskApi);
+  }
+
   return getSmartCutTask(taskId);
 }
 
