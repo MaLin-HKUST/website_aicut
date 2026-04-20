@@ -90,11 +90,28 @@ class AlgorithmDockerRunner:
             raise RuntimeError("Algorithm Docker runner is disabled")
 
         command = self.build_command(task_id, stage)
-        subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=timeout,
-        )
+        try:
+            subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=timeout,
+            )
+        except subprocess.CalledProcessError as exc:
+            try:
+                result_manifest = self.job_contract.read_result_manifest(task_id)
+            except Exception:
+                raise RuntimeError(
+                    exc.stderr.strip()
+                    or exc.stdout.strip()
+                    or f"Algorithm stage failed: {stage}"
+                ) from exc
+
+            metadata = result_manifest.get("metadata") or {}
+            debug_path = metadata.get("debug_alignment_failure_path")
+            error_message = result_manifest.get("error_message") or f"Algorithm stage failed: {stage}"
+            if debug_path:
+                error_message = f"{error_message} [debug_alignment_failure_path={debug_path}]"
+            raise RuntimeError(error_message) from exc
         return self.job_contract.read_result_manifest(task_id)

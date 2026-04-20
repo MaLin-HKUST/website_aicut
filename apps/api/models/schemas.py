@@ -255,7 +255,7 @@ class TaskDetailResponse(BaseModel):
 
 class PreviewRequest(BaseModel):
     """触发预览请求"""
-    edited_script: Any = Field(..., description="用户编辑后的文案脚本")
+    edited_script: str = Field(..., description="用户编辑后的大括号格式脚本")
 
 
 class PreviewResponse(BaseModel):

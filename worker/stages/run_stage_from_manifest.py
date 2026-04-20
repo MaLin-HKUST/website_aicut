@@ -42,6 +42,33 @@ def _run(command: list[str]) -> None:
     )
 
 
+def _preview_debug_path(task: dict[str, Any]) -> Path:
+    edit_id = task.get("edit_id") or task.get("payload", {}).get("edit_id") or "default"
+    return Path(task["work_dir"]) / "preview" / edit_id / "debug_alignment_failure.json"
+
+
+def _build_failure_metadata(task: dict[str, Any], stage: str) -> dict[str, Any]:
+    metadata: dict[str, Any] = {}
+    if task.get("edit_id"):
+        metadata["edit_id"] = task["edit_id"]
+    elif task.get("payload", {}).get("edit_id"):
+        metadata["edit_id"] = task["payload"]["edit_id"]
+
+    if stage == "preview":
+        debug_path = _preview_debug_path(task)
+        if debug_path.exists():
+            metadata["debug_alignment_failure_path"] = str(debug_path)
+            try:
+                payload = _load_json(debug_path)
+            except Exception:
+                payload = None
+            if isinstance(payload, dict):
+                details = payload.get("details") or {}
+                if details.get("marked_content"):
+                    metadata["failing_segment"] = details["marked_content"]
+    return metadata
+
+
 def _ensure_runtime_dependencies() -> None:
     env = os.environ.copy()
     subprocess.run(
@@ -162,6 +189,7 @@ def run_preview(task: dict[str, Any]) -> dict[str, Any]:
 
     edited_script_data = _read_json(edited_script_path)
     _write_script1(edited_script_data, script1_path)
+    debug_alignment_path = preview_dir / "debug_alignment_failure.json"
 
     _run(
         [
@@ -173,6 +201,8 @@ def run_preview(task: dict[str, Any]) -> dict[str, Any]:
             str(asr_result_path),
             "-o",
             str(edited_delay_path),
+            "--debug-json",
+            str(debug_alignment_path),
         ]
     )
 
@@ -235,12 +265,26 @@ def main() -> int:
 
     task_manifest = _load_json(Path(args.task_manifest))
 
-    if args.stage == "analyze":
-        outputs = run_analyze(task_manifest)
-    elif args.stage == "preview":
-        outputs = run_preview(task_manifest)
-    else:
-        outputs = run_finalize(task_manifest)
+    try:
+        if args.stage == "analyze":
+            outputs = run_analyze(task_manifest)
+        elif args.stage == "preview":
+            outputs = run_preview(task_manifest)
+        else:
+            outputs = run_finalize(task_manifest)
+    except Exception as exc:
+        result_manifest = {
+            "manifest_version": task_manifest["manifest_version"],
+            "task_id": task_manifest["task_id"],
+            "scheduler_task_id": task_manifest["scheduler_task_id"],
+            "stage": args.stage,
+            "status": "failed",
+            "outputs": {},
+            "error_message": str(exc),
+            "metadata": _build_failure_metadata(task_manifest, args.stage),
+        }
+        _write_json(Path(args.result_manifest), result_manifest)
+        raise
 
     result_manifest = {
         "manifest_version": task_manifest["manifest_version"],

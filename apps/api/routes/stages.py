@@ -6,6 +6,7 @@
 - F19: POST /api/smart-cut/tasks/{task_id}/finalize
 """
 
+import json
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -29,6 +30,76 @@ router = APIRouter(prefix="/api/smart-cut", tags=["stages"])
 def get_scheduler_service(db: Session = Depends(get_db)) -> Any:
     """获取调度服务实例（简化版本，直接操作数据库）"""
     return db
+
+
+def _coerce_script_text(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, dict) and isinstance(value.get("segments"), list):
+        parts: list[str] = []
+        for segment in value["segments"]:
+            if isinstance(segment, str):
+                parts.append(segment)
+            elif isinstance(segment, dict):
+                parts.append(str(segment.get("text", "")))
+            else:
+                parts.append(str(segment))
+        return "".join(parts)
+    try:
+        return json.dumps(value, ensure_ascii=False, indent=2)
+    except TypeError:
+        return str(value)
+
+
+def _strip_brace_markers(script: str) -> str:
+    return "".join(char for char in script if char not in "{}")
+
+
+def _validate_brace_script(script: str) -> None:
+    if not script.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="edited_script cannot be empty",
+        )
+
+    depth = 0
+    for char in script:
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth < 0:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="edited_script contains invalid brace markers",
+                )
+    if depth != 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="edited_script contains invalid brace markers",
+        )
+
+
+def _validate_preview_script_against_task(task: SmartCutTask, edited_script: str) -> None:
+    _validate_brace_script(edited_script)
+
+    baseline_script = _coerce_script_text(task.analyze_script)
+    if not baseline_script:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Analyze script not available, preview baseline missing",
+        )
+
+    if _strip_brace_markers(edited_script) != _strip_brace_markers(baseline_script):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "edited_script must preserve the current task script text; "
+                "preview only supports adjusting deletion ranges"
+            ),
+        )
 
 
 # ========== F13: Trigger Analyze ==========
@@ -155,6 +226,8 @@ async def start_preview(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="ASR result not available, analyze not completed"
         )
+
+    _validate_preview_script_against_task(task, req.edited_script)
     
     # 获取下一个版本号
     next_version = SmartCutEdit.get_next_version_number(db, task_id)

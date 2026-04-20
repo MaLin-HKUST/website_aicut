@@ -133,12 +133,16 @@ class PreviewProcessor(BaseProcessor):
             edit = db.query(SmartCutEdit).filter_by(id=edit_id).first()
             if not edit:
                 raise ValueError(f"Edit not found: {edit_id}")
-            self._edit = edit
             
             # 读取业务任务获取原始视频URL
             business_task = db.query(BusinessTask).filter_by(id=task.business_task_id).first()
             if not business_task:
                 raise ValueError(f"Business task not found: {task.business_task_id}")
+            if edit.task_id != task.business_task_id:
+                raise ValueError(
+                    f"Edit {edit_id} does not belong to business task {task.business_task_id}"
+                )
+            self._edit = edit
             self._business_task = business_task
             
             work_dir = self.file_transport.task_dir(task.business_task_id)
@@ -506,8 +510,16 @@ class PreviewProcessor(BaseProcessor):
         try:
             # 获取 edit_id
             edit_id = None
+            existing_metadata: dict[str, Any] = {}
             if self._current_task and self._current_task.payload:
                 edit_id = self._current_task.payload.get("edit_id")
+            if self._current_task:
+                result_manifest_path = self.job_contract.ensure_layout(
+                    self._current_task.business_task_id
+                )["result_manifest_path"]
+                if result_manifest_path.exists():
+                    existing_manifest = json.loads(result_manifest_path.read_text(encoding="utf-8"))
+                    existing_metadata = dict(existing_manifest.get("metadata") or {})
 
             if self._current_task:
                 self.job_contract.write_result_manifest(
@@ -517,7 +529,7 @@ class PreviewProcessor(BaseProcessor):
                     status="failed",
                     outputs={},
                     error_message=error_message,
-                    metadata={"edit_id": edit_id},
+                    metadata={**existing_metadata, "edit_id": edit_id},
                 )
             
             # 更新 Edit 状态为失败
