@@ -1,0 +1,46 @@
+# Preview DelayCut 定位失败问题档案
+
+本文档包的目的：
+
+- 固化 `10c7eff8-6d4f-453b-900e-33079bad0997` 这次 `preview_failed` 的完整上下文
+- 让新的 coding agent 不需要依赖当前聊天记录，就能复现、分析并修改算法
+- 明确哪些是“输入层问题”，哪些是“算法层问题”
+- 明确修改后应该如何交回结果
+
+## 阅读顺序
+
+1. [01_输入与复现.md](./01_输入与复现.md)
+2. [02_代码路径与故障点.md](./02_代码路径与故障点.md)
+3. [03_根因分析与修改建议.md](./03_根因分析与修改建议.md)
+4. [04_交接与提交要求.md](./04_交接与提交要求.md)
+
+## 一句话结论
+
+这次 `preview_failed` 的直接触发原因是：
+
+- `10c7eff8-6d4f-453b-900e-33079bad0997` 使用了来自另一条成功任务 `c10264ad-5f62-4ad9-9731-bffd0e9ce33c` 的 `edited_script`
+- 该 `edited_script` 中存在删除片段 `也就是说当下的股票已经。`
+- 这段文本在 `10c7...` 自己的 ASR 文本里无法稳定定位
+- `script_to_delay_cuts.py` 没把“文本找不到”明确报出来，而是继续返回 `0.0, 0.0`，最终在下游抛成 `片段时长非正数`
+
+因此：
+
+- 这是一个“输入不一致 + 算法报错不清晰”的复合问题
+- 不是 TOS 问题
+- 不是 Worker Gateway 问题
+- 不是 finalize 上传问题
+
+## 本档案关注的范围
+
+只关注 `preview -> script_to_delay_cuts.py` 这一条问题链：
+
+- API 如何触发 preview
+- Worker 如何生成 `task_manifest`
+- 算法容器如何执行 `script_to_delay_cuts.py`
+- 为什么会在 `也就是说当下的股票已经。` 上失败
+
+不覆盖：
+
+- finalize multipart 上传
+- Worker 镜像依赖清理
+- Scheduler 超时窗口
