@@ -3,6 +3,9 @@ export type SmartCutTask = {
   user_id: string;
   status: string;
   current_stage: string | null;
+  task_title: string | null;
+  visible_in_task_center: boolean;
+  session_scope_id: string | null;
   error_stage: string | null;
   error_message: string | null;
   original_video_url: string | null;
@@ -54,6 +57,9 @@ type SmartCutTaskApi = {
   user_id: string;
   status: string;
   current_stage: string | null;
+  task_title?: string | null;
+  visible_in_task_center?: boolean;
+  session_scope_id?: string | null;
   original_video_url?: string | null;
   reference_text_url?: string | null;
   analyze_script?: unknown;
@@ -94,6 +100,13 @@ type TaskCreateApi = {
   };
 };
 
+type FinalizeResponseApi = {
+  scheduler_task_id: string;
+  status: string;
+  visible_in_task_center: boolean;
+  task_title: string;
+};
+
 type SmartCutDraftEnvelope =
   | SmartCutTaskApi
   | {
@@ -107,11 +120,37 @@ export type SmartCutDraftLookup = {
   task: SmartCutTask | null;
 };
 
+export type SmartCutFinalizeResult = {
+  schedulerTaskId: string;
+  status: string;
+  visibleInTaskCenter: boolean;
+  taskTitle: string;
+};
+
 export type DeleteRange = { start: number; end: number };
+
+const DEFAULT_TOS_PUBLIC_BASE_URL = "https://autocut-malin.tos-cn-shanghai.volces.com";
+
+function resolveTosUrl(value: string | null | undefined): string | null {
+  if (!value) return null;
+  if (/^https?:\/\//i.test(value)) return value;
+  const baseUrl = process.env.NEXT_PUBLIC_TOS_PUBLIC_BASE_URL || DEFAULT_TOS_PUBLIC_BASE_URL;
+  return `${baseUrl.replace(/\/+$/, "")}/${value.replace(/^\/+/, "")}`;
+}
 
 function toScriptText(value: unknown): string | null {
   if (value == null) return null;
   if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    const parts = value.map((segment) => {
+      if (typeof segment === "string") return segment;
+      if (segment && typeof segment === "object" && "text" in segment) {
+        return String((segment as { text?: unknown }).text ?? "");
+      }
+      return "";
+    });
+    return parts.join("");
+  }
   if (typeof value === "object" && value && Array.isArray((value as { segments?: unknown[] }).segments)) {
     const parts = (value as { segments: unknown[] }).segments.map((segment) => {
       if (typeof segment === "string") return segment;
@@ -135,20 +174,23 @@ function normalizeTask(payload: SmartCutTaskApi): SmartCutTask {
     user_id: payload.user_id,
     status: payload.status,
     current_stage: payload.current_stage ?? null,
+    task_title: payload.task_title ?? null,
+    visible_in_task_center: payload.visible_in_task_center ?? false,
+    session_scope_id: payload.session_scope_id ?? null,
     error_stage: null,
     error_message: payload.error_message ?? null,
-    original_video_url: payload.original_video_url ?? null,
+    original_video_url: resolveTosUrl(payload.original_video_url ?? null),
     original_video_tos_key: payload.original_video_url ?? null,
-    reference_text_url: payload.reference_text_url ?? null,
+    reference_text_url: resolveTosUrl(payload.reference_text_url ?? null),
     reference_text_tos_key: payload.reference_text_url ?? null,
     analyze_script: toScriptText(payload.current_edited_script ?? payload.analyze_script),
     analyze_script_tos_key: null,
     asr_result_tos_key: payload.asr_result_tos_key ?? null,
     active_edit_id: payload.active_edit_id ?? null,
     finalize_source_edit_id: payload.active_edit_id ?? null,
-    final_video_url: payload.final_video_url ?? null,
+    final_video_url: resolveTosUrl(payload.final_video_url ?? null),
     final_video_tos_key: payload.final_video_url ?? null,
-    groundtruth_url: payload.groundtruth_url ?? null,
+    groundtruth_url: resolveTosUrl(payload.groundtruth_url ?? null),
     groundtruth_tos_key: payload.groundtruth_url ?? null,
     feed_to_ai: true,
     output_mode: "original",
@@ -164,8 +206,8 @@ function normalizeEdit(payload: SmartCutEditApi): SmartCutEdit {
     task_id: payload.task_id,
     edited_script: toScriptText(payload.edited_script) ?? "",
     status: payload.status,
-    audio_a_url: payload.audio_a_url ?? null,
-    audio_b_url: payload.audio_b_url ?? null,
+    audio_a_url: resolveTosUrl(payload.audio_a_url ?? null),
+    audio_b_url: resolveTosUrl(payload.audio_b_url ?? null),
     audio_b_tos_key: payload.audio_b_url ?? null,
     edited_delay_cuts_tos_key: payload.edited_delay_cuts_tos_key ?? null,
     pause_cuts_on_original_tos_key: payload.pause_cuts_on_original_tos_key ?? null,
@@ -486,10 +528,15 @@ export async function startPreview(taskId: string, editedScript: string): Promis
 export async function startFinalize(
   taskId: string,
   params: { outputMode: "original" | "vertical_1080p"; feedToAi: boolean },
-): Promise<SmartCutTask> {
-  await fetchJson(`/api/proxy/api/smart-cut/tasks/${taskId}/finalize`, {
+): Promise<SmartCutFinalizeResult> {
+  const payload = await fetchJson<FinalizeResponseApi>(`/api/proxy/api/smart-cut/tasks/${taskId}/finalize`, {
     method: "POST",
     body: JSON.stringify({ output_mode: params.outputMode, feed_to_ai: params.feedToAi }),
   });
-  return getSmartCutTask(taskId);
+  return {
+    schedulerTaskId: payload.scheduler_task_id,
+    status: payload.status,
+    visibleInTaskCenter: payload.visible_in_task_center,
+    taskTitle: payload.task_title,
+  };
 }
