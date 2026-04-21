@@ -12,7 +12,7 @@ from apps.api.routes.task_center import router as task_center_router
 from apps.api.routes.stages import router as stages_router
 from apps.api.routes.tasks import router as tasks_router
 from apps.models.edit import EditStatus, SmartCutEdit
-from apps.models.scheduler_task import SchedulerTask, SchedulerTaskStatus, SchedulerTaskType
+from apps.models.scheduler_task import SchedulerTask, SchedulerTaskType
 from apps.models.task import CurrentStage, SmartCutTask, TaskStatus
 from apps.services.tos_service import TOSService
 from configs.database import Base, build_engine, get_db
@@ -99,20 +99,22 @@ def test_rel0415_edits_and_task_center_routes(api_client):
     client, SessionLocal = api_client
 
     with SessionLocal() as db:
-        task = SmartCutTask(
+        hidden_task = SmartCutTask(
             user_id="alice",
             status=TaskStatus.WAITING_USER,
             current_stage=CurrentStage.USER_SELECT,
+            visible_in_task_center=False,
+            session_scope_id="scs_hidden",
             original_video_url="smart-cut/demo/input/source_video.mp4",
             reference_text_url="smart-cut/demo/input/reference.txt",
             analyze_script="{demo}",
             asr_result_tos_key="smart-cut/demo/analyze/asr.json",
         )
-        db.add(task)
+        db.add(hidden_task)
         db.flush()
 
         edit = SmartCutEdit(
-            task_id=task.id,
+            task_id=hidden_task.id,
             edited_script="{demo}",
             status=EditStatus.SUCCESS,
             audio_b_url="smart-cut/demo/preview/edit-1/audio_b.mp3",
@@ -123,22 +125,24 @@ def test_rel0415_edits_and_task_center_routes(api_client):
         db.add(edit)
         db.flush()
 
-        task.active_edit_id = edit.id
+        hidden_task.active_edit_id = edit.id
 
-        scheduler_task = SchedulerTask(
-            task_type=SchedulerTaskType.SMART_CUT_PREVIEW,
-            status=SchedulerTaskStatus.POST,
-            business_task_id=task.id,
-            assigned_worker_id="worker-01",
-            payload={"edit_id": edit.id},
-            result={"audio_b_url": edit.audio_b_url},
+        visible_task = SmartCutTask(
+            user_id="alice",
+            status=TaskStatus.SUCCESS,
+            current_stage=CurrentStage.COMPLETE,
+            task_title="智能剪气口-20260421-101010",
+            visible_in_task_center=True,
+            original_video_url="smart-cut/demo/final/input/source_video.mp4",
+            reference_text_url="smart-cut/demo/final/input/reference.txt",
+            final_video_url="smart-cut/demo/final/finalize/final_video.mp4",
         )
-        db.add(scheduler_task)
+        db.add(visible_task)
         db.commit()
 
-        task_id = task.id
+        task_id = hidden_task.id
         edit_id = edit.id
-        scheduler_task_id = scheduler_task.id
+        visible_task_id = visible_task.id
 
     edits_response = client.get(f"/api/smart-cut/tasks/{task_id}/edits")
     assert edits_response.status_code == 200
@@ -149,16 +153,17 @@ def test_rel0415_edits_and_task_center_routes(api_client):
     user_center = client.get("/api/task-center/tasks", params={"user_id": "alice"})
     assert user_center.status_code == 200
     user_payload = user_center.json()
-    assert user_payload[0]["id"] == task_id
-    assert user_payload[0]["status"] == "running"
+    assert [item["id"] for item in user_payload] == [visible_task_id]
+    assert user_payload[0]["title"] == "智能剪气口-20260421-101010"
+    assert user_payload[0]["status"] == "finished"
     assert user_payload[0]["scheduler_task_id"] is None
 
     admin_center = client.get("/api/admin/task-center/tasks")
     assert admin_center.status_code == 200
     admin_payload = admin_center.json()
-    assert admin_payload[0]["id"] == task_id
-    assert admin_payload[0]["scheduler_task_id"] == scheduler_task_id
-    assert admin_payload[0]["worker_id"] == "worker-01"
+    assert [item["id"] for item in admin_payload] == [visible_task_id]
+    assert admin_payload[0]["status"] == "finished"
+    assert admin_payload[0]["download_url"].endswith("final_video.mp4")
 
 
 def test_current_draft_endpoints_are_scoped_to_login_session(api_client):

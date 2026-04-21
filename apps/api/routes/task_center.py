@@ -55,7 +55,12 @@ async def list_user_task_center(
     user_id: str | None = Query(default=None, description="用户 ID；为空时返回全部任务"),
     limit: int = Query(default=50, ge=1, le=200),
 ) -> list[TaskCenterTaskRead]:
-    stmt = select(SmartCutTask).order_by(desc(SmartCutTask.updated_at)).limit(limit)
+    stmt = (
+        select(SmartCutTask)
+        .where(SmartCutTask.visible_in_task_center.is_(True))
+        .order_by(desc(SmartCutTask.updated_at))
+        .limit(limit)
+    )
     if user_id:
         stmt = stmt.where(SmartCutTask.user_id == user_id)
     tasks = list(db.execute(stmt).scalars().all())
@@ -82,7 +87,12 @@ async def list_admin_task_center(
     limit: int = Query(default=100, ge=1, le=500),
 ) -> list[TaskCenterTaskRead]:
     tasks = list(
-        db.execute(select(SmartCutTask).order_by(desc(SmartCutTask.updated_at)).limit(limit)).scalars().all()
+        db.execute(
+            select(SmartCutTask)
+            .where(SmartCutTask.visible_in_task_center.is_(True))
+            .order_by(desc(SmartCutTask.updated_at))
+            .limit(limit)
+        ).scalars().all()
     )
     queue_positions = _queue_positions(db)
     items = [
