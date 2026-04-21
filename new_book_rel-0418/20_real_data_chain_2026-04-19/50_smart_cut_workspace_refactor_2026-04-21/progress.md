@@ -4,6 +4,7 @@
 
 - `R01-R02` 已编码并完成最小回归验证
 - `Agent 01` 回交已完成审查，契约层可作为后续开发基线
+- `Agent 02` 回交已完成审查，`R03` 可接受
 - 专项包已建立
 - `R03` 与 `R04-R06` 可继续推进
 
@@ -21,11 +22,12 @@
 - 补充现有数据库的运行时补列与历史可见性回填脚本
 - 补充 `tests/test_rel0415_api.py` 回归覆盖
 - 完成 `Agent 01` 回交审查，确认 `branch / commit SHA / 改动文件 / 验证命令` 均可核对
+- 完成 `Agent 02` 回交审查，确认任务中心过滤与 backfill 脚本交付完整
 
 ## 正在进行
 
 - 主集成人评估 `configs/database.py` 的运行时补列策略是否原样集成
-- 等待放行 `Agent 02` 与 `Agent 03`
+- 等待 `Agent 03` 回交
 
 ## 阻塞项
 
@@ -42,6 +44,7 @@
 - 并行开发按 5 个 agent 分工执行
 - Agent 01 先行锁定契约，其余 agent 按依赖关系启动
 - `commit 51071188253984779ca7ce9bce1d7ce42bad1919` 作为当前 `R01-R02` 契约基线
+- `commit 380baddf7c61c0d0dd4630eb1c1bea4a79c3044c` 作为当前 `R03` 任务中心可见性基线
 
 ## 需要同步给其他 Agent 的上下文
 
@@ -56,6 +59,9 @@
 - finalize 已验证同次提交内写入标题并切换 `visible_in_task_center=true`
 - 已核对 `branch=feature/smart-cut-workspace-refactor-R01-R02-contract`
 - 已核对 `commit SHA=51071188253984779ca7ce9bce1d7ce42bad1919`
+- 已核对 `branch=feature/smart-cut-workspace-refactor-R03-task-center-visibility`
+- 已核对 `commit SHA=380baddf7c61c0d0dd4630eb1c1bea4a79c3044c`
+- 已核对 `R03` 改动范围集中在 `task_center.py`、backfill 脚本、测试与专项检查文档
 
 ## 已知问题记录
 
@@ -86,3 +92,10 @@
 - 症状：为 finalize 升格事务和补列落地，提交超出最初最窄写入范围
 - 当前判断：扩 scope 有理由，但主集成人需要在合并前逐项确认这些改动不踩后续 Agent 02/03 的责任边界
 - 下一步：主集成人在正式集成 `R01-R02` 时对这两处做额外审阅
+
+### ISSUE-005
+- 标题：Agent 02 的 backfill 脚本尚未在真实历史库执行
+- 位置：`scripts/rel0415/backfill_smart_cut_task_center_visibility.py`
+- 症状：当前只完成测试与脚本交付，没有对生产/真实 PostgreSQL 历史库做实际回填
+- 当前判断：实现可接受，但上线前必须明确回填执行策略
+- 下一步：在主线集成或上线前由主集成人决定何时执行 backfill

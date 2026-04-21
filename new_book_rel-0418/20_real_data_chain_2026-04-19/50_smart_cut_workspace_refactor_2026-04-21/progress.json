@@ -1,7 +1,7 @@
 {
   "spec_version": "2026-04-21.v1",
   "track": "smart_cut_workspace_refactor",
-  "current_phase": "R01-R02 reviewed; ready to start R03 and R04-R06",
+  "current_phase": "R01-R03 reviewed; waiting for R04-R06 handoff",
   "completed_tasks": [
     "package_bootstrap",
     "interaction_spec_written",
@@ -11,10 +11,13 @@
     "r01_model_contract_coded",
     "r02_draft_api_coded",
     "r01_r02_regression_tests_added",
-    "agent01_handoff_reviewed"
+    "agent01_handoff_reviewed",
+    "r03_task_center_visibility_coded",
+    "agent02_handoff_reviewed"
   ],
   "in_progress_tasks": [
-    "integration_review_for_r01_r02"
+    "integration_review_for_r01_r02",
+    "waiting_for_r04_r06_handoff"
   ],
   "blocked_tasks": [],
   "decisions": [
@@ -41,6 +44,11 @@
     {
       "id": "D005",
       "title": "Commit 51071188253984779ca7ce9bce1d7ce42bad1919 is the accepted R01-R02 contract baseline",
+      "status": "locked"
+    },
+    {
+      "id": "D006",
+      "title": "Commit 380baddf7c61c0d0dd4630eb1c1bea4a79c3044c is the accepted R03 task-center visibility baseline",
       "status": "locked"
     }
   ],
@@ -76,6 +84,14 @@
       "symptom": "The handoff touches files slightly outside the narrowest original scope",
       "current_judgement": "Scope expansion is explainable, but must be checked against Agent 02 and Agent 03 responsibilities",
       "next_action": "Review before cherry-picking or merging"
+    },
+    {
+      "id": "ISSUE-005",
+      "title": "Agent 02 backfill script has not been executed against a real historical database",
+      "where_found": "scripts/rel0415/backfill_smart_cut_task_center_visibility.py",
+      "symptom": "The visibility rules are coded and tested, but the real legacy dataset has not yet been backfilled",
+      "current_judgement": "Acceptable for now; production rollout must still decide when and how to run the script",
+      "next_action": "Plan the backfill execution during integration or release prep"
     }
   ],
   "last_verified_at": "2026-04-21T23:59:00+08:00",
@@ -84,6 +100,7 @@
     "R01-R02 are now coded in backend contract layer and documented here.",
     "Follow task.json as the only execution checklist.",
     "Use parallel_agents/ as the only handoff pack for external coding agents.",
-    "Agent 02 and Agent 03 may proceed against commit 51071188253984779ca7ce9bce1d7ce42bad1919."
+    "Agent 02 and Agent 03 may proceed against commit 51071188253984779ca7ce9bce1d7ce42bad1919.",
+    "R03 is accepted; Agent 04 should still wait for Agent 03 because preview/finalize depend on the workspace skeleton."
   ]
 }
