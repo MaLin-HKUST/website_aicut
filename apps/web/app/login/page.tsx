@@ -80,7 +80,7 @@ export default function LoginPage() {
             <h2 className="text-3xl font-semibold">登录</h2>
           </div>
 
-          <form className="space-y-4" onSubmit={onSubmit}>
+          <form action="/login/submit" className="space-y-4" method="post" onSubmit={onSubmit}>
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="login-username">
                 用户名
