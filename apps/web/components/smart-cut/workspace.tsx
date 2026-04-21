@@ -12,6 +12,8 @@ import { SmartCutScriptEditor, SmartCutScriptEditorHandle } from "@/components/s
 import { AuthResponse } from "@/lib/auth";
 import {
   createSmartCutTask,
+  ensureCurrentSmartCutDraft,
+  getCurrentSmartCutDraft,
   getSmartCutEdits,
   getSmartCutTask,
   SmartCutEdit,
@@ -85,48 +87,88 @@ function summarizeUploadName(value: string | null | undefined) {
   return cleaned.split("/").filter(Boolean).pop() ?? "尚未上传";
 }
 
-export function SmartCutLandingPage() {
-  const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function bootstrap() {
-      const authResponse = await fetch("/api/proxy/auth/me");
-      if (!authResponse.ok) {
-        router.replace("/login");
-        return;
-      }
-
-      const authPayload = (await authResponse.json()) as AuthResponse;
-      if (authPayload.user.role === "admin") {
-        router.replace("/admin");
-        return;
-      }
-
-      try {
-        const createdTask = await createSmartCutTask(authPayload.user.username);
-        router.replace(`/smart-cut/${createdTask.id}`);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "读取任务失败");
-      }
-    }
-
-    void bootstrap().catch((err) => {
-      setError(err instanceof Error ? err.message : "打开智能气口剪辑失败");
-    });
-  }, [router]);
-
-  return (
-    <Card className="flex min-h-[640px] items-center justify-center rounded-[32px] border-[#e5dacd] bg-[#f8f5ef] shadow-panel">
-      <div className="space-y-4 text-center">
-        <p className="text-lg font-medium text-stone-500">正在打开智能气口剪辑工作台…</p>
-        {error ? <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
-      </div>
-    </Card>
-  );
+function draftCacheKey(username: string) {
+  return `smart-cut:draft-task:${username}`;
 }
 
-export function SmartCutWorkspace({ taskId }: { taskId: string }) {
+function readCachedDraftTaskId(username: string): string | null {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(draftCacheKey(username));
+}
+
+function writeCachedDraftTaskId(username: string, taskId: string) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(draftCacheKey(username), taskId);
+}
+
+function clearCachedDraftTaskId(username: string) {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(draftCacheKey(username));
+}
+
+function isBusyStatus(status: string | null | undefined) {
+  return status ? ["analyzing", "previewing", "finalizing"].includes(status) : false;
+}
+
+function buildWorkspaceBanner(args: {
+  busyAction: "upload" | "analyze" | "preview" | "finalize" | null;
+  task: SmartCutTask | null;
+  uploadState: "idle" | "uploading" | "success" | "error";
+  canAnalyze: boolean;
+  hasAudioA: boolean;
+  hasAudioB: boolean;
+}) {
+  const { busyAction, task, uploadState, canAnalyze, hasAudioA, hasAudioB } = args;
+
+  if (uploadState === "uploading" || busyAction === "upload") {
+    return {
+      title: "正在上传素材",
+      detail: "视频和标准文案会进入当前会话草稿，上传完成后即可开始分析。",
+    };
+  }
+  if (busyAction === "analyze" || task?.status === "analyzing") {
+    return {
+      title: "正在收到您的信息并处理中……",
+      detail: "分析完成后，当前页面会直接显示删除线脚本和 audio_a。",
+    };
+  }
+  if (busyAction === "preview" || task?.status === "previewing") {
+    return {
+      title: "正在生成试听",
+      detail: "试听完成后，这里会切换到最新的 audio_b 播放器。",
+    };
+  }
+  if (busyAction === "finalize" || task?.status === "finalizing") {
+    return {
+      title: "正在生成视频",
+      detail: "当前任务会转入任务列表，工作台将回到下一条草稿的起点。",
+    };
+  }
+  if (hasAudioB) {
+    return {
+      title: "试听生成完成",
+      detail: "你可以继续调整删除线，或者直接开始生成视频。",
+    };
+  }
+  if (hasAudioA) {
+    return {
+      title: "分析完成，可调整删除线",
+      detail: "当前页已经回显删除线脚本和首版 audio_a，可直接进入试听。",
+    };
+  }
+  if (canAnalyze) {
+    return {
+      title: "素材已就绪，等待开始分析",
+      detail: "当前会话草稿已恢复，点击“开始分析”即可继续。",
+    };
+  }
+  return {
+    title: "等待上传视频和标准文案",
+    detail: "进入 /smart-cut 不会自动建任务；第一次真正上传时才会确保草稿存在。",
+  };
+}
+
+export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
   const router = useRouter();
   const [task, setTask] = useState<SmartCutTask | null>(null);
   const [currentUser, setCurrentUser] = useState<AuthResponse["user"] | null>(null);
@@ -146,6 +188,7 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
   const [busyAction, setBusyAction] = useState<"upload" | "analyze" | "preview" | "finalize" | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadState, setUploadState] = useState<"idle" | "uploading" | "success" | "error">("idle");
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const workspace = useUserWorkspaceData(currentUser?.username);
@@ -155,11 +198,31 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
 
   async function logout() {
     await fetch("/api/proxy/auth/logout", { method: "POST" });
+    if (currentUser?.username) {
+      clearCachedDraftTaskId(currentUser.username);
+    }
     router.replace("/login");
     router.refresh();
   }
 
+  async function hydrateTask(nextTaskId: string, username?: string) {
+    const [taskData, editData] = await Promise.all([getSmartCutTask(nextTaskId), getSmartCutEdits(nextTaskId).catch(() => [])]);
+
+    setTask(taskData);
+    setEdits(editData);
+    setOutputMode(taskData.output_mode ?? "original");
+    setFeedToAi(taskData.feed_to_ai ?? true);
+
+    const sourceScript = editData[0]?.edited_script ?? taskData.analyze_script ?? "";
+    setScriptDraft(sourceScript);
+    if (username) {
+      writeCachedDraftTaskId(username, taskData.id);
+    }
+    return taskData;
+  }
+
   async function bootstrap() {
+    setLoading(true);
     const authResponse = await fetch("/api/proxy/auth/me");
     if (!authResponse.ok) {
       router.replace("/login");
@@ -173,28 +236,52 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
     }
     setCurrentUser(authPayload.user);
 
-    const [taskData, editData] = await Promise.all([getSmartCutTask(taskId), getSmartCutEdits(taskId).catch(() => [])]);
+    try {
+      if (taskId) {
+        await hydrateTask(taskId, authPayload.user.username);
+        return;
+      }
 
-    setTask(taskData);
-    setEdits(editData);
-    setOutputMode(taskData.output_mode ?? "original");
-    setFeedToAi(taskData.feed_to_ai ?? true);
+      const draftLookup = await getCurrentSmartCutDraft();
+      if (draftLookup.task) {
+        await hydrateTask(draftLookup.task.id, authPayload.user.username);
+        return;
+      }
 
-    const sourceScript = editData[0]?.edited_script ?? taskData.analyze_script ?? "";
-    if (sourceScript) {
-      setScriptDraft(sourceScript);
+      if (!draftLookup.supported) {
+        const cachedTaskId = readCachedDraftTaskId(authPayload.user.username);
+        if (cachedTaskId) {
+          try {
+            await hydrateTask(cachedTaskId, authPayload.user.username);
+            return;
+          } catch {
+            clearCachedDraftTaskId(authPayload.user.username);
+          }
+        }
+      }
+
+      setTask(null);
+      setEdits([]);
+      setScriptDraft("");
+      setNotice(null);
+      setError(null);
+      setUploadState("idle");
+      setUploadProgress(0);
+    } finally {
+      setLoading(false);
     }
   }
 
   useEffect(() => {
     void bootstrap().catch((err) => {
       setError(err instanceof Error ? err.message : "读取任务失败");
+      setLoading(false);
     });
   }, [taskId]);
 
   useEffect(() => {
     if (!task) return;
-    if (!["analyzing", "previewing", "finalizing"].includes(task.status)) return;
+    if (!isBusyStatus(task.status)) return;
 
     const timer = window.setInterval(() => {
       void bootstrap().catch(() => undefined);
@@ -202,18 +289,37 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
     return () => window.clearInterval(timer);
   }, [task?.status]);
 
-  const canUpload = task && task.status === "waiting_upload";
-  const canAnalyze = task && task.status === "ready_analyze";
-  const canPreview = task && ["waiting_user", "preview_failed"].includes(task.status) && scriptDraft.length > 0;
-  const canFinalize = task && ["waiting_user", "finalize_failed"].includes(task.status);
+  const canUpload = (!task && Boolean(currentUser)) || task?.status === "waiting_upload";
+  const canAnalyze = task?.status === "ready_analyze";
+  const canPreview = Boolean(task && ["waiting_user", "preview_failed"].includes(task.status) && scriptDraft.length > 0);
+  const canFinalize = Boolean(task && ["waiting_user", "finalize_failed"].includes(task.status));
 
   useEffect(() => {
-    if (!task?.id || !canUpload || busyAction !== null || uploadState !== "idle" || !videoFile || !referenceFile) return;
+    if (!canUpload || busyAction !== null || uploadState !== "idle" || !videoFile || !referenceFile) return;
     void handleUpload().catch(() => undefined);
-  }, [busyAction, canUpload, referenceFile, task?.id, uploadState, videoFile]);
+  }, [busyAction, canUpload, currentUser?.username, referenceFile, task?.id, uploadState, videoFile]);
+
+  async function ensureDraftTask() {
+    if (task) return task;
+    if (!currentUser?.username) {
+      throw new Error("当前登录态未就绪，请刷新后重试");
+    }
+
+    const ensured = await ensureCurrentSmartCutDraft(currentUser.username);
+    if (ensured.task) {
+      setTask(ensured.task);
+      writeCachedDraftTaskId(currentUser.username, ensured.task.id);
+      return ensured.task;
+    }
+
+    const createdTask = await createSmartCutTask(currentUser.username);
+    setTask(createdTask);
+    writeCachedDraftTaskId(currentUser.username, createdTask.id);
+    return createdTask;
+  }
 
   async function handleUpload() {
-    if (!task || !videoFile || !referenceFile) return;
+    if (!videoFile || !referenceFile) return;
     setBusyAction("upload");
     setUploadProgress(0);
     setUploadState("uploading");
@@ -221,12 +327,16 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
     setNotice(null);
 
     try {
-      const nextTask = await uploadDirectInputs(task.id, videoFile, referenceFile, {
+      const ensuredTask = await ensureDraftTask();
+      const nextTask = await uploadDirectInputs(ensuredTask.id, videoFile, referenceFile, {
         onProgress: (progress) => {
           setUploadProgress(progress.percent);
         },
       });
       setTask(nextTask);
+      if (currentUser?.username) {
+        writeCachedDraftTaskId(currentUser.username, nextTask.id);
+      }
       setUploadProgress(100);
       setUploadState("success");
       setNotice("输入文件已上传，可以开始分析。");
@@ -279,6 +389,9 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
     try {
       const nextTask = await startFinalize(task.id, { outputMode, feedToAi });
       setTask(nextTask);
+      if (currentUser?.username) {
+        clearCachedDraftTaskId(currentUser.username);
+      }
       setNotice("生成视频任务已提交。按照 0415 规划，最终状态与下载会继续由任务中心接管。");
       router.push(`/tasks?taskId=${task.id}`);
     } catch (err) {
@@ -289,13 +402,24 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
   }
 
   const taskStatusLabel = task ? labelStatus(task.status) : "待同步";
-  const taskStageLabel = task ? labelStage(task.current_stage) : "等待推进";
+  const taskStageLabel = task ? labelStage(task.current_stage) : "会话草稿待创建";
   const uploadSummary = videoFile?.name ?? summarizeUploadName(task?.original_video_tos_key ?? task?.original_video_url);
   const referenceSummary = referenceFile?.name ?? summarizeUploadName(task?.reference_text_tos_key ?? task?.reference_text_url);
+  const audioAReady = Boolean(latestEdit?.audio_a_url);
   const previewReady = Boolean(latestEdit?.audio_b_url);
+  const audioPreviewUrl = latestEdit?.audio_b_url ?? latestEdit?.audio_a_url ?? null;
+  const audioPreviewLabel = latestEdit?.audio_b_url ? "试听音频 audio_b" : latestEdit?.audio_a_url ? "分析音频 audio_a" : null;
   const downloadReady = Boolean(task?.final_video_url);
   const stageOneLabel = canPreview ? "可生成试听" : canAnalyze ? "待开始分析" : "待上传素材";
   const stageTwoLabel = canFinalize ? "可生成视频" : previewReady ? "待确认规格" : "等待试听完成";
+  const banner = buildWorkspaceBanner({
+    busyAction,
+    task,
+    uploadState,
+    canAnalyze,
+    hasAudioA: audioAReady,
+    hasAudioB: previewReady,
+  });
   const uploadProgressText = formatPercent(uploadProgress);
   const uploadInFlight = uploadState === "uploading";
   const scriptActionsVisible = editorTab === "script";
@@ -347,6 +471,40 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
       previewTasks={workspace.previewTasks}
     >
       <section className="rounded-[32px] border border-[#dde1ea] bg-[#f7f9fc] p-6 shadow-[0_8px_24px_rgba(78,91,117,0.06)]">
+        {loading ? (
+          <Card className="mb-6 flex min-h-[160px] items-center justify-center rounded-[28px] border-[#dbe4f4] bg-white p-6 shadow-sm">
+            <p className="text-base font-medium text-stone-500">正在恢复当前会话草稿工作台…</p>
+          </Card>
+        ) : null}
+        {!loading ? (
+          <Card className="mb-6 rounded-[28px] border-[#dbe4f4] bg-[linear-gradient(135deg,#ffffff_0%,#eef5ff_100%)] p-5 shadow-sm">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <p className="text-xs tracking-[0.24em] text-[#6f7d92]">CURRENT DRAFT</p>
+                <h2 className="mt-2 text-[24px] font-semibold text-[#243444]">{banner.title}</h2>
+                <p className="mt-2 max-w-3xl text-sm leading-7 text-[#5f6f84]">{banner.detail}</p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-[20px] border border-[#dbe4f4] bg-white px-4 py-3">
+                  <p className="text-xs tracking-[0.2em] text-[#7a8494]">当前状态</p>
+                  <p className="mt-2 text-base font-semibold text-[#243444]">{taskStatusLabel}</p>
+                </div>
+                <div className="rounded-[20px] border border-[#dbe4f4] bg-white px-4 py-3">
+                  <p className="text-xs tracking-[0.2em] text-[#7a8494]">生命周期阶段</p>
+                  <p className="mt-2 text-base font-semibold text-[#243444]">{taskStageLabel}</p>
+                </div>
+                <div className="rounded-[20px] border border-[#dbe4f4] bg-white px-4 py-3">
+                  <p className="text-xs tracking-[0.2em] text-[#7a8494]">当前入口语义</p>
+                  <p className="mt-2 text-base font-semibold text-[#243444]">{task ? `已恢复草稿 ${task.id.slice(0, 8)}` : "空工作台，不自动建任务"}</p>
+                </div>
+                <div className="rounded-[20px] border border-[#dbe4f4] bg-white px-4 py-3">
+                  <p className="text-xs tracking-[0.2em] text-[#7a8494]">下一步</p>
+                  <p className="mt-2 text-base font-semibold text-[#243444]">{stageOneLabel} / {stageTwoLabel}</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+        ) : null}
         <div className="grid gap-6 xl:grid-cols-[1.7fr_0.62fr]">
           <div className="space-y-5">
             <Card className="rounded-[30px] border-[#dbe4f4] bg-white p-5 shadow-sm">
@@ -534,13 +692,22 @@ export function SmartCutWorkspace({ taskId }: { taskId: string }) {
                 </Button>
               </div>
               <div className="mt-5 rounded-[24px] border border-dashed border-[#ddd2c4] bg-[#fffdfa] p-6">
-                {latestEdit?.audio_b_url ? (
-                  <audio className="w-full" controls src={latestEdit.audio_b_url} />
+                {audioPreviewUrl ? (
+                  <div className="space-y-4">
+                    <div className="rounded-[18px] border border-[#ece2d4] bg-white px-4 py-3">
+                      <p className="text-xs tracking-[0.2em] text-[#7a7267]">CURRENT AUDIO</p>
+                      <p className="mt-2 text-base font-semibold text-[#241714]">{audioPreviewLabel}</p>
+                      <p className="mt-1 text-sm text-[#7b7267]">
+                        {previewReady ? "当前播放器展示的是用户修改删除线之后的 audio_b。" : "Analyze 完成后，这里会先回显首版 audio_a。"}
+                      </p>
+                    </div>
+                    <audio className="w-full" controls src={audioPreviewUrl} />
+                  </div>
                 ) : (
                   <div className="flex min-h-[240px] flex-col items-center justify-center text-center">
                     <p className="text-[24px] font-semibold text-[#241714]">还没有生成音频</p>
                     <p className="mt-6 max-w-[280px] text-[16px] leading-9 text-[#7b7267]">
-                      点击上方生成试听后，这里会显示播放器。
+                      Analyze 完成后这里先显示 audio_a，点击上方生成试听后再切到 audio_b。
                     </p>
                   </div>
                 )}

@@ -118,6 +118,41 @@ test.beforeEach(async ({ page }) => {
     });
   });
 
+  await page.route("**/api/proxy/api/smart-cut/draft/current", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        task: {
+          id: "smartcut_rel0415_001",
+          user_id: USER.username,
+          status: "waiting_user",
+          current_stage: "preview",
+          error_stage: null,
+          error_message: null,
+          original_video_url: null,
+          original_video_tos_key: "smart-cut/smartcut_rel0415_001/input/source_video.mp4",
+          reference_text_url: null,
+          reference_text_tos_key: "smart-cut/smartcut_rel0415_001/input/reference.txt",
+          analyze_script: "今天我们{先删掉这句}继续讲重点。",
+          analyze_script_tos_key: "smart-cut/smartcut_rel0415_001/analyze/script.txt",
+          asr_result_tos_key: "smart-cut/smartcut_rel0415_001/analyze/asr.json",
+          active_edit_id: "edit_rel0415_001",
+          finalize_source_edit_id: "edit_rel0415_001",
+          final_video_url: null,
+          final_video_tos_key: null,
+          groundtruth_url: null,
+          groundtruth_tos_key: null,
+          feed_to_ai: true,
+          output_mode: "original",
+          last_scheduler_task_id: "sched_rel0415_001",
+          created_at: "2026-04-18T08:00:00Z",
+          updated_at: "2026-04-18T10:10:00Z",
+        },
+      }),
+    });
+  });
+
   await page.route("**/api/proxy/api/smart-cut/tasks/smartcut_rel0415_001", async (route) => {
     await route.fulfill({
       status: 200,
@@ -197,7 +232,7 @@ test("rel0415 user can navigate login welcome tts smart-cut and tasks", async ({
   await expect(page.getByRole("button", { name: "下载音频" })).toBeVisible();
 
   await page.getByRole("button", { name: "智能剪气口" }).click();
-  await expect(page).toHaveURL(/\/smart-cut\/smartcut_rel0415_001$/);
+  await expect(page).toHaveURL(/\/smart-cut$/);
   await expect(page.getByText("请上传你要处理的视频和标准文案")).toBeVisible();
   await expect(page.getByRole("button", { name: "开始生成试听" })).toBeVisible();
 
