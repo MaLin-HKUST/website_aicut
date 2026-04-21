@@ -45,12 +45,14 @@
 6. [07_失败处理与回滚条件.md](./07_失败处理与回滚条件.md)
 7. [06_热补收口与发布收口.md](./06_热补收口与发布收口.md)
 8. [30_preview_delaycut_issue_2026-04-20/README.md](./30_preview_delaycut_issue_2026-04-20/README.md)
+9. [40_headed_browser_e2e_2026-04-21/README.md](./40_headed_browser_e2e_2026-04-21/README.md)
 
 其中：
 
 - `04_step_by_step执行计划.md` 是本专项的主 runbook
 - `05_证据清单与产物目录.md` 是每一步的证据对照表
 - `07_失败处理与回滚条件.md` 是失败时的分叉处理面
+- `40_headed_browser_e2e_2026-04-21/task.json` 是“真实浏览器 + 真实数据 + 页面/API/DB/Worker/TOS 联查”的专项执行清单
 
 ## 当前结论
 

@@ -1,0 +1,726 @@
+{
+  "spec_version": "2026-04-21.v1",
+  "track": "headed_browser_real_data_smart_cut_e2e",
+  "summary": "使用 headed Playwright 在正式站以真实账号和真实样本完整跑通智能剪气口，并在每一步同步检查页面、API、调度数据库、Worker 与 TOS。",
+  "base_url": "https://xiaomajianji.cn",
+  "account": {
+    "username": "rbzj",
+    "password_ref": "../基础网络信息和账号信息.md#前端网页登录账号"
+  },
+  "fixtures": {
+    "video_path": "/Volumes/XIAOMA-A-1T/wei_videodb/C2384_reencoded.mp4",
+    "reference_text_path": "/Volumes/XIAOMA-A-1T/wei_videodb/ref.txt",
+    "source_of_truth_docs": [
+      "HarnessPlan/rel0415_acceptance/reports/acceptance_20260417_real_data_flow.md",
+      "HarnessPlan/rel0415_acceptance/reports/acceptance_20260417_real_data_inventory.md",
+      "tests/test_cujiian/manual_case_config.json"
+    ]
+  },
+  "runtime_observation": {
+    "frontend_entry": "https://xiaomajianji.cn",
+    "a_machine": "14.103.249.104",
+    "worker_1": "14.103.63.252",
+    "legacy_api_port": 8000,
+    "smart_cut_api_port": 18001,
+    "postgres_port": 55433,
+    "notes": [
+      "只允许使用线上运行面，不做本地镜像对照",
+      "执行时允许同步查看 A 机日志、Worker 日志和 PostgreSQL 状态"
+    ]
+  },
+  "artifact_root_template": "new_book_rel-0418/20_real_data_chain_2026-04-19/artifacts/<timestamp>_headed_real_browser_run",
+  "tasks": [
+    {
+      "id": "T00",
+      "title": "运行面前置检查",
+      "goal": "确认正式站、A机、Worker 和文档描述一致，避免在漂移环境上开始真实浏览器验收。",
+      "requires": [],
+      "environment_checks": [
+        "https://xiaomajianji.cn/login 可访问",
+        "A机 3301/8000/18001/55433 对应运行面存在",
+        "worker1-phase6-gateway 正在运行",
+        "PostgreSQL 可连接且关键表存在"
+      ],
+      "inputs": [
+        "new_book_rel-0418/基础网络信息和账号信息.md",
+        "../10_rebuild_2026-04-18/11_2026-04-19_当前系统状态.md",
+        "../10_rebuild_2026-04-18/12_2026-04-19_当前Release与证据索引.md"
+      ],
+      "ui_actions": [
+        "在浏览器打开 /login，确认页面能加载"
+      ],
+      "ui_assertions": [
+        "登录页可见“登录”标题",
+        "页面无整页报错 overlay"
+      ],
+      "api_checks": [
+        "POST /api/proxy/auth/login 可返回 200 或 303",
+        "GET /welcome 返回 200"
+      ],
+      "db_checks": [
+        "连接 55433，确认 smart_cut_tasks、scheduler_tasks、smart_cut_edits 存在"
+      ],
+      "worker_checks": [
+        "worker1-phase6-gateway 容器 running/healthy",
+        "最近心跳时间可见"
+      ],
+      "tos_checks": [
+        "仅确认 TOS 凭据与 bucket 可用，不在此步上传业务对象"
+      ],
+      "expected_result": [
+        "环境与 codebook 描述一致，可以进入 T01"
+      ],
+      "failure_capture": [
+        "preflight_a_machine.txt",
+        "preflight_worker.txt",
+        "preflight_domain.txt"
+      ],
+      "artifacts": [
+        "preflight_a_machine.txt",
+        "preflight_worker.txt",
+        "preflight_domain.txt"
+      ],
+      "stop_on_failure": true
+    },
+    {
+      "id": "T01",
+      "title": "固定真实样本",
+      "goal": "把这轮浏览器验收使用的视频和文案固定下来，避免样本漂移。",
+      "requires": [
+        "T00"
+      ],
+      "environment_checks": [
+        "样本盘已挂载",
+        "ffprobe 可用"
+      ],
+      "inputs": [
+        "/Volumes/XIAOMA-A-1T/wei_videodb/C2384_reencoded.mp4",
+        "/Volumes/XIAOMA-A-1T/wei_videodb/ref.txt"
+      ],
+      "ui_actions": [],
+      "ui_assertions": [],
+      "api_checks": [],
+      "db_checks": [],
+      "worker_checks": [],
+      "tos_checks": [],
+      "expected_result": [
+        "视频与文案可读，基础信息已落档"
+      ],
+      "failure_capture": [
+        "样本路径不存在截图或终端输出",
+        "ffprobe 报错输出"
+      ],
+      "artifacts": [
+        "sample_info.txt",
+        "sample_ffprobe.txt",
+        "sample_text_preview.txt"
+      ],
+      "stop_on_failure": true
+    },
+    {
+      "id": "T02",
+      "title": "建立本轮 artifacts 目录",
+      "goal": "为本轮 headed 浏览器运行建立唯一证据目录和运行上下文。",
+      "requires": [
+        "T01"
+      ],
+      "environment_checks": [
+        "new_book_rel-0418/20_real_data_chain_2026-04-19/artifacts 可写"
+      ],
+      "inputs": [
+        "当前 git commit",
+        "当前时间戳"
+      ],
+      "ui_actions": [],
+      "ui_assertions": [],
+      "api_checks": [],
+      "db_checks": [],
+      "worker_checks": [],
+      "tos_checks": [],
+      "expected_result": [
+        "本轮 artifacts 目录存在，后续文件命名固定"
+      ],
+      "failure_capture": [
+        "目录创建错误信息"
+      ],
+      "artifacts": [
+        "run_context.txt",
+        "api_base.txt",
+        "nginx_upstream.txt"
+      ],
+      "stop_on_failure": true
+    },
+    {
+      "id": "T03",
+      "title": "真实浏览器登录",
+      "goal": "用 headed Playwright 在正式站完成真实登录。",
+      "requires": [
+        "T02"
+      ],
+      "environment_checks": [
+        "浏览器可启动 headed 模式",
+        "rbzj 账号可用"
+      ],
+      "inputs": [
+        "username=rbzj",
+        "password=123456"
+      ],
+      "ui_actions": [
+        "打开 https://xiaomajianji.cn/login",
+        "输入用户名 rbzj",
+        "输入密码 123456",
+        "点击 登录"
+      ],
+      "ui_assertions": [
+        "页面跳转到 /welcome",
+        "欢迎页出现公司名或欢迎语",
+        "页面不再停在 loading 状态"
+      ],
+      "api_checks": [
+        "POST /api/proxy/auth/login 返回 200 或登录 fallback 返回 303",
+        "session cookie 已写入"
+      ],
+      "db_checks": [
+        "本步不要求数据库写入业务任务，但可确认会话相关调用无异常"
+      ],
+      "worker_checks": [],
+      "tos_checks": [],
+      "expected_result": [
+        "浏览器已登录，可继续访问受保护页面"
+      ],
+      "failure_capture": [
+        "login_page.png",
+        "login_after_submit.png",
+        "login_request.json",
+        "login_response.json",
+        "login_cookies.txt"
+      ],
+      "artifacts": [
+        "login.json",
+        "screenshots/login_before.png",
+        "screenshots/login_after.png"
+      ],
+      "stop_on_failure": true
+    },
+    {
+      "id": "T04",
+      "title": "进入 Smart Cut 入口并创建任务",
+      "goal": "从正式站入口真实创建一条新的 Smart Cut 业务任务。",
+      "requires": [
+        "T03"
+      ],
+      "environment_checks": [
+        "登录态有效"
+      ],
+      "inputs": [
+        "当前登录态"
+      ],
+      "ui_actions": [
+        "访问 https://xiaomajianji.cn/smart-cut"
+      ],
+      "ui_assertions": [
+        "不出现 Task creation did not return task_id",
+        "页面自动进入 /smart-cut/<taskId> 或工作区可见"
+      ],
+      "api_checks": [
+        "POST /api/proxy/api/smart-cut/tasks 成功",
+        "返回体含可用 task id"
+      ],
+      "db_checks": [
+        "smart_cut_tasks 新增一行",
+        "status 初始值合理",
+        "当前用户与 company 归属正确"
+      ],
+      "worker_checks": [],
+      "tos_checks": [],
+      "expected_result": [
+        "拿到本轮新的 taskId，且它不是历史任务"
+      ],
+      "failure_capture": [
+        "smartcut_entry.png",
+        "task_create.json",
+        "task_detail_after_create.json"
+      ],
+      "artifacts": [
+        "create.json",
+        "task_id.txt",
+        "task_detail_after_create.json",
+        "screenshots/smartcut_entry.png"
+      ],
+      "stop_on_failure": true
+    },
+    {
+      "id": "T05",
+      "title": "上传真实视频",
+      "goal": "通过页面上传 C2384_reencoded.mp4，并确认输入视频对象进入任务前缀。",
+      "requires": [
+        "T04"
+      ],
+      "environment_checks": [
+        "页面存在视频上传控件",
+        "视频文件可读"
+      ],
+      "inputs": [
+        "/Volumes/XIAOMA-A-1T/wei_videodb/C2384_reencoded.mp4"
+      ],
+      "ui_actions": [
+        "点击 上传视频",
+        "选择 C2384_reencoded.mp4",
+        "等待上传完成"
+      ],
+      "ui_assertions": [
+        "页面显示视频文件名",
+        "上传状态从进行中变成完成",
+        "页面无上传报错文案"
+      ],
+      "api_checks": [
+        "上传相关接口返回成功",
+        "任务详情 original_video_tos_key 非空"
+      ],
+      "db_checks": [
+        "任务输入字段已记录视频对象 key"
+      ],
+      "worker_checks": [
+        "此步不应触发 analyze/preview/finalize worker 消费"
+      ],
+      "tos_checks": [
+        "输入视频对象存在于 smart-cut/<taskId>/input/ 前缀"
+      ],
+      "expected_result": [
+        "视频上传成功，页面进入“已上传视频”状态"
+      ],
+      "failure_capture": [
+        "upload_video_ui.png",
+        "upload_video_response.json",
+        "task_detail_after_video_upload.json"
+      ],
+      "artifacts": [
+        "upload_video.json",
+        "task_detail_after_video_upload.json",
+        "screenshots/upload_video_done.png"
+      ],
+      "stop_on_failure": true
+    },
+    {
+      "id": "T06",
+      "title": "上传真实文案",
+      "goal": "通过页面上传 ref.txt，并确认 analyze 所需输入已齐全。",
+      "requires": [
+        "T05"
+      ],
+      "environment_checks": [
+        "页面存在文案上传控件",
+        "ref.txt 可读"
+      ],
+      "inputs": [
+        "/Volumes/XIAOMA-A-1T/wei_videodb/ref.txt"
+      ],
+      "ui_actions": [
+        "点击 上传标准文案",
+        "选择 ref.txt",
+        "等待上传完成"
+      ],
+      "ui_assertions": [
+        "页面显示文案文件名",
+        "分析按钮变为可用"
+      ],
+      "api_checks": [
+        "上传文案接口成功",
+        "reference_text_tos_key 非空"
+      ],
+      "db_checks": [
+        "任务输入字段已记录文案对象 key"
+      ],
+      "worker_checks": [],
+      "tos_checks": [
+        "文案对象存在于 smart-cut/<taskId>/input/ 前缀"
+      ],
+      "expected_result": [
+        "视频和文案都已就位，可以启动 analyze"
+      ],
+      "failure_capture": [
+        "upload_text_ui.png",
+        "upload_text_response.json",
+        "task_detail_after_text_upload.json"
+      ],
+      "artifacts": [
+        "upload_text.json",
+        "task_detail_after_text_upload.json",
+        "screenshots/upload_text_done.png"
+      ],
+      "stop_on_failure": true
+    },
+    {
+      "id": "T07",
+      "title": "启动 analyze 并校验页面进入可编辑态",
+      "goal": "让真实任务完成 analyze，并在页面上出现可编辑脚本。",
+      "requires": [
+        "T06"
+      ],
+      "environment_checks": [
+        "开始分析按钮可点击"
+      ],
+      "inputs": [
+        "当前 taskId"
+      ],
+      "ui_actions": [
+        "点击 开始分析",
+        "等待页面从分析中切换到可编辑态"
+      ],
+      "ui_assertions": [
+        "页面先显示分析中",
+        "随后显示识别结果和标准文案区域",
+        "识别结果文本可见",
+        "标记删除/恢复保留/清空删除标记 按钮可见"
+      ],
+      "api_checks": [
+        "POST /analyze 成功",
+        "任务详情先进入 analyzing/analyze，后进入 waiting_user/user_select",
+        "active_edit_id 非空"
+      ],
+      "db_checks": [
+        "scheduler_tasks 新增 analyze 任务并成功",
+        "smart_cut_tasks.status/current_stage 符合预期"
+      ],
+      "worker_checks": [
+        "Worker 领取 analyze 任务",
+        "Worker 日志出现本 taskId",
+        "analyze 执行结束后 worker 回到空闲或等待下一任务"
+      ],
+      "tos_checks": [
+        "存在 asr.json",
+        "存在 script.json",
+        "存在 delay_cuts.json",
+        "存在 audio_a.mp3"
+      ],
+      "expected_result": [
+        "analyze 成功，页面进入可编辑状态"
+      ],
+      "failure_capture": [
+        "analyze_ui_before.png",
+        "analyze_ui_after.png",
+        "analyze_response.json",
+        "task_poll_analyze.txt",
+        "worker_logs_analyze.txt",
+        "tos_objects_after_analyze.txt"
+      ],
+      "artifacts": [
+        "analyze.json",
+        "analyze_complete.json",
+        "task_poll_analyze.txt",
+        "worker_logs_analyze.txt",
+        "tos_objects_after_analyze.txt",
+        "screenshots/analyze_before.png",
+        "screenshots/analyze_after.png"
+      ],
+      "stop_on_failure": true
+    },
+    {
+      "id": "T08",
+      "title": "页面内做最小合法编辑",
+      "goal": "在不改正文的前提下，做一次符合当前 preview 契约的删除标记。",
+      "requires": [
+        "T07"
+      ],
+      "environment_checks": [
+        "页面已处于 user_select 可编辑态",
+        "识别结果文本可选中"
+      ],
+      "inputs": [
+        "当前 active_edit_id",
+        "当前 analyze_script"
+      ],
+      "ui_actions": [
+        "在识别结果中选中一小段文本",
+        "点击 标记删除"
+      ],
+      "ui_assertions": [
+        "选中片段出现删除标记视觉效果",
+        "页面无“脚本不合法”或契约错误提示"
+      ],
+      "api_checks": [
+        "编辑稿保存请求成功",
+        "去掉删除标记后的可见文本仍等于 analyze_script"
+      ],
+      "db_checks": [
+        "smart_cut_edits 当前 edit 已更新",
+        "没有跨 task edit 被错误复用"
+      ],
+      "worker_checks": [],
+      "tos_checks": [],
+      "expected_result": [
+        "当前 edit 已处于一个最小合法的 preview 输入状态"
+      ],
+      "failure_capture": [
+        "edit_before.png",
+        "edit_after.png",
+        "edited_script.txt",
+        "edit_validation_response.json"
+      ],
+      "artifacts": [
+        "edited_script.txt",
+        "edit_validation.json",
+        "screenshots/edit_before.png",
+        "screenshots/edit_after.png"
+      ],
+      "stop_on_failure": true
+    },
+    {
+      "id": "T09",
+      "title": "启动 preview 并校验试听产物",
+      "goal": "生成试听音频，并在页面上看到播放器。",
+      "requires": [
+        "T08"
+      ],
+      "environment_checks": [
+        "开始生成试听按钮可点击"
+      ],
+      "inputs": [
+        "当前 taskId",
+        "当前 active_edit_id"
+      ],
+      "ui_actions": [
+        "点击 开始生成试听",
+        "等待页面进入试听生成中，再等待完成"
+      ],
+      "ui_assertions": [
+        "页面先显示试听生成中",
+        "成功后出现音频播放器或试听区域",
+        "页面不出现 preview_failed 错误"
+      ],
+      "api_checks": [
+        "POST /preview 成功",
+        "任务详情重新进入 waiting_user/user_select",
+        "audio_b_url 非空",
+        "active_edit_id 保持为当前 edit 或更新为新的有效 edit"
+      ],
+      "db_checks": [
+        "scheduler_tasks 新增 preview 任务并成功",
+        "edit 结果状态与 preview 成功一致"
+      ],
+      "worker_checks": [
+        "Worker 领取 preview 任务",
+        "如果失败，必须抓 manifest 中的 debug_alignment_failure_path 或失败片段"
+      ],
+      "tos_checks": [
+        "存在 preview 音频对象",
+        "存在 edited_delay_cuts.json"
+      ],
+      "expected_result": [
+        "preview 成功，页面出现试听能力"
+      ],
+      "failure_capture": [
+        "preview_before.png",
+        "preview_after.png",
+        "preview_response.json",
+        "task_poll_preview.txt",
+        "worker_logs_preview.txt",
+        "tos_objects_after_preview.txt",
+        "preview_failure_manifest.json"
+      ],
+      "artifacts": [
+        "preview.json",
+        "preview_complete.json",
+        "task_poll_preview.txt",
+        "worker_logs_preview.txt",
+        "tos_objects_after_preview.txt",
+        "screenshots/preview_before.png",
+        "screenshots/preview_after.png"
+      ],
+      "stop_on_failure": true
+    },
+    {
+      "id": "T10",
+      "title": "启动 finalize 并校验自动回写",
+      "goal": "生成最终视频，且由系统自动上传到 TOS 并自动回写最终状态。",
+      "requires": [
+        "T09"
+      ],
+      "environment_checks": [
+        "开始生成视频按钮可点击",
+        "preview 已成功"
+      ],
+      "inputs": [
+        "当前 taskId",
+        "当前 active_edit_id"
+      ],
+      "ui_actions": [
+        "点击 开始生成视频",
+        "等待页面进入生成视频中，再等待完成"
+      ],
+      "ui_assertions": [
+        "页面先显示处理中",
+        "成功后出现完成态与下载入口",
+        "页面不长期停在 finalizing"
+      ],
+      "api_checks": [
+        "POST /finalize 成功",
+        "任务详情最终为 success/complete",
+        "final_video_url 非空"
+      ],
+      "db_checks": [
+        "finalize 对应 scheduler_task 成功",
+        "smart_cut_tasks.final_video_url 已自动回写",
+        "smart_cut_tasks.status/current_stage 正确"
+      ],
+      "worker_checks": [
+        "Worker 领取 finalize 任务",
+        "Worker 日志显示上传最终视频到 TOS",
+        "Worker 最终回到 idle"
+      ],
+      "tos_checks": [
+        "存在 smart-cut/<taskId>/finalize/final_video.mp4"
+      ],
+      "expected_result": [
+        "finalize 完整成功，且不需要手工补传或手工改库"
+      ],
+      "failure_capture": [
+        "finalize_before.png",
+        "finalize_after.png",
+        "finalize_response.json",
+        "task_poll_finalize.txt",
+        "worker_logs_finalize.txt",
+        "tos_objects_after_finalize.txt",
+        "task_detail_final.json"
+      ],
+      "artifacts": [
+        "finalize.json",
+        "finalize_complete.json",
+        "task_poll_finalize.txt",
+        "worker_logs_finalize.txt",
+        "tos_objects_after_finalize.txt",
+        "task_detail_final.json",
+        "screenshots/finalize_before.png",
+        "screenshots/finalize_after.png"
+      ],
+      "stop_on_failure": true
+    },
+    {
+      "id": "T11",
+      "title": "页面侧复核任务列表与详情页",
+      "goal": "验证用户在页面层面真实能看到本轮任务结果，而不是只有后端成功。",
+      "requires": [
+        "T10"
+      ],
+      "environment_checks": [
+        "当前任务已 success/complete"
+      ],
+      "inputs": [
+        "taskId",
+        "final_video_url"
+      ],
+      "ui_actions": [
+        "打开 /tasks?taskId=<taskId>",
+        "打开 /smart-cut/<taskId>"
+      ],
+      "ui_assertions": [
+        "任务列表能看到本轮任务",
+        "任务详情页显示完成态",
+        "页面可见试听区域",
+        "页面可见最终下载入口"
+      ],
+      "api_checks": [
+        "GET /api/proxy/api/smart-cut/tasks/<taskId> 返回完成态"
+      ],
+      "db_checks": [
+        "数据库状态与页面显示一致"
+      ],
+      "worker_checks": [],
+      "tos_checks": [],
+      "expected_result": [
+        "页面端与后端状态一致"
+      ],
+      "failure_capture": [
+        "tasks_page.png",
+        "smartcut_detail_done.png",
+        "task_detail_final_again.json"
+      ],
+      "artifacts": [
+        "screenshots/tasks_page.png",
+        "screenshots/smartcut_detail_done.png",
+        "task_detail_final_again.json"
+      ],
+      "stop_on_failure": true
+    },
+    {
+      "id": "T12",
+      "title": "验证最终下载链路",
+      "goal": "确认 final_video_url 对应的对象真实存在且可下载。",
+      "requires": [
+        "T11"
+      ],
+      "environment_checks": [
+        "final_video_url 已存在"
+      ],
+      "inputs": [
+        "final_video_url"
+      ],
+      "ui_actions": [
+        "点击页面中的下载入口，或通过浏览器请求下载地址"
+      ],
+      "ui_assertions": [
+        "浏览器开始下载或返回有效视频响应"
+      ],
+      "api_checks": [
+        "task detail 中的 final_video_url 与页面入口一致"
+      ],
+      "db_checks": [],
+      "worker_checks": [],
+      "tos_checks": [
+        "HEAD/GET final video 对象成功",
+        "对象大小非零"
+      ],
+      "expected_result": [
+        "最终视频确实可用，不是空链接"
+      ],
+      "failure_capture": [
+        "download_click.png",
+        "final_video_head.txt",
+        "final_object_stat.txt"
+      ],
+      "artifacts": [
+        "download_check.txt",
+        "final_video_head.txt",
+        "final_object_stat.txt"
+      ],
+      "stop_on_failure": true
+    },
+    {
+      "id": "T13",
+      "title": "证据落档与状态回写",
+      "goal": "把本轮 headed 浏览器验收的结论沉淀回 codebook，供后续 Agent 复用。",
+      "requires": [
+        "T12"
+      ],
+      "environment_checks": [
+        "本轮 artifacts 已完整"
+      ],
+      "inputs": [
+        "本轮 taskId",
+        "analyze/preview/finalize scheduler task ids",
+        "final_video_url",
+        "关键截图与日志"
+      ],
+      "ui_actions": [],
+      "ui_assertions": [],
+      "api_checks": [],
+      "db_checks": [],
+      "worker_checks": [],
+      "tos_checks": [],
+      "expected_result": [
+        "本轮执行有完整结论和证据索引"
+      ],
+      "failure_capture": [
+        "如果文档回写失败，记录未更新项清单"
+      ],
+      "artifacts": [
+        "browser_run_summary.md",
+        "artifact_index.md",
+        "artifact_manifest.json",
+        "sanitized_summary.md",
+        "playwright_trace.zip"
+      ],
+      "stop_on_failure": true
+    }
+  ]
+}
