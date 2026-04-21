@@ -55,12 +55,14 @@
 9. [task.json](./task.json)
 10. [progress.md](./progress.md)
 11. [progress.json](./progress.json)
+12. [parallel_agents/README.md](./parallel_agents/README.md)
 
 其中：
 
 - `task.json` 是唯一执行清单
 - `progress.md` 是面向人类的开发日志
 - `progress.json` 是面向 Agent 的结构化状态
+- `parallel_agents/` 是发给并行 coding agent 的任务书集合
 
 ## 文件说明
 

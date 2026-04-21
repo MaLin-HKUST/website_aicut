@@ -12,6 +12,8 @@
 - 写入目标交互、数据模型、前端状态机、任务中心规则、验收标准
 - 写入 `task.json`
 - 建立 `progress.md` 与 `progress.json`
+- 建立并行开发任务书目录 `parallel_agents/`
+- 写入 5 个并行 agent 任务书与统一回交模板
 
 ## 正在进行
 
@@ -28,6 +30,8 @@
 - finalize 前任务不进入任务中心
 - analyze 后页面必须直接展示 `audio_a`
 - preview 后页面必须直接展示 `audio_b`
+- 并行开发按 5 个 agent 分工执行
+- Agent 01 先行锁定契约，其余 agent 按依赖关系启动
 
 ## 需要同步给其他 Agent 的上下文
 
@@ -38,7 +42,8 @@
 ## 最近一次验证结果
 
 - 当前专项文档已落地
-- `task.json` 结构待做 JSON 解析校验
+- `task.json` 已通过 JSON 解析校验
+- 并行开发任务书目录已落地
 
 ## 已知问题记录
 

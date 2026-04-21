@@ -6,7 +6,8 @@
     "package_bootstrap",
     "interaction_spec_written",
     "task_json_written",
-    "progress_files_initialized"
+    "progress_files_initialized",
+    "parallel_agent_handoffs_written"
   ],
   "in_progress_tasks": [],
   "blocked_tasks": [],
@@ -24,6 +25,11 @@
     {
       "id": "D003",
       "title": "Analyze result must render audio_a directly in current page",
+      "status": "locked"
+    },
+    {
+      "id": "D004",
+      "title": "Parallel execution uses five bounded coding agents with Agent 01 locking the contract first",
       "status": "locked"
     }
   ],
@@ -45,10 +51,11 @@
       "next_action": "Fix in R03"
     }
   ],
-  "last_verified_at": "2026-04-21T00:00:00+08:00",
+  "last_verified_at": "2026-04-21T23:59:00+08:00",
   "last_good_commit": "",
   "notes": [
     "This package is planning and execution scaffolding only; implementation not started yet.",
-    "Follow task.json as the only execution checklist."
+    "Follow task.json as the only execution checklist.",
+    "Use parallel_agents/ as the only handoff pack for external coding agents."
   ]
 }
