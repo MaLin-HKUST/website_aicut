@@ -1,7 +1,7 @@
 {
   "spec_version": "2026-04-21.v1",
   "track": "smart_cut_workspace_refactor",
-  "current_phase": "R01-R09 reviewed; ready to start R10-R11",
+  "current_phase": "R01-R11 reviewed; awaiting integration and deployment alignment",
   "completed_tasks": [
     "package_bootstrap",
     "interaction_spec_written",
@@ -17,11 +17,13 @@
     "r04_r06_workspace_entry_and_analyze_coded",
     "agent03_handoff_reviewed",
     "r07_r09_preview_finalize_workspace_coded",
-    "agent04_handoff_reviewed"
+    "agent04_handoff_reviewed",
+    "r10_r11_evidence_and_docs_curated",
+    "agent05_handoff_reviewed"
   ],
   "in_progress_tasks": [
     "integration_review_for_r01_r02",
-    "waiting_for_r10_r11_real_e2e_handoff"
+    "integration_and_release_decision"
   ],
   "blocked_tasks": [],
   "decisions": [
@@ -63,6 +65,11 @@
     {
       "id": "D008",
       "title": "Commit 7831b90107414ea986f1b7c86481efe07ec2f591 is the accepted R07-R09 workspace-first preview/finalize baseline",
+      "status": "locked"
+    },
+    {
+      "id": "D009",
+      "title": "Commit 3bcda4485726ab3a312f249bbfd4e9b4bf0dd54a is the accepted R10-R11 evidence-and-docs baseline",
       "status": "locked"
     }
   ],
@@ -138,6 +145,22 @@
       "symptom": "The handoff explicitly notes pre-existing local modifications in the same file",
       "current_judgement": "Integratable, but mainline integration must review the combined diff carefully",
       "next_action": "Review when cherry-picking or integrating R04-R06 and R07-R09 together"
+    },
+    {
+      "id": "ISSUE-010",
+      "title": "Agent 05 did not rerun a fresh real task from create to finalize",
+      "where_found": "R10-R11 validation layer",
+      "symptom": "The handoff curates evidence around the prior 542a... run and live checks instead of a new end-to-end rerun after refactor deployment",
+      "current_judgement": "Good enough for documentation closure, not good enough to declare the refactor deployed and proven fresh",
+      "next_action": "Run a fresh headed browser full chain after integration/deployment"
+    },
+    {
+      "id": "ISSUE-011",
+      "title": "Live candidate PostgreSQL still does not reflect the full draft/task-center contract",
+      "where_found": "live schema verification",
+      "symptom": "visible_in_task_center and task_title are not yet observed as fully deployed in the live candidate database",
+      "current_judgement": "Codebook and repo evolved ahead of live deployment; integration must close that gap",
+      "next_action": "Handle schema alignment during integration/release"
     }
   ],
   "last_verified_at": "2026-04-21T23:59:00+08:00",
@@ -149,6 +172,7 @@
     "Agent 02 and Agent 03 may proceed against commit 51071188253984779ca7ce9bce1d7ce42bad1919.",
     "R03 is accepted; Agent 04 should still wait for Agent 03 because preview/finalize depend on the workspace skeleton.",
     "Agent 04 may now proceed against commit a00466106aeda2ee2877ac20c27dcdce0609baea.",
-    "Agent 05 may now proceed against commit 7831b90107414ea986f1b7c86481efe07ec2f591."
+    "Agent 05 may now proceed against commit 7831b90107414ea986f1b7c86481efe07ec2f591.",
+    "The refactor is not deploy-complete until integration resolves live schema alignment and a fresh headed browser rerun succeeds."
   ]
 }
