@@ -254,9 +254,9 @@ class RealTOSClient:
             os.environ.get("TOS_MULTIPART_THRESHOLD_BYTES", str(32 * 1024 * 1024))
         )
         self.multipart_part_size = int(
-            os.environ.get("TOS_MULTIPART_PART_SIZE_BYTES", str(20 * 1024 * 1024))
+            os.environ.get("TOS_MULTIPART_PART_SIZE_BYTES", str(5 * 1024 * 1024))
         )
-        self.multipart_task_num = int(os.environ.get("TOS_MULTIPART_TASK_NUM", "4"))
+        self.multipart_task_num = int(os.environ.get("TOS_MULTIPART_TASK_NUM", "1"))
     
     def generate_presigned_url(
         self,
