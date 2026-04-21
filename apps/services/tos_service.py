@@ -244,12 +244,6 @@ class RealTOSClient:
         self._http_method_type = HttpMethodType
         self.endpoint = endpoint
         self.region = region
-        self.client = tos.TosClientV2(
-            access_key,
-            secret_key,
-            endpoint,
-            region,
-        )
         self.multipart_threshold_bytes = int(
             os.environ.get("TOS_MULTIPART_THRESHOLD_BYTES", str(32 * 1024 * 1024))
         )
@@ -257,6 +251,25 @@ class RealTOSClient:
             os.environ.get("TOS_MULTIPART_PART_SIZE_BYTES", str(5 * 1024 * 1024))
         )
         self.multipart_task_num = int(os.environ.get("TOS_MULTIPART_TASK_NUM", "1"))
+        # TOS Python SDK defaults to a 30s socket timeout, which is too small for
+        # A-machine -> TOS uploads on slow links. Keep the defaults conservative
+        # but explicitly long so upload-direct can finish without hidden retries.
+        self.socket_timeout_seconds = int(
+            os.environ.get("TOS_SOCKET_TIMEOUT_SECONDS", "1800")
+        )
+        self.connection_timeout_seconds = int(
+            os.environ.get("TOS_CONNECTION_TIMEOUT_SECONDS", "30")
+        )
+        self.max_retry_count = int(os.environ.get("TOS_MAX_RETRY_COUNT", "5"))
+        self.client = tos.TosClientV2(
+            access_key,
+            secret_key,
+            endpoint,
+            region,
+            max_retry_count=self.max_retry_count,
+            connection_time=self.connection_timeout_seconds,
+            socket_timeout=self.socket_timeout_seconds,
+        )
     
     def generate_presigned_url(
         self,

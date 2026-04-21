@@ -50,6 +50,9 @@ def test_real_tos_client_uses_single_put_for_small_files(monkeypatch, tmp_path: 
 
     assert fake_client.calls[0][0] == "put_object_from_file"
     assert result["upload_strategy"] == "single_put"
+    assert client.socket_timeout_seconds == 1800
+    assert client.connection_timeout_seconds == 30
+    assert client.max_retry_count == 5
 
 
 def test_real_tos_client_uses_multipart_for_large_files(monkeypatch, tmp_path: Path) -> None:
@@ -60,6 +63,9 @@ def test_real_tos_client_uses_multipart_for_large_files(monkeypatch, tmp_path: P
     monkeypatch.setenv("TOS_MULTIPART_THRESHOLD_BYTES", "8")
     monkeypatch.setenv("TOS_MULTIPART_PART_SIZE_BYTES", "5")
     monkeypatch.setenv("TOS_MULTIPART_TASK_NUM", "3")
+    monkeypatch.setenv("TOS_SOCKET_TIMEOUT_SECONDS", "900")
+    monkeypatch.setenv("TOS_CONNECTION_TIMEOUT_SECONDS", "45")
+    monkeypatch.setenv("TOS_MAX_RETRY_COUNT", "7")
 
     source = tmp_path / "large.bin"
     source.write_bytes(b"0123456789abcdef")
@@ -77,4 +83,7 @@ def test_real_tos_client_uses_multipart_for_large_files(monkeypatch, tmp_path: P
     assert fake_client.calls[0][1]["part_size"] == 5
     assert fake_client.calls[0][1]["task_num"] == 3
     assert fake_client.calls[0][1]["enable_checkpoint"] is True
+    assert client.socket_timeout_seconds == 900
+    assert client.connection_timeout_seconds == 45
+    assert client.max_retry_count == 7
     assert result["upload_strategy"] == "multipart"
