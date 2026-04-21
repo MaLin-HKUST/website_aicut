@@ -1,0 +1,11 @@
+worker1-phase6-gateway	Up 32 hours (healthy)
+2026-04-21 05:26:12,551 - worker.processors.base_stage_processor - INFO - Processing task: 14c45353-5cd9-4276-a38f-2eac9694519f, business_task: 542a7196-dbee-4e8f-acb4-7f134f2ba438
+2026-04-21 05:31:19,679 - worker.processors.analyze_processor - INFO - Script uploaded: smart-cut/542a7196-dbee-4e8f-acb4-7f134f2ba438/analyze/script.json
+2026-04-21 05:31:23,220 - worker.processors.analyze_processor - INFO - ASR uploaded: smart-cut/542a7196-dbee-4e8f-acb4-7f134f2ba438/analyze/asr.json
+2026-04-21 05:31:23,533 - worker.processors.analyze_processor - INFO - Delay cuts uploaded: smart-cut/542a7196-dbee-4e8f-acb4-7f134f2ba438/analyze/delay_cuts.json
+2026-04-21 05:32:04,115 - worker.processors.analyze_processor - INFO - Audio uploaded: smart-cut/542a7196-dbee-4e8f-acb4-7f134f2ba438/analyze/audio_a.mp3
+2026-04-21 05:32:04,118 - worker.processors.analyze_processor - INFO - Business task updated: 542a7196-dbee-4e8f-acb4-7f134f2ba438
+2026-04-21 05:43:02,636 - worker.processors.preview_processor - INFO - Processing preview task: 8cbeabaa-0544-44b8-b8c4-3a47c93b244d, business_task: 542a7196-dbee-4e8f-acb4-7f134f2ba438
+2026-04-21 05:48:38,173 - worker.processors.finalize_processor - INFO - Processing finalize task: 30be1c22-8694-4940-b9b1-c94a45041bc3, business_task: 542a7196-dbee-4e8f-acb4-7f134f2ba438
+2026-04-21 06:17:07,966 - worker.processors.finalize_processor - INFO - Business task marked as success: 542a7196-dbee-4e8f-acb4-7f134f2ba438
+2026-04-21 06:17:07,968 - worker.processors.finalize_processor - INFO - Final video uploaded and database updated: smart-cut/542a7196-dbee-4e8f-acb4-7f134f2ba438/finalize/final_video.mp4

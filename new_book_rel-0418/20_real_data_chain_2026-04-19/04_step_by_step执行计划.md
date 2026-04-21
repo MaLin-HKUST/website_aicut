@@ -87,6 +87,27 @@
 10. 把真实数据证据转入后续热补收口
 11. 对真实任务执行 Playwright UI 观测验收
 
+## 2026-04-21 执行补记
+
+最新一次完整 headed 浏览器实跑目录是：
+
+- `artifacts/20260421_124738_headed_real_browser_run/`
+
+这轮执行带来两个重要修正：
+
+1. 旧主路径 `upload-direct` 在真实视频上先返回了 `413`
+2. 浏览器侧实际可用并已成功闭环的上传路径是：
+   - `upload-prepare`
+   - 浏览器直传 TOS
+   - `upload-complete`
+
+因此后续执行本 runbook 时，不要再把“必须让旧 `upload-direct` 成功”当成唯一完成条件。
+更准确的要求是：
+
+- 必须把真实视频与真实文案成功挂到任务上
+- 必须明确记录本轮使用的是哪条上传路径
+- 如果仍看到 `413`，应直接按 headed 浏览器已验证过的 TOS 直传链路继续，不要在失败后空转
+
 ---
 
 ## Step 0：确认前置状态
@@ -632,10 +653,16 @@
    - `../10_rebuild_2026-04-18/11_2026-04-19_当前系统状态.md`
    - `../10_rebuild_2026-04-18/12_2026-04-19_当前Release与证据索引.md`
 3. 如需要，再新增一份本轮真实数据运行报告。
+4. 同步更新：
+   - `03_当前正式链路与缺口.md`
+   - 当前 artifacts 的 `artifact_index.md`
+   - 当前 artifacts 的 `sanitized_summary.md`
 
 ### 本步产物
 
 - `summary.md`
+- `artifact_index.md`
+- `sanitized_summary.md`
 - 对 `11` / `12` 的文档更新
 - 可选：
   - `real_data_run_report.md`
@@ -660,7 +687,7 @@
   - `final_video_url`
   - 最终对象 key
   - 结论 `pass / blocked / degraded`
-- `11` / `12` 文档中可检索到这轮任务信息
+- `03` / `11` / `12` 文档中可检索到这轮任务信息
 
 ### 失败分叉
 

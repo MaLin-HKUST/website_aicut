@@ -1,0 +1,7 @@
+PLAYWRIGHT_BASE_URL=https://xiaomajianji.cn PLAYWRIGHT_SKIP_WEBSERVER=1 PLAYWRIGHT_REAL_DATA_TASK_ID=542a7196-dbee-4e8f-acb4-7f134f2ba438 PLAYWRIGHT_USERNAME=rbzj PLAYWRIGHT_PASSWORD=123456 npx playwright test tests/rel0415-smart-cut-real-task.spec.ts --headed --reporter=list
+
+Running 1 test using 1 worker
+
+  ✓  1 [chromium] › tests/rel0415-smart-cut-real-task.spec.ts:5:5 › real-data smart cut task is visible and downloadable in the live UI (37.6s)
+
+  1 passed (44.9s)
