@@ -69,12 +69,44 @@ async function routeBaseApis(page: Page) {
   });
 }
 
+async function selectScriptSubstring(page: Page, target: string) {
+  const range = await page.evaluate((needle) => {
+    const chars = Array.from(document.querySelectorAll<HTMLElement>("[data-index]")).map((node) =>
+      node.textContent === "\u00A0" ? " " : (node.textContent ?? ""),
+    );
+    const visibleText = chars.join("");
+    const start = visibleText.indexOf(needle);
+    if (start === -1) return null;
+    return { start, end: start + needle.length - 1 };
+  }, target);
+
+  expect(range, `substring "${target}" should exist in the script editor`).not.toBeNull();
+  if (!range) return;
+
+  await page.evaluate(({ start, end }) => {
+    const root = document.querySelector('[data-smartcut-script-editor="true"]');
+    if (!root) {
+      throw new Error("smart cut script editor root not found");
+    }
+    root.dispatchEvent(new CustomEvent("smartcut-test-select", { detail: { start, end } }));
+  }, range);
+}
+
+async function getDeletedText(page: Page) {
+  return page.evaluate(() =>
+    Array.from(document.querySelectorAll<HTMLElement>("[data-index]"))
+      .filter((node) => getComputedStyle(node).textDecorationLine.includes("line-through"))
+      .map((node) => (node.textContent === "\u00A0" ? " " : (node.textContent ?? "")))
+      .join(""),
+  );
+}
+
 test("opening /smart-cut no longer auto-creates an empty task", async ({ page }) => {
   let createCount = 0;
 
   await routeBaseApis(page);
 
-  await page.route("**/api/proxy/api/smart-cut/tasks/draft/current", async (route) => {
+  await page.route(/\/api\/proxy\/api\/smart-cut\/tasks\/draft\/current(\?.*)?$/, async (route) => {
     await route.fulfill({
       status: 204,
       body: "",
@@ -109,7 +141,7 @@ test("analyze result renders script and audio_a in the current draft workspace",
 
   await routeBaseApis(page);
 
-  await page.route("**/api/proxy/api/smart-cut/tasks/draft/current", async (route) => {
+  await page.route(/\/api\/proxy\/api\/smart-cut\/tasks\/draft\/current(\?.*)?$/, async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -174,7 +206,7 @@ test("preview keeps正文不可改 and renders audio_b in the current workspace"
 
   await routeBaseApis(page);
 
-  await page.route("**/api/proxy/api/smart-cut/tasks/draft/current", async (route) => {
+  await page.route(/\/api\/proxy\/api\/smart-cut\/tasks\/draft\/current(\?.*)?$/, async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -261,12 +293,126 @@ test("preview keeps正文不可改 and renders audio_b in the current workspace"
   await expect(page.locator("audio")).toHaveAttribute("src", "https://example.com/audio_b.mp3");
 });
 
+test("delete-line actions can mark, restore, clear, and then submit preview from the edited script", async ({ page }) => {
+  let previewRequestScript = "";
+  let previewSubmitted = false;
+
+  await routeBaseApis(page);
+
+  await page.route(/\/api\/proxy\/api\/smart-cut\/tasks\/draft\/current(\?.*)?$/, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ task: DRAFT_TASK }),
+    });
+  });
+
+  await page.route("**/api/proxy/api/smart-cut/tasks/smartcut_mock_001", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ...DRAFT_TASK,
+        status: "waiting_user",
+        current_stage: "preview",
+        updated_at: previewSubmitted ? "2026-04-16T09:20:00Z" : DRAFT_TASK.updated_at,
+      }),
+    });
+  });
+
+  await page.route("**/api/proxy/api/smart-cut/tasks/smartcut_mock_001/edits", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([
+        previewSubmitted
+          ? {
+              id: "edit_mock_003",
+              task_id: "smartcut_mock_001",
+              edited_script: previewRequestScript,
+              status: "success",
+              audio_a_url: "https://example.com/audio_a.mp3",
+              audio_b_url: "https://example.com/audio_b.mp3",
+              audio_b_tos_key: "smart-cut/smartcut_mock_001/preview/edit_mock_003/audio_b.mp3",
+              edited_delay_cuts_tos_key: "smart-cut/smartcut_mock_001/preview/edit_mock_003/edited_delay_cuts.json",
+              pause_cuts_on_original_tos_key: "smart-cut/smartcut_mock_001/preview/edit_mock_003/pause_cuts_on_original.json",
+              error_message: null,
+              created_at: "2026-04-16T08:50:00Z",
+              updated_at: "2026-04-16T08:52:00Z",
+            }
+          : {
+              id: "edit_mock_001",
+              task_id: "smartcut_mock_001",
+              edited_script: "今天我们{先删掉这句}继续讲重点。",
+              status: "success",
+              audio_a_url: "https://example.com/audio_a.mp3",
+              audio_b_url: null,
+              audio_b_tos_key: null,
+              edited_delay_cuts_tos_key: null,
+              pause_cuts_on_original_tos_key: null,
+              error_message: null,
+              created_at: "2026-04-16T08:20:00Z",
+              updated_at: "2026-04-16T08:30:00Z",
+            },
+      ]),
+    });
+  });
+
+  await page.route("**/api/proxy/api/smart-cut/tasks/smartcut_mock_001/preview", async (route) => {
+    const payload = route.request().postDataJSON() as { edited_script: string };
+    previewRequestScript = payload.edited_script;
+    previewSubmitted = true;
+    await route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify({
+        edit_id: "edit_mock_003",
+        scheduler_task_id: "sched_preview_002",
+        status: "previewing",
+      }),
+    });
+  });
+
+  await page.goto("/smart-cut");
+
+  const markDeleteButton = page.getByRole("button", { name: "标记删除" });
+  const restoreButton = page.getByRole("button", { name: "恢复保留" });
+  const clearButton = page.getByRole("button", { name: "清空删除标记" });
+
+  await expect(markDeleteButton).toBeDisabled();
+  await expect(restoreButton).toBeDisabled();
+  await expect(clearButton).toBeEnabled();
+  await expect(await getDeletedText(page)).toContain("先删掉这句");
+
+  await selectScriptSubstring(page, "重点。");
+  await expect(page.getByText("当前选中 3 个字").first()).toBeVisible();
+  await expect(markDeleteButton).toBeEnabled();
+  await markDeleteButton.click();
+  await expect(await getDeletedText(page)).toContain("重点。");
+
+  await selectScriptSubstring(page, "先删掉这句");
+  await expect(page.getByText("当前选中 5 个字").first()).toBeVisible();
+  await expect(restoreButton).toBeEnabled();
+  await restoreButton.click();
+  await expect(await getDeletedText(page)).not.toContain("先删掉这句");
+  await expect(await getDeletedText(page)).toContain("重点。");
+
+  await clearButton.click();
+  await expect(await getDeletedText(page)).toBe("");
+
+  await page.getByRole("button", { name: "开始生成试听" }).click();
+
+  await expect(page.getByText("正在生成试听")).toBeVisible();
+  await expect.poll(() => previewRequestScript).toBe("今天我们先删掉这句继续讲重点。");
+  await expect(page.getByText("试听音频 audio_b")).toBeVisible();
+});
+
 test("finalize promotes the task and resets the workspace to idle", async ({ page }) => {
   let finalizePayload: { output_mode: string; feed_to_ai: boolean } | null = null;
 
   await routeBaseApis(page);
 
-  await page.route("**/api/proxy/api/smart-cut/tasks/draft/current", async (route) => {
+  await page.route(/\/api\/proxy\/api\/smart-cut\/tasks\/draft\/current(\?.*)?$/, async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",

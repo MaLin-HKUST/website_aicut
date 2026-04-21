@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 
 import { Card } from "@/components/ui/card";
 import { applyRangesToScript, DeleteRange, mergeRanges, parseBraceScript, rangeContainsIndex } from "@/lib/smart-cut";
@@ -85,6 +85,7 @@ export const SmartCutScriptEditor = forwardRef<SmartCutScriptEditorHandle, Smart
   const [{ visibleText, ranges }, setEditorState] = useState(() => parseBraceScript(script));
   const [dragging, setDragging] = useState(false);
   const [selection, setSelection] = useState<Selection>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setEditorState(parseBraceScript(script));
@@ -145,6 +146,24 @@ export const SmartCutScriptEditor = forwardRef<SmartCutScriptEditorHandle, Smart
     });
   }, [canClear, canMarkDelete, canRestore, onStateChange, selectedCount]);
 
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+
+    function handleTestSelection(event: Event) {
+      if (disabled) return;
+      const detail = (event as CustomEvent<{ start?: number; end?: number }>).detail;
+      if (typeof detail?.start !== "number" || typeof detail?.end !== "number") return;
+      setSelection({ start: detail.start, end: detail.end });
+      setDragging(false);
+    }
+
+    root.addEventListener("smartcut-test-select", handleTestSelection as EventListener);
+    return () => {
+      root.removeEventListener("smartcut-test-select", handleTestSelection as EventListener);
+    };
+  }, [disabled]);
+
   useImperativeHandle(
     ref,
     () => ({
@@ -175,9 +194,11 @@ export const SmartCutScriptEditor = forwardRef<SmartCutScriptEditorHandle, Smart
 
       <div className="mt-5 rounded-[26px] border border-[#eadfce] bg-white p-4 lg:p-5">
         <div
+          data-smartcut-script-editor="true"
           className="min-h-[260px] cursor-text select-none rounded-[22px] bg-[#fffdf9] p-3 text-[17px] leading-9 text-[#2d211d]"
           onMouseLeave={finishSelection}
           onMouseUp={finishSelection}
+          ref={rootRef}
           role="presentation"
         >
           {visibleText.split("").map((char, index) => {
