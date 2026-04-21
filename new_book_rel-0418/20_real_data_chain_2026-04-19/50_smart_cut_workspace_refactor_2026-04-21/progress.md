@@ -6,8 +6,9 @@
 - `Agent 01` 回交已完成审查，契约层可作为后续开发基线
 - `Agent 02` 回交已完成审查，`R03` 可接受
 - `Agent 03` 回交已完成审查，`R04-R06` 可接受
+- `Agent 04` 回交已完成审查，`R07-R09` 可接受
 - 专项包已建立
-- `R07-R09` 可以开始推进
+- `R10-R11` 可以开始推进
 
 ## 已完成任务
 
@@ -25,11 +26,12 @@
 - 完成 `Agent 01` 回交审查，确认 `branch / commit SHA / 改动文件 / 验证命令` 均可核对
 - 完成 `Agent 02` 回交审查，确认任务中心过滤与 backfill 脚本交付完整
 - 完成 `Agent 03` 回交审查，确认 `/smart-cut` 入口不再自动建空任务，analyze 结果可在当前页面回显
+- 完成 `Agent 04` 回交审查，确认 preview/finalize 保持在工作台内，finalize 后工作台可复位
 
 ## 正在进行
 
 - 主集成人评估 `configs/database.py` 的运行时补列策略是否原样集成
-- 等待放行 `Agent 04`
+- 等待 `Agent 05` 真实浏览器 + 真实 API/DB/Worker/TOS 闭环回归
 
 ## 阻塞项
 
@@ -48,6 +50,7 @@
 - `commit 51071188253984779ca7ce9bce1d7ce42bad1919` 作为当前 `R01-R02` 契约基线
 - `commit 380baddf7c61c0d0dd4630eb1c1bea4a79c3044c` 作为当前 `R03` 任务中心可见性基线
 - `commit a00466106aeda2ee2877ac20c27dcdce0609baea` 作为当前 `R04-R06` 工作台入口与 analyze 回显基线
+- `commit 7831b90107414ea986f1b7c86481efe07ec2f591` 作为当前 `R07-R09` preview/finalize 工作台基线
 
 ## 需要同步给其他 Agent 的上下文
 
@@ -71,6 +74,13 @@
 - 已核对验证命令：
   - `cd apps/web && npx tsc --noEmit`
   - `cd apps/web && npx playwright test tests/smart-cut.spec.ts --reporter=list`
+- 已核对 `branch=feature/smart-cut-workspace-refactor-R07-R09-preview-finalize`
+- 已核对 `commit SHA=7831b90107414ea986f1b7c86481efe07ec2f591`
+- 已核对 `7831b90` 自身只包含 3 个前端文件改动，没有把其他 lane 混进提交
+- 已核对验证命令：
+  - `cd apps/web && npx tsc --noEmit`
+  - `cd apps/web && npx playwright test tests/smart-cut.spec.ts --reporter=list`
+  - `pytest tests/test_rel0415_api.py -k finalize_promotes_hidden_draft_into_task_center`
 
 ## 已知问题记录
 
@@ -122,3 +132,17 @@
 - 症状：该测试存在更早的旧失败，不属于本次 Smart Cut 入口重构直接引入
 - 当前判断：不阻塞接收 `R04-R06`，但不要把它误判成这次改动的新问题
 - 下一步：单独归档为已有历史问题，不在本专项里扩散修
+
+### ISSUE-008
+- 标题：Agent 04 还未执行真实环境闭环
+- 位置：`R07-R09` 验证层
+- 症状：当前仅完成前端 mock 回归和 finalize 升格 API 断言，未跑真实浏览器 + 真实 API/DB/Worker/TOS
+- 当前判断：不影响接收 `R07-R09` 实现，但绝不等于专项完成
+- 下一步：必须由 `Agent 05` 或主集成人执行 `R10-R11`
+
+### ISSUE-009
+- 标题：Agent 04 的实现叠加在已有本地 `apps/web/lib/smart-cut.ts` 改动之上
+- 位置：`apps/web/lib/smart-cut.ts`
+- 症状：回交中已明确说明该文件在接手前就存在未提交本地改动
+- 当前判断：接收实现没有问题，但主线集成时必须和 `R04-R06` 基线一起复核，不能盲目 cherry-pick
+- 下一步：主集成人在正式集成前检查该文件的组合 diff
