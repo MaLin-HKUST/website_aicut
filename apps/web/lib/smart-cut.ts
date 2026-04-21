@@ -287,6 +287,14 @@ type UploadDirectProgress = {
   percent: number;
 };
 
+type UploadPrepareApi = {
+  video_upload_url: string;
+  video_key: string;
+  text_upload_url: string;
+  text_key: string;
+  expires_at: string;
+};
+
 function parseXhrPayload<T>(xhr: XMLHttpRequest): T | null {
   if (xhr.response && typeof xhr.response === "object") {
     return xhr.response as T;
@@ -303,6 +311,43 @@ function parseXhrPayload<T>(xhr: XMLHttpRequest): T | null {
   }
 }
 
+async function uploadFileToPresignedUrl(
+  url: string,
+  file: File,
+  options?: {
+    onProgress?: (progress: UploadDirectProgress) => void;
+    offset?: number;
+    totalBytes?: number;
+  },
+): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", url);
+    xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+
+    xhr.upload.onprogress = (event) => {
+      if (!event.lengthComputable || !options?.onProgress || !options.totalBytes) return;
+      const loaded = (options.offset ?? 0) + event.loaded;
+      options.onProgress({
+        loaded,
+        total: options.totalBytes,
+        percent: Math.max(0, Math.min(100, Math.round((loaded / options.totalBytes) * 100))),
+      });
+    };
+
+    xhr.onerror = () => reject(new Error("上传到 TOS 失败，请检查网络后重试"));
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+        return;
+      }
+      reject(new Error(`TOS upload failed: ${xhr.status}`));
+    };
+
+    xhr.send(file);
+  });
+}
+
 export async function uploadDirectInputs(
   taskId: string,
   videoFile: File,
@@ -311,49 +356,37 @@ export async function uploadDirectInputs(
     onProgress?: (progress: UploadDirectProgress) => void;
   },
 ): Promise<SmartCutTask> {
-  const formData = new FormData();
-  formData.append("video_file", videoFile);
-  formData.append("reference_file", referenceFile);
-
-  if (!options?.onProgress) {
-    const payload = await fetchJson<SmartCutTaskApi>(`/api/proxy/api/smart-cut/tasks/${taskId}/upload-direct`, {
-      method: "POST",
-      body: formData,
-    });
-    return normalizeTask(payload);
-  }
-
-  return await new Promise<SmartCutTask>((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-
-    xhr.open("POST", `/api/proxy/api/smart-cut/tasks/${taskId}/upload-direct`);
-    xhr.responseType = "json";
-
-    xhr.upload.onprogress = (event) => {
-      if (!event.lengthComputable) return;
-      options.onProgress?.({
-        loaded: event.loaded,
-        total: event.total,
-        percent: Math.max(0, Math.min(100, Math.round((event.loaded / event.total) * 100))),
-      });
-    };
-
-    xhr.onerror = () => {
-      reject(new Error("上传请求失败，请检查网络后重试"));
-    };
-
-    xhr.onload = () => {
-      const payload = parseXhrPayload<SmartCutTaskApi & { detail?: string }>(xhr);
-      if (xhr.status >= 200 && xhr.status < 300 && payload) {
-        resolve(normalizeTask(payload));
-        return;
-      }
-
-      reject(new Error(payload?.detail ?? `Request failed: ${xhr.status}`));
-    };
-
-    xhr.send(formData);
+  const videoExt = videoFile.name.split(".").pop()?.toLowerCase() ?? "mp4";
+  const prepare = await fetchJson<UploadPrepareApi>(`/api/proxy/api/smart-cut/tasks/${taskId}/upload-prepare?video_ext=${encodeURIComponent(videoExt)}`, {
+    method: "POST",
   });
+
+  const totalBytes = videoFile.size + referenceFile.size;
+  await uploadFileToPresignedUrl(prepare.video_upload_url, videoFile, {
+    onProgress: options?.onProgress,
+    offset: 0,
+    totalBytes,
+  });
+  await uploadFileToPresignedUrl(prepare.text_upload_url, referenceFile, {
+    onProgress: options?.onProgress,
+    offset: videoFile.size,
+    totalBytes,
+  });
+
+  await fetchJson(`/api/proxy/api/smart-cut/tasks/${taskId}/upload-complete`, {
+    method: "POST",
+    body: JSON.stringify({
+      uploaded_keys: [prepare.video_key, prepare.text_key],
+    }),
+  });
+
+  options?.onProgress?.({
+    loaded: totalBytes,
+    total: totalBytes,
+    percent: 100,
+  });
+
+  return getSmartCutTask(taskId);
 }
 
 export async function startAnalyze(taskId: string): Promise<SmartCutTask> {
