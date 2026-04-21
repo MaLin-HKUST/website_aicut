@@ -5,8 +5,9 @@
 - `R01-R02` 已编码并完成最小回归验证
 - `Agent 01` 回交已完成审查，契约层可作为后续开发基线
 - `Agent 02` 回交已完成审查，`R03` 可接受
+- `Agent 03` 回交已完成审查，`R04-R06` 可接受
 - 专项包已建立
-- `R03` 与 `R04-R06` 可继续推进
+- `R07-R09` 可以开始推进
 
 ## 已完成任务
 
@@ -23,11 +24,12 @@
 - 补充 `tests/test_rel0415_api.py` 回归覆盖
 - 完成 `Agent 01` 回交审查，确认 `branch / commit SHA / 改动文件 / 验证命令` 均可核对
 - 完成 `Agent 02` 回交审查，确认任务中心过滤与 backfill 脚本交付完整
+- 完成 `Agent 03` 回交审查，确认 `/smart-cut` 入口不再自动建空任务，analyze 结果可在当前页面回显
 
 ## 正在进行
 
 - 主集成人评估 `configs/database.py` 的运行时补列策略是否原样集成
-- 等待 `Agent 03` 回交
+- 等待放行 `Agent 04`
 
 ## 阻塞项
 
@@ -45,6 +47,7 @@
 - Agent 01 先行锁定契约，其余 agent 按依赖关系启动
 - `commit 51071188253984779ca7ce9bce1d7ce42bad1919` 作为当前 `R01-R02` 契约基线
 - `commit 380baddf7c61c0d0dd4630eb1c1bea4a79c3044c` 作为当前 `R03` 任务中心可见性基线
+- `commit a00466106aeda2ee2877ac20c27dcdce0609baea` 作为当前 `R04-R06` 工作台入口与 analyze 回显基线
 
 ## 需要同步给其他 Agent 的上下文
 
@@ -62,6 +65,12 @@
 - 已核对 `branch=feature/smart-cut-workspace-refactor-R03-task-center-visibility`
 - 已核对 `commit SHA=380baddf7c61c0d0dd4630eb1c1bea4a79c3044c`
 - 已核对 `R03` 改动范围集中在 `task_center.py`、backfill 脚本、测试与专项检查文档
+- 已核对 `branch=feature/smart-cut-workspace-refactor-R04-R06-draft-workspace`
+- 已核对 `commit SHA=a00466106aeda2ee2877ac20c27dcdce0609baea`
+- 已核对 `a004661` 自身只包含 5 个前端文件改动，没有把 `R03` 一起打包进提交
+- 已核对验证命令：
+  - `cd apps/web && npx tsc --noEmit`
+  - `cd apps/web && npx playwright test tests/smart-cut.spec.ts --reporter=list`
 
 ## 已知问题记录
 
@@ -99,3 +108,17 @@
 - 症状：当前只完成测试与脚本交付，没有对生产/真实 PostgreSQL 历史库做实际回填
 - 当前判断：实现可接受，但上线前必须明确回填执行策略
 - 下一步：在主线集成或上线前由主集成人决定何时执行 backfill
+
+### ISSUE-006
+- 标题：Agent 03 在前端保留了本地缓存 fallback
+- 位置：`apps/web/components/smart-cut/workspace.tsx`
+- 症状：当前为了兼容契约尚未完全落地，工作台会对同用户名保留本地缓存兜底
+- 当前判断：短期可接受，但在契约稳定后应评估是否删掉，避免和服务端草稿语义双轨并存
+- 下一步：在主集成人集成 `R04-R06` 时复核是否继续保留
+
+### ISSUE-007
+- 标题：Agent 03 未处理 `welcome -> /tts` 的既有导航失败
+- 位置：`apps/web/tests/rel0415-user-navigation.spec.ts`
+- 症状：该测试存在更早的旧失败，不属于本次 Smart Cut 入口重构直接引入
+- 当前判断：不阻塞接收 `R04-R06`，但不要把它误判成这次改动的新问题
+- 下一步：单独归档为已有历史问题，不在本专项里扩散修
