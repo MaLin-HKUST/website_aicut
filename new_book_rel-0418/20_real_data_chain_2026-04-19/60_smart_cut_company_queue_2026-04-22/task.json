@@ -1,0 +1,70 @@
+{
+  "spec_version": "2026-04-22.v1",
+  "track": "smart_cut_company_queue",
+  "tasks": [
+    {
+      "id": "CQ01",
+      "title": "记录这轮调试与上线过程",
+      "goal": "把 deployment/upload/analyze/preview/finalize 的关键问题与修复写入 codebook",
+      "verification": [
+        "codebook 新专项目录存在",
+        "关键 commit、关键任务 ID、关键产物 key 已落档"
+      ]
+    },
+    {
+      "id": "CQ02",
+      "title": "给 smart_cut_tasks 增加 company_id",
+      "goal": "让正式任务具备公司级归属",
+      "verification": [
+        "模型包含 company_id",
+        "init_db/additive schema 能补列"
+      ]
+    },
+    {
+      "id": "CQ03",
+      "title": "普通用户任务中心按公司过滤",
+      "goal": "同公司共享任务列表，跨公司完全隔离",
+      "verification": [
+        "普通用户 task-center 优先按 company_id 查询",
+        "admin 仍可看全量"
+      ]
+    },
+    {
+      "id": "CQ04",
+      "title": "公司视角 queue_position",
+      "goal": "单 worker 下仍然只展示公司内队列位置",
+      "verification": [
+        "queue_position 按 company_id 视图计算",
+        "测试覆盖 company A / company B 各自 position=1"
+      ]
+    },
+    {
+      "id": "CQ05",
+      "title": "前端查询改成 company_id 维度",
+      "goal": "任务中心与侧边栏预览任务按 company_id 拉数据",
+      "verification": [
+        "前端类型检查通过",
+        "user workspace data 使用 company_id"
+      ]
+    },
+    {
+      "id": "CQ06",
+      "title": "单 worker 双任务真实排队验证",
+      "goal": "在 live 环境创建两条同公司正式任务，验证前后衔接",
+      "verification": [
+        "第一条 running",
+        "第二条 queued",
+        "第一条完成后第二条自动转 running"
+      ]
+    },
+    {
+      "id": "CQ07",
+      "title": "公司可见性真实验证",
+      "goal": "验证同公司共享、跨公司隔离",
+      "verification": [
+        "同公司账号可见同队列",
+        "不同公司账号不可见彼此任务"
+      ]
+    }
+  ]
+}

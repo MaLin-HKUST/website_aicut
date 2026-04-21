@@ -46,6 +46,10 @@ class TaskCreateRequest(BaseModel):
         default="anonymous",
         description="用户ID，不提供则使用匿名用户"
     )
+    company_id: Optional[int] = Field(
+        default=None,
+        description="企业ID，可选；用于公司级任务隔离"
+    )
     session_scope_id: Optional[str] = Field(
         default=None,
         description="可选，显式传入当前登录会话作用域 ID"
@@ -230,6 +234,7 @@ class TaskDetailResponse(BaseModel):
     # 基本信息
     id: str = Field(..., description="任务ID")
     user_id: str = Field(..., description="用户ID")
+    company_id: Optional[int] = Field(None, description="企业ID")
     status: str = Field(..., description="任务状态")
     current_stage: str = Field(..., description="当前阶段")
     task_title: Optional[str] = Field(None, description="任务中心标题")
@@ -323,6 +328,7 @@ class SmartCutTaskSummaryRead(BaseModel):
     id: str = Field(..., description="任务 ID")
     status: str = Field(..., description="任务状态")
     current_stage: Optional[str] = Field(None, description="当前阶段")
+    company_id: Optional[int] = Field(None, description="企业ID")
     active_edit_id: Optional[str] = Field(None, description="当前 edit ID")
     visible_in_task_center: bool = Field(False, description="是否在任务中心可见")
     session_scope_id: Optional[str] = Field(None, description="当前登录会话作用域 ID")
@@ -384,6 +390,7 @@ class TaskCenterTaskRead(BaseModel):
     input_files: List[str] = Field(default_factory=list, description="输入文件摘要")
     output_files: List[str] = Field(default_factory=list, description="输出文件摘要")
     user_id: Optional[str] = Field(None, description="用户 ID（admin 可见）")
+    company_id: Optional[int] = Field(None, description="企业 ID（admin 可见）")
     scheduler_task_id: Optional[str] = Field(None, description="最近一次调度任务 ID（admin 可见）")
     scheduler_status: Optional[str] = Field(None, description="最近一次调度任务状态（admin 可见）")
     worker_id: Optional[str] = Field(None, description="当前/最近一次 Worker（admin 可见）")

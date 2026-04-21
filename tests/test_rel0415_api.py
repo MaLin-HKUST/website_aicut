@@ -12,7 +12,7 @@ from apps.api.routes.task_center import router as task_center_router
 from apps.api.routes.stages import router as stages_router
 from apps.api.routes.tasks import router as tasks_router
 from apps.models.edit import EditStatus, SmartCutEdit
-from apps.models.scheduler_task import SchedulerTask, SchedulerTaskType
+from apps.models.scheduler_task import SchedulerTask, SchedulerTaskType, SchedulerTaskStatus
 from apps.models.task import CurrentStage, SmartCutTask, TaskStatus
 from apps.services.tos_service import TOSService
 from configs.database import Base, build_engine, get_db
@@ -48,7 +48,7 @@ def api_client(tmp_path: Path):
 def test_rel0415_list_and_detail_routes(api_client):
     client, _SessionLocal = api_client
 
-    response = client.post("/api/smart-cut/tasks", json={"user_id": "alice"})
+    response = client.post("/api/smart-cut/tasks", json={"user_id": "alice", "company_id": 1})
     assert response.status_code == 201
     task_id = response.json()["data"]["task_id"]
 
@@ -63,6 +63,7 @@ def test_rel0415_list_and_detail_routes(api_client):
     assert detail_response.status_code == 200
     payload = detail_response.json()
     assert payload["id"] == task_id
+    assert payload["company_id"] == 1
     assert payload["status"] == "waiting_upload"
     assert payload["current_stage"] == "upload"
 
@@ -70,7 +71,7 @@ def test_rel0415_list_and_detail_routes(api_client):
 def test_rel0415_upload_direct_transitions_to_ready_analyze(api_client, tmp_path: Path):
     client, _SessionLocal = api_client
 
-    create_response = client.post("/api/smart-cut/tasks", json={"user_id": "alice"})
+    create_response = client.post("/api/smart-cut/tasks", json={"user_id": "alice", "company_id": 1})
     task_id = create_response.json()["data"]["task_id"]
 
     video_path = tmp_path / "source.mp4"
@@ -101,6 +102,7 @@ def test_rel0415_edits_and_task_center_routes(api_client):
     with SessionLocal() as db:
         hidden_task = SmartCutTask(
             user_id="alice",
+            company_id=1,
             status=TaskStatus.WAITING_USER,
             current_stage=CurrentStage.USER_SELECT,
             visible_in_task_center=False,
@@ -129,6 +131,7 @@ def test_rel0415_edits_and_task_center_routes(api_client):
 
         visible_task = SmartCutTask(
             user_id="alice",
+            company_id=1,
             status=TaskStatus.SUCCESS,
             current_stage=CurrentStage.COMPLETE,
             task_title="智能剪气口-20260421-101010",
@@ -150,7 +153,7 @@ def test_rel0415_edits_and_task_center_routes(api_client):
     assert edits_payload[0]["id"] == edit_id
     assert edits_payload[0]["audio_b_url"].endswith("audio_b.mp3")
 
-    user_center = client.get("/api/task-center/tasks", params={"user_id": "alice"})
+    user_center = client.get("/api/task-center/tasks", params={"company_id": 1})
     assert user_center.status_code == 200
     user_payload = user_center.json()
     assert [item["id"] for item in user_payload] == [visible_task_id]
@@ -164,6 +167,7 @@ def test_rel0415_edits_and_task_center_routes(api_client):
     assert [item["id"] for item in admin_payload] == [visible_task_id]
     assert admin_payload[0]["status"] == "finished"
     assert admin_payload[0]["download_url"].endswith("final_video.mp4")
+    assert admin_payload[0]["company_id"] == 1
 
 
 def test_current_draft_endpoints_are_scoped_to_login_session(api_client):
@@ -171,7 +175,7 @@ def test_current_draft_endpoints_are_scoped_to_login_session(api_client):
 
     ensure_response = client.post(
         "/api/smart-cut/tasks/draft/current/ensure",
-        json={"user_id": "alice"},
+        json={"user_id": "alice", "company_id": 1},
         cookies={"session_token": "session-a"},
     )
     assert ensure_response.status_code == 200
@@ -180,10 +184,11 @@ def test_current_draft_endpoints_are_scoped_to_login_session(api_client):
     assert ensure_payload["created"] is True
     assert ensure_payload["task"]["visible_in_task_center"] is False
     assert ensure_payload["task"]["session_scope_id"].startswith("scs_")
+    assert ensure_payload["task"]["company_id"] == 1
 
     second_ensure = client.post(
         "/api/smart-cut/tasks/draft/current/ensure",
-        json={"user_id": "alice"},
+        json={"user_id": "alice", "company_id": 1},
         cookies={"session_token": "session-a"},
     )
     assert second_ensure.status_code == 200
@@ -219,6 +224,7 @@ def test_current_draft_endpoints_are_scoped_to_login_session(api_client):
         assert len(rows) == 1
         assert rows[0].id == task_id
         assert rows[0].visible_in_task_center is False
+        assert rows[0].company_id == 1
 
 
 def test_finalize_promotes_hidden_draft_into_task_center(api_client):
@@ -227,6 +233,7 @@ def test_finalize_promotes_hidden_draft_into_task_center(api_client):
     with SessionLocal() as db:
         task = SmartCutTask(
             user_id="alice",
+            company_id=1,
             status=TaskStatus.WAITING_USER,
             current_stage=CurrentStage.USER_SELECT,
             visible_in_task_center=False,
@@ -268,6 +275,80 @@ def test_finalize_promotes_hidden_draft_into_task_center(api_client):
         assert task is not None
         assert task.visible_in_task_center is True
         assert task.task_title == payload["task_title"]
+        assert task.company_id == 1
         assert task.status == TaskStatus.FINALIZING
         assert task.active_edit_id == edit_id
         assert scheduler_task.task_type == SchedulerTaskType.SMART_CUT_FINALIZE
+
+
+def test_task_center_is_company_scoped_and_queue_positions_are_company_local(api_client):
+    client, SessionLocal = api_client
+
+    with SessionLocal() as db:
+        company_a_finished = SmartCutTask(
+            user_id="alice",
+            company_id=1,
+            status=TaskStatus.SUCCESS,
+            current_stage=CurrentStage.COMPLETE,
+            task_title="智能剪气口-20260422-000001",
+            visible_in_task_center=True,
+            original_video_url="smart-cut/a-finished/input/source_video.mp4",
+            reference_text_url="smart-cut/a-finished/input/reference.txt",
+            final_video_url="smart-cut/a-finished/finalize/final_video.mp4",
+        )
+        company_a_pending = SmartCutTask(
+            user_id="bob",
+            company_id=1,
+            status=TaskStatus.FINALIZING,
+            current_stage=CurrentStage.FINALIZE,
+            task_title="智能剪气口-20260422-000002",
+            visible_in_task_center=True,
+            original_video_url="smart-cut/a-pending/input/source_video.mp4",
+            reference_text_url="smart-cut/a-pending/input/reference.txt",
+        )
+        company_b_pending = SmartCutTask(
+            user_id="charlie",
+            company_id=2,
+            status=TaskStatus.FINALIZING,
+            current_stage=CurrentStage.FINALIZE,
+            task_title="智能剪气口-20260422-000003",
+            visible_in_task_center=True,
+            original_video_url="smart-cut/b-pending/input/source_video.mp4",
+            reference_text_url="smart-cut/b-pending/input/reference.txt",
+        )
+        db.add_all([company_a_finished, company_a_pending, company_b_pending])
+        db.flush()
+
+        db.add_all(
+            [
+                SchedulerTask(
+                    task_type=SchedulerTaskType.SMART_CUT_FINALIZE,
+                    status=SchedulerTaskStatus.PENDING,
+                    business_task_id=company_a_pending.id,
+                    payload={},
+                ),
+                SchedulerTask(
+                    task_type=SchedulerTaskType.SMART_CUT_FINALIZE,
+                    status=SchedulerTaskStatus.PENDING,
+                    business_task_id=company_b_pending.id,
+                    payload={},
+                ),
+            ]
+        )
+        db.commit()
+
+        company_a_finished_id = company_a_finished.id
+        company_a_pending_id = company_a_pending.id
+        company_b_pending_id = company_b_pending.id
+
+    company_a_response = client.get("/api/task-center/tasks", params={"company_id": 1})
+    assert company_a_response.status_code == 200
+    company_a_items = company_a_response.json()
+    assert [item["id"] for item in company_a_items] == [company_a_pending_id, company_a_finished_id]
+    assert company_a_items[0]["queue_position"] == 1
+
+    company_b_response = client.get("/api/task-center/tasks", params={"company_id": 2})
+    assert company_b_response.status_code == 200
+    company_b_items = company_b_response.json()
+    assert [item["id"] for item in company_b_items] == [company_b_pending_id]
+    assert company_b_items[0]["queue_position"] == 1

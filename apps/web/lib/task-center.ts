@@ -16,6 +16,7 @@ export type TaskCenterItem = {
   inputSummary: string[];
   outputSummary?: string[];
   userId?: string | null;
+  companyId?: number | null;
   schedulerTaskId?: string | null;
   schedulerStatus?: string | null;
   workerId?: string | null;
@@ -37,6 +38,7 @@ type TaskCenterApiItem = {
   input_files?: string[];
   output_files?: string[];
   user_id?: string | null;
+  company_id?: number | null;
   scheduler_task_id?: string | null;
   scheduler_status?: string | null;
   worker_id?: string | null;
@@ -112,6 +114,7 @@ function normalizeItem(payload: TaskCenterApiItem): TaskCenterItem {
     inputSummary: payload.input_files ?? [],
     outputSummary: payload.output_files ?? [],
     userId: payload.user_id ?? null,
+    companyId: payload.company_id ?? null,
     schedulerTaskId: payload.scheduler_task_id ?? null,
     schedulerStatus: payload.scheduler_status ?? null,
     workerId: payload.worker_id ?? null,
@@ -159,10 +162,20 @@ export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> 
   return (await response.json()) as T;
 }
 
-export async function listTaskCenterItems(opts: { mode: "user" | "admin"; userId?: string }): Promise<TaskCenterItem[]> {
+export async function listTaskCenterItems(opts: { mode: "user" | "admin"; userId?: string; companyId?: number | null }): Promise<TaskCenterItem[]> {
   const basePath =
     opts.mode === "admin" ? "/api/proxy/api/admin/task-center/tasks" : "/api/proxy/api/task-center/tasks";
-  const query = opts.mode === "user" && opts.userId ? `?user_id=${encodeURIComponent(opts.userId)}` : "";
+  let query = "";
+  if (opts.mode === "user") {
+    const params = new URLSearchParams();
+    if (opts.companyId != null) {
+      params.set("company_id", String(opts.companyId));
+    } else if (opts.userId) {
+      params.set("user_id", opts.userId);
+    }
+    const serialized = params.toString();
+    query = serialized ? `?${serialized}` : "";
+  }
   const payload = await fetchJson<TaskCenterApiItem[]>(`${basePath}${query}`);
   return payload.map(normalizeItem);
 }

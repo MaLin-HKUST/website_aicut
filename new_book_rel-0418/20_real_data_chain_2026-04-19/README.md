@@ -47,6 +47,7 @@
 8. [30_preview_delaycut_issue_2026-04-20/README.md](./30_preview_delaycut_issue_2026-04-20/README.md)
 9. [40_headed_browser_e2e_2026-04-21/README.md](./40_headed_browser_e2e_2026-04-21/README.md)
 10. [50_smart_cut_workspace_refactor_2026-04-21/README.md](./50_smart_cut_workspace_refactor_2026-04-21/README.md)
+11. [60_smart_cut_company_queue_2026-04-22/README.md](./60_smart_cut_company_queue_2026-04-22/README.md)
 
 其中：
 
@@ -55,6 +56,7 @@
 - `07_失败处理与回滚条件.md` 是失败时的分叉处理面
 - `40_headed_browser_e2e_2026-04-21/task.json` 是“真实浏览器 + 真实数据 + 页面/API/DB/Worker/TOS 联查”的专项执行清单
 - `50_smart_cut_workspace_refactor_2026-04-21/task.json` 是“Smart Cut 工作台交互生命周期重构”的专项执行清单
+- `60_smart_cut_company_queue_2026-04-22/task.json` 是“公司级可见性、单 worker 排队与调试过程收口”的专项执行清单
 
 ## 当前结论
 

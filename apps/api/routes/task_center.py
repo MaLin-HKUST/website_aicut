@@ -16,14 +16,27 @@ from apps.models.scheduler_task import SchedulerTask, SchedulerTaskStatus
 from apps.models.task import SmartCutTask
 
 
-def _queue_positions(db: Session) -> dict[str, int]:
-    pending_tasks = list(
-        db.execute(
-            select(SchedulerTask)
-            .where(SchedulerTask.status == SchedulerTaskStatus.PENDING)
-            .order_by(SchedulerTask.created_at.asc())
-        ).scalars().all()
+def _queue_positions(
+    db: Session,
+    *,
+    company_id: int | None = None,
+    user_id: str | None = None,
+) -> dict[str, int]:
+    stmt = (
+        select(SchedulerTask)
+        .join(SmartCutTask, SchedulerTask.business_task_id == SmartCutTask.id)
+        .where(
+            SchedulerTask.status == SchedulerTaskStatus.PENDING,
+            SmartCutTask.visible_in_task_center.is_(True),
+        )
+        .order_by(SchedulerTask.created_at.asc())
     )
+    if company_id is not None:
+        stmt = stmt.where(SmartCutTask.company_id == company_id)
+    elif user_id:
+        stmt = stmt.where(SmartCutTask.user_id == user_id)
+
+    pending_tasks = list(db.execute(stmt).scalars().all())
     positions: dict[str, int] = {}
     for index, scheduler_task in enumerate(pending_tasks, start=1):
         positions.setdefault(scheduler_task.business_task_id, index)
@@ -53,6 +66,7 @@ def _apply_queue_positions(items: list[TaskCenterTaskRead]) -> list[TaskCenterTa
 async def list_user_task_center(
     db: Session = Depends(get_db),
     user_id: str | None = Query(default=None, description="用户 ID；为空时返回全部任务"),
+    company_id: int | None = Query(default=None, description="企业 ID；为空时退回 user_id 过滤"),
     limit: int = Query(default=50, ge=1, le=200),
 ) -> list[TaskCenterTaskRead]:
     stmt = (
@@ -61,10 +75,12 @@ async def list_user_task_center(
         .order_by(desc(SmartCutTask.updated_at))
         .limit(limit)
     )
-    if user_id:
+    if company_id is not None:
+        stmt = stmt.where(SmartCutTask.company_id == company_id)
+    elif user_id:
         stmt = stmt.where(SmartCutTask.user_id == user_id)
     tasks = list(db.execute(stmt).scalars().all())
-    queue_positions = _queue_positions(db)
+    queue_positions = _queue_positions(db, company_id=company_id, user_id=user_id)
     items = [
         build_task_center_item(
             db,

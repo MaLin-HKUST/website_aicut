@@ -200,7 +200,7 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [lastSubmittedTaskTitle, setLastSubmittedTaskTitle] = useState<string | null>(null);
   const [inputResetToken, setInputResetToken] = useState(0);
-  const workspace = useUserWorkspaceData(currentUser?.username);
+  const workspace = useUserWorkspaceData(currentUser?.username, currentUser?.company_id);
   const scriptEditorRef = useRef<SmartCutScriptEditorHandle>(null);
 
   const latestEdit = edits[0] ?? null;
@@ -342,14 +342,14 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
       throw new Error("当前登录态未就绪，请刷新后重试");
     }
 
-    const ensured = await ensureCurrentSmartCutDraft(currentUser.username);
+    const ensured = await ensureCurrentSmartCutDraft(currentUser.username, currentUser.company_id);
     if (ensured.task) {
       setTask(ensured.task);
       writeCachedDraftTaskId(currentUser.username, ensured.task.id);
       return ensured.task;
     }
 
-    const createdTask = await createSmartCutTask(currentUser.username);
+    const createdTask = await createSmartCutTask(currentUser.username, currentUser.company_id);
     setTask(createdTask);
     writeCachedDraftTaskId(currentUser.username, createdTask.id);
     return createdTask;

@@ -112,6 +112,8 @@ def _apply_additive_smart_cut_schema(bind_engine: Engine) -> None:
             )
     if "session_scope_id" not in column_names:
         statements.append("ALTER TABLE smart_cut_tasks ADD COLUMN session_scope_id VARCHAR(128)")
+    if "company_id" not in column_names:
+        statements.append("ALTER TABLE smart_cut_tasks ADD COLUMN company_id INTEGER")
 
     true_literal = "TRUE" if dialect == "postgresql" else "1"
     false_literal = "FALSE" if dialect == "postgresql" else "0"

@@ -40,7 +40,7 @@ export default function TTSPage() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioFileName, setAudioFileName] = useState<string | null>(null);
   const [usageCredits, setUsageCredits] = useState(EXAMPLE_COPY[0].length);
-  const workspace = useUserWorkspaceData(user?.username);
+  const workspace = useUserWorkspaceData(user?.username, user?.company_id);
 
   useEffect(() => {
     async function bootstrap() {

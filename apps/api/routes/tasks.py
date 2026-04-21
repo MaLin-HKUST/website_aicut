@@ -134,6 +134,7 @@ def _build_task_detail(
     return TaskDetailResponse(
         id=task.id,
         user_id=task.user_id,
+        company_id=task.company_id,
         status=task.status.value,
         current_stage=task.current_stage.value,
         task_title=task.task_title,
@@ -160,6 +161,7 @@ def _build_task_summary(task: SmartCutTask) -> SmartCutTaskSummaryRead:
         id=task.id,
         status=task.status.value,
         current_stage=task.current_stage.value if task.current_stage else None,
+        company_id=task.company_id,
         active_edit_id=task.active_edit_id,
         visible_in_task_center=task.visible_in_task_center,
         session_scope_id=task.session_scope_id,
@@ -267,6 +269,7 @@ def build_task_center_item(
         input_files=[item for item in input_files if item],
         output_files=output_files,
         user_id=task.user_id if include_admin_fields else None,
+        company_id=task.company_id if include_admin_fields else None,
         scheduler_task_id=scheduler_task.id if include_admin_fields and scheduler_task else None,
         scheduler_status=scheduler_status if include_admin_fields and scheduler_task else None,
         worker_id=scheduler_task.assigned_worker_id if include_admin_fields and scheduler_task else None,
@@ -341,6 +344,7 @@ async def create_task(
         # 创建新任务
         task = SmartCutTask(
             user_id=request.user_id,
+            company_id=request.company_id,
             status=TaskStatus.WAITING_UPLOAD,
             current_stage=CurrentStage.UPLOAD,
             visible_in_task_center=False,
@@ -419,6 +423,7 @@ async def ensure_current_draft(
     if task is None:
         task = SmartCutTask(
             user_id=payload.user_id,
+            company_id=payload.company_id,
             status=TaskStatus.WAITING_UPLOAD,
             current_stage=CurrentStage.UPLOAD,
             visible_in_task_center=False,
@@ -445,9 +450,12 @@ async def ensure_current_draft(
 async def list_tasks(
     db: Annotated[Session, Depends(get_db)],
     user_id: str | None = Query(default=None, description="用户 ID；为空时返回全部任务"),
+    company_id: int | None = Query(default=None, description="企业 ID；为空时不过滤企业"),
     limit: int = Query(default=50, ge=1, le=200),
 ) -> list[SmartCutTaskSummaryRead]:
     stmt = select(SmartCutTask).order_by(desc(SmartCutTask.updated_at)).limit(limit)
+    if company_id is not None:
+        stmt = stmt.where(SmartCutTask.company_id == company_id)
     if user_id:
         stmt = stmt.where(SmartCutTask.user_id == user_id)
     tasks = list(db.execute(stmt).scalars().all())

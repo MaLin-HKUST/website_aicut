@@ -1,0 +1,30 @@
+{
+  "spec_version": "2026-04-22.v1",
+  "track": "smart_cut_company_queue",
+  "current_phase": "CQ05",
+  "completed_tasks": [
+    "CQ01",
+    "CQ02",
+    "CQ03",
+    "CQ04",
+    "CQ05"
+  ],
+  "in_progress_tasks": [],
+  "blocked_tasks": [],
+  "open_issues": [
+    {
+      "id": "CQ-LIVE-QUEUE",
+      "title": "live 双任务排队尚未验证",
+      "where_found": "专项执行层",
+      "symptom": "repo 代码已支持 company_id 维度，但 live 还未跑同公司双任务正式排队",
+      "current_judgement": "需要在 live API/frontend 带上 company_id 后，再做真实验证",
+      "next_action": "部署并执行 CQ06"
+    }
+  ],
+  "last_verified_at": "2026-04-22T00:00:00+08:00",
+  "last_good_commit": "",
+  "notes": [
+    "普通用户任务中心必须按 company_id 过滤",
+    "底层单 worker 仍允许全局 FCFS，但页面只展示公司视角队列"
+  ]
+}

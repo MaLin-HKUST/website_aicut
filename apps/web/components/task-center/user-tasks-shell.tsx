@@ -54,7 +54,7 @@ export function UserTasksShell() {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [selectedId, setSelectedId] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const workspace = useUserWorkspaceData(user?.username);
+  const workspace = useUserWorkspaceData(user?.username, user?.company_id);
 
   useEffect(() => {
     async function bootstrap() {
@@ -73,7 +73,11 @@ export function UserTasksShell() {
       setUser(payload.user);
 
       try {
-        const nextItems = await listTaskCenterItems({ mode: "user", userId: payload.user.username });
+        const nextItems = await listTaskCenterItems({
+          mode: "user",
+          userId: payload.user.username,
+          companyId: payload.user.company_id,
+        });
         setItems(nextItems);
         const requestedId = searchParams.get("taskId");
         setSelectedId(requestedId || nextItems[0]?.id || "");

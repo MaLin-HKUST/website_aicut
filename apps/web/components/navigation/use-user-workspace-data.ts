@@ -13,7 +13,7 @@ function toPreviewTasks(items: TaskCenterItem[]): UserWorkspacePreviewTask[] {
   }));
 }
 
-export function useUserWorkspaceData(userId?: string) {
+export function useUserWorkspaceData(userId?: string, companyId?: number | null) {
   const [items, setItems] = useState<TaskCenterItem[]>([]);
 
   useEffect(() => {
@@ -25,7 +25,7 @@ export function useUserWorkspaceData(userId?: string) {
 
     async function bootstrap() {
       try {
-        const nextItems = await listTaskCenterItems({ mode: "user", userId });
+        const nextItems = await listTaskCenterItems({ mode: "user", userId, companyId });
         if (!cancelled) {
           setItems(nextItems);
         }
@@ -40,7 +40,7 @@ export function useUserWorkspaceData(userId?: string) {
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [companyId, userId]);
 
   const metrics = useMemo<UserWorkspaceMetric[]>(
     () => [

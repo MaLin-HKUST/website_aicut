@@ -11,7 +11,7 @@ import { AuthResponse } from "@/lib/auth";
 export default function WelcomePage() {
   const router = useRouter();
   const [user, setUser] = useState<AuthResponse["user"] | null>(null);
-  const workspace = useUserWorkspaceData(user?.username);
+  const workspace = useUserWorkspaceData(user?.username, user?.company_id);
 
   useEffect(() => {
     async function bootstrap() {

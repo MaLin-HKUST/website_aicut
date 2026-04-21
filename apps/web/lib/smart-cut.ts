@@ -1,6 +1,7 @@
 export type SmartCutTask = {
   id: string;
   user_id: string;
+  company_id: number | null;
   status: string;
   current_stage: string | null;
   task_title: string | null;
@@ -55,6 +56,7 @@ export type SmartCutEdit = {
 type SmartCutTaskApi = {
   id: string;
   user_id: string;
+  company_id?: number | null;
   status: string;
   current_stage: string | null;
   task_title?: string | null;
@@ -187,6 +189,7 @@ function normalizeTask(payload: SmartCutTaskApi): SmartCutTask {
   return {
     id: payload.id,
     user_id: payload.user_id,
+    company_id: payload.company_id ?? null,
     status: payload.status,
     current_stage: payload.current_stage ?? null,
     task_title: payload.task_title ?? null,
@@ -381,10 +384,10 @@ export async function getSmartCutEdits(taskId: string): Promise<SmartCutEdit[]> 
   return payload.map(normalizeEdit);
 }
 
-export async function createSmartCutTask(userId: string): Promise<SmartCutTask> {
+export async function createSmartCutTask(userId: string, companyId?: number | null): Promise<SmartCutTask> {
   const payload = await fetchJson<TaskCreateApi>("/api/proxy/api/smart-cut/tasks", {
     method: "POST",
-    body: JSON.stringify({ user_id: userId }),
+    body: JSON.stringify({ user_id: userId, company_id: companyId ?? null }),
   });
   const taskId = payload.data?.task_id ?? payload.id;
   if (!taskId) {
@@ -408,10 +411,10 @@ export async function getCurrentSmartCutDraft(userId: string): Promise<SmartCutD
   };
 }
 
-export async function ensureCurrentSmartCutDraft(userId: string): Promise<SmartCutDraftLookup> {
+export async function ensureCurrentSmartCutDraft(userId: string, companyId?: number | null): Promise<SmartCutDraftLookup> {
   const result = await fetchOptionalJson<SmartCutDraftEnvelope>("/api/proxy/api/smart-cut/tasks/draft/current/ensure", {
     method: "POST",
-    body: JSON.stringify({ user_id: userId }),
+    body: JSON.stringify({ user_id: userId, company_id: companyId ?? null }),
   });
   const payload = unwrapDraftTask(result.data);
   return {

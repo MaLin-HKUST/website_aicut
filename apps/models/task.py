@@ -8,7 +8,7 @@ from datetime import datetime
 from enum import Enum as PyEnum
 from typing import Any, Optional, List
 
-from sqlalchemy import String, Text, DateTime, JSON, Enum
+from sqlalchemy import String, Text, DateTime, JSON, Enum, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from configs.database import Base
@@ -70,6 +70,12 @@ class SmartCutTask(Base):
         String(64),
         nullable=False,
         comment="用户ID"
+    )
+
+    company_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+        comment="企业ID"
     )
     
     # 时间戳
@@ -198,6 +204,7 @@ class SmartCutTask(Base):
         return {
             "id": self.id,
             "user_id": self.user_id,
+            "company_id": self.company_id,
             "status": self.status.value,
             "current_stage": self.current_stage.value,
             "task_title": self.task_title,
