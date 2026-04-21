@@ -1,0 +1,54 @@
+{
+  "spec_version": "2026-04-21.v1",
+  "track": "smart_cut_workspace_refactor",
+  "current_phase": "R00-R02 planned",
+  "completed_tasks": [
+    "package_bootstrap",
+    "interaction_spec_written",
+    "task_json_written",
+    "progress_files_initialized"
+  ],
+  "in_progress_tasks": [],
+  "blocked_tasks": [],
+  "decisions": [
+    {
+      "id": "D001",
+      "title": "Smart Cut uses one active draft per user session",
+      "status": "locked"
+    },
+    {
+      "id": "D002",
+      "title": "Task center visibility starts only at finalize",
+      "status": "locked"
+    },
+    {
+      "id": "D003",
+      "title": "Analyze result must render audio_a directly in current page",
+      "status": "locked"
+    }
+  ],
+  "open_issues": [
+    {
+      "id": "ISSUE-001",
+      "title": "Landing auto-creates waiting_upload task",
+      "where_found": "apps/web/components/smart-cut/workspace.tsx",
+      "symptom": "Clicking smart-cut navigation creates empty tasks in task center",
+      "current_judgement": "Current interaction model is wrong, not just a small frontend bug",
+      "next_action": "Fix in R04 by removing landing auto-create logic"
+    },
+    {
+      "id": "ISSUE-002",
+      "title": "Task center exposes intermediate draft stages",
+      "where_found": "apps/api/routes/tasks.py and apps/api/routes/task_center.py",
+      "symptom": "waiting_upload and ready_analyze are visible to end users",
+      "current_judgement": "Visibility semantics need a model-level flag and task-center filtering",
+      "next_action": "Fix in R03"
+    }
+  ],
+  "last_verified_at": "2026-04-21T00:00:00+08:00",
+  "last_good_commit": "",
+  "notes": [
+    "This package is planning and execution scaffolding only; implementation not started yet.",
+    "Follow task.json as the only execution checklist."
+  ]
+}

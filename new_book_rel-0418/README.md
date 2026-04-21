@@ -57,6 +57,7 @@
 2. [10_rebuild_2026-04-18/11_2026-04-19_当前系统状态.md](./10_rebuild_2026-04-18/11_2026-04-19_当前系统状态.md)
 3. [10_rebuild_2026-04-18/12_2026-04-19_当前Release与证据索引.md](./10_rebuild_2026-04-18/12_2026-04-19_当前Release与证据索引.md)
 4. [20_real_data_chain_2026-04-19/README.md](./20_real_data_chain_2026-04-19/README.md)
+5. 如果任务是 Smart Cut 工作台交互生命周期重构，继续读 [20_real_data_chain_2026-04-19/50_smart_cut_workspace_refactor_2026-04-21/README.md](./20_real_data_chain_2026-04-19/50_smart_cut_workspace_refactor_2026-04-21/README.md)
 
 ## 与旧文档的关系
 
@@ -69,6 +70,7 @@
 - [00_system_knowledge/README.md](./00_system_knowledge/README.md)
 - [10_rebuild_2026-04-18/README.md](./10_rebuild_2026-04-18/README.md)
 - [20_real_data_chain_2026-04-19/README.md](./20_real_data_chain_2026-04-19/README.md)
+- [20_real_data_chain_2026-04-19/50_smart_cut_workspace_refactor_2026-04-21/README.md](./20_real_data_chain_2026-04-19/50_smart_cut_workspace_refactor_2026-04-21/README.md)
 - [00_system_knowledge/08_前端协作模板.md](./00_system_knowledge/08_前端协作模板.md)
 - [00_system_knowledge/09_前端页面修改上线Runbook.md](./00_system_knowledge/09_前端页面修改上线Runbook.md)
 - [00_system_knowledge/10_前端CodingAgent交付纯模板.md](./00_system_knowledge/10_前端CodingAgent交付纯模板.md)

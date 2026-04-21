@@ -1,0 +1,696 @@
+{
+  "spec_version": "2026-04-21.v1",
+  "track": "smart_cut_workspace_refactor",
+  "branch_strategy": {
+    "integration_branch": "feature/rel0415-ui-U01-bootstrap",
+    "task_branch_prefix": "feature/smart-cut-workspace-refactor-"
+  },
+  "context_docs": [
+    "new_book_rel-0418/README.md",
+    "new_book_rel-0418/00_system_knowledge/README.md",
+    "new_book_rel-0418/20_real_data_chain_2026-04-19/README.md",
+    "new_book_rel-0418/20_real_data_chain_2026-04-19/40_headed_browser_e2e_2026-04-21/README.md",
+    "new_book_rel-0418/基础网络信息和账号信息.md"
+  ],
+  "product_decisions": {
+    "draft_scope": "same_login_session_only",
+    "max_active_drafts_per_user": 1,
+    "task_center_visibility": "finalize_only",
+    "first_audio_source": "analyze.audio_a",
+    "preview_audio_source": "preview.audio_b",
+    "logout_behavior": "clear_or_invalidate_previous_session_draft",
+    "task_name_pattern": "智能剪气口-YYYYMMDD-HHMMSS",
+    "timezone": "Asia/Shanghai"
+  },
+  "tasks": [
+    {
+      "id": "R00",
+      "title": "基线冻结与当前偏差归档",
+      "lane": "docs",
+      "parallel_group": "G0",
+      "goal": "固定当前 Smart Cut 工作台和任务中心的错误交互，作为重构前基线。",
+      "depends_on": [],
+      "write_scope": [
+        "new_book_rel-0418/20_real_data_chain_2026-04-19/50_smart_cut_workspace_refactor_2026-04-21/*"
+      ],
+      "required_context": [
+        "apps/web/components/smart-cut/workspace.tsx",
+        "apps/api/routes/tasks.py",
+        "apps/api/routes/task_center.py"
+      ],
+      "start_state": [
+        "当前线上 /smart-cut 仍存在进入即建空任务",
+        "当前 codebook 尚未有本专项完整基线文档"
+      ],
+      "implementation_steps": [
+        "记录 /smart-cut 入口即 create_task 的现状",
+        "记录 task-center 对 waiting_upload 等中间态的可见性映射",
+        "把当前偏差写入专项文档"
+      ],
+      "expected_end_state": [
+        "重构前基线和偏差已完整落档"
+      ],
+      "verification": {
+        "ui": [
+          "存在能证明空任务污染的任务中心截图"
+        ],
+        "api": [
+          "已记录 create_task 与 task-center 的现状响应"
+        ],
+        "db": [
+          "已记录 smart_cut_tasks 当前状态集合"
+        ],
+        "worker": [],
+        "tos": []
+      },
+      "artifacts": [
+        "baseline_ui.md",
+        "baseline_api.md",
+        "baseline_db.md"
+      ],
+      "git_requirements": {
+        "branch": "feature/rel0415-ui-U01-bootstrap",
+        "must_commit": false
+      },
+      "stop_on_failure": true
+    },
+    {
+      "id": "R01",
+      "title": "数据模型方案定稿",
+      "lane": "db",
+      "parallel_group": "G0",
+      "goal": "定义 Smart Cut 会话草稿与任务中心可见性的最小模型改动。",
+      "depends_on": [
+        "R00"
+      ],
+      "write_scope": [
+        "apps/models/task.py",
+        "migration files",
+        "new_book_rel-0418/20_real_data_chain_2026-04-19/50_smart_cut_workspace_refactor_2026-04-21/02_数据模型与接口重构.md"
+      ],
+      "required_context": [
+        "apps/models/task.py",
+        "apps/api/routes/tasks.py",
+        "apps/api/routes/task_center.py"
+      ],
+      "start_state": [
+        "smart_cut_tasks 尚无 visible_in_task_center 与 session_scope_id"
+      ],
+      "implementation_steps": [
+        "定义 visible_in_task_center 字段",
+        "定义 session_scope_id 字段",
+        "定义历史数据的可见性回填策略"
+      ],
+      "expected_end_state": [
+        "数据模型改动方案决策完成"
+      ],
+      "verification": {
+        "ui": [],
+        "api": [],
+        "db": [
+          "字段、默认值和回填规则在文档中无歧义"
+        ],
+        "worker": [],
+        "tos": []
+      },
+      "artifacts": [
+        "02_数据模型与接口重构.md"
+      ],
+      "git_requirements": {
+        "branch": "feature/smart-cut-workspace-refactor-R01-data-model",
+        "must_commit": true
+      },
+      "stop_on_failure": true
+    },
+    {
+      "id": "R02",
+      "title": "会话草稿接口设计",
+      "lane": "api",
+      "parallel_group": "G0",
+      "goal": "定义 current draft 与 ensure draft 的接口语义与事务边界。",
+      "depends_on": [
+        "R01"
+      ],
+      "write_scope": [
+        "apps/api/routes/tasks.py",
+        "apps/api/models/schemas.py",
+        "new_book_rel-0418/20_real_data_chain_2026-04-19/50_smart_cut_workspace_refactor_2026-04-21/02_数据模型与接口重构.md"
+      ],
+      "required_context": [
+        "apps/api/routes/tasks.py",
+        "apps/api/models/schemas.py",
+        "apps/web/lib/smart-cut.ts"
+      ],
+      "start_state": [
+        "前端仍依赖 create_task 直接驱动 /smart-cut"
+      ],
+      "implementation_steps": [
+        "定义 GET current draft",
+        "定义 POST ensure current draft",
+        "定义 logout 之后 draft 失效规则",
+        "定义 finalize 时可见性切换必须在同一事务内"
+      ],
+      "expected_end_state": [
+        "前端入口不再依赖 landing 自动 create_task"
+      ],
+      "verification": {
+        "ui": [],
+        "api": [
+          "接口返回形状、无草稿/有草稿两种情况无歧义"
+        ],
+        "db": [
+          "会话草稿唯一性规则明确"
+        ],
+        "worker": [],
+        "tos": []
+      },
+      "artifacts": [
+        "02_数据模型与接口重构.md"
+      ],
+      "git_requirements": {
+        "branch": "feature/smart-cut-workspace-refactor-R02-draft-api",
+        "must_commit": true
+      },
+      "stop_on_failure": true
+    },
+    {
+      "id": "R03",
+      "title": "任务中心可见性改造",
+      "lane": "api",
+      "parallel_group": "G1",
+      "goal": "让任务中心只展示 finalize 之后的正式任务。",
+      "depends_on": [
+        "R02"
+      ],
+      "write_scope": [
+        "apps/api/routes/tasks.py",
+        "apps/api/routes/task_center.py"
+      ],
+      "required_context": [
+        "apps/api/routes/task_center.py",
+        "apps/api/routes/tasks.py"
+      ],
+      "start_state": [
+        "waiting_upload 等中间态仍在任务中心可见"
+      ],
+      "implementation_steps": [
+        "task-center 查询加 visible_in_task_center 过滤",
+        "把 finalize 前后的任务中心可见性切换逻辑接上",
+        "准备历史空任务隐藏回填"
+      ],
+      "expected_end_state": [
+        "任务中心不再展示中间态草稿任务"
+      ],
+      "verification": {
+        "ui": [
+          "任务列表中不再出现 waiting_upload 空任务"
+        ],
+        "api": [
+          "task-center 列表只返回 visible_in_task_center=true 的任务"
+        ],
+        "db": [
+          "历史中间态任务默认被隐藏"
+        ],
+        "worker": [],
+        "tos": []
+      },
+      "artifacts": [
+        "task_center_visibility_checks.md"
+      ],
+      "git_requirements": {
+        "branch": "feature/smart-cut-workspace-refactor-R03-task-center",
+        "must_commit": true
+      },
+      "stop_on_failure": true
+    },
+    {
+      "id": "R04",
+      "title": "Smart Cut 页面入口重构",
+      "lane": "frontend",
+      "parallel_group": "G1",
+      "goal": "让 /smart-cut 成为恢复会话草稿的入口，而不是自动创建任务的入口。",
+      "depends_on": [
+        "R02"
+      ],
+      "write_scope": [
+        "apps/web/app/smart-cut/page.tsx",
+        "apps/web/components/smart-cut/workspace.tsx",
+        "apps/web/lib/smart-cut.ts"
+      ],
+      "required_context": [
+        "apps/web/components/smart-cut/workspace.tsx",
+        "apps/web/lib/smart-cut.ts"
+      ],
+      "start_state": [
+        "SmartCutLandingPage 会自动 create_task 并跳转"
+      ],
+      "implementation_steps": [
+        "删除 landing 自动 create_task",
+        "增加 restore current draft 入口逻辑",
+        "支持无 taskId 的 draft workspace 模式"
+      ],
+      "expected_end_state": [
+        "多次进入 /smart-cut 不再自动新增空任务"
+      ],
+      "verification": {
+        "ui": [
+          "点击左侧标签多次不会产生 waiting_upload 空任务"
+        ],
+        "api": [
+          "进入 /smart-cut 不再触发 POST /tasks"
+        ],
+        "db": [
+          "无上传动作时不再新增草稿任务"
+        ],
+        "worker": [],
+        "tos": []
+      },
+      "artifacts": [
+        "workspace_entry_checks.md"
+      ],
+      "git_requirements": {
+        "branch": "feature/smart-cut-workspace-refactor-R04-workspace-entry",
+        "must_commit": true
+      },
+      "stop_on_failure": true
+    },
+    {
+      "id": "R05",
+      "title": "Upload 段会话恢复",
+      "lane": "frontend",
+      "parallel_group": "G2",
+      "goal": "让上传状态在同一登录会话内可恢复。",
+      "depends_on": [
+        "R04"
+      ],
+      "write_scope": [
+        "apps/web/components/smart-cut/workspace.tsx",
+        "apps/web/lib/smart-cut.ts"
+      ],
+      "required_context": [
+        "apps/web/components/smart-cut/workspace.tsx",
+        "apps/web/lib/smart-cut.ts",
+        "40_headed_browser_e2e_2026-04-21/task.json"
+      ],
+      "start_state": [
+        "切页或刷新后上传态无法稳定恢复"
+      ],
+      "implementation_steps": [
+        "让上传区读取当前会话草稿输入状态",
+        "恢复视频/文案文件名和状态",
+        "恢复开始分析按钮可用性"
+      ],
+      "expected_end_state": [
+        "切到任务列表再回来、刷新后上传态仍存在"
+      ],
+      "verification": {
+        "ui": [
+          "文件名、状态条和按钮状态恢复"
+        ],
+        "api": [
+          "current draft 接口能返回已上传输入"
+        ],
+        "db": [
+          "草稿状态与输入字段一致"
+        ],
+        "worker": [],
+        "tos": [
+          "输入文件仍存在于任务前缀"
+        ]
+      },
+      "artifacts": [
+        "upload_session_restore.md"
+      ],
+      "git_requirements": {
+        "branch": "feature/smart-cut-workspace-refactor-R05-upload-restore",
+        "must_commit": true
+      },
+      "stop_on_failure": true
+    },
+    {
+      "id": "R06",
+      "title": "Analyze 页面内回显",
+      "lane": "frontend",
+      "parallel_group": "G2",
+      "goal": "analyze 完成后，script 与 audio_a 自动显示在当前页面。",
+      "depends_on": [
+        "R04"
+      ],
+      "write_scope": [
+        "apps/web/components/smart-cut/workspace.tsx",
+        "apps/web/lib/smart-cut.ts",
+        "apps/api/routes/tasks.py"
+      ],
+      "required_context": [
+        "apps/web/components/smart-cut/workspace.tsx",
+        "apps/web/lib/smart-cut.ts",
+        "apps/api/routes/tasks.py",
+        "worker/processors/analyze_processor.py"
+      ],
+      "start_state": [
+        "analyze 更像后台任务，页面不能稳定承接首版结果"
+      ],
+      "implementation_steps": [
+        "顶部状态条加 analyze 处理中提示",
+        "analyze 完成后自动展示删除线文本",
+        "右侧自动展示 audio_a"
+      ],
+      "expected_end_state": [
+        "用户第一次看到的工作台结果就已经包含 script 和 audio_a"
+      ],
+      "verification": {
+        "ui": [
+          "脚本框自动出现内容",
+          "右侧音频播放器自动出现"
+        ],
+        "api": [
+          "任务详情可返回 analyze_script 与首版音频"
+        ],
+        "db": [
+          "task.status=waiting_user 且 active_edit_id 正确"
+        ],
+        "worker": [
+          "analyze 任务成功"
+        ],
+        "tos": [
+          "audio_a 与 analyze 产物存在"
+        ]
+      },
+      "artifacts": [
+        "analyze_page_feedback.md"
+      ],
+      "git_requirements": {
+        "branch": "feature/smart-cut-workspace-refactor-R06-analyze-feedback",
+        "must_commit": true
+      },
+      "stop_on_failure": true
+    },
+    {
+      "id": "R07",
+      "title": "Preview 页面内回显",
+      "lane": "frontend",
+      "parallel_group": "G3",
+      "goal": "用户改删除线后，preview 结果仍回到当前页面。",
+      "depends_on": [
+        "R06"
+      ],
+      "write_scope": [
+        "apps/web/components/smart-cut/workspace.tsx",
+        "apps/web/components/smart-cut/script-editor.tsx",
+        "apps/web/lib/smart-cut.ts",
+        "apps/api/routes/stages.py"
+      ],
+      "required_context": [
+        "apps/web/components/smart-cut/workspace.tsx",
+        "apps/web/components/smart-cut/script-editor.tsx",
+        "apps/api/routes/stages.py"
+      ],
+      "start_state": [
+        "preview 反馈不完整，页面和后台结果脱节"
+      ],
+      "implementation_steps": [
+        "限制正文不可改，只允许改删除线",
+        "点击开始生成试听后顶部状态条显示处理中",
+        "preview 完成后用 audio_b 覆盖右侧播放器"
+      ],
+      "expected_end_state": [
+        "用户可在当前页面反复试听，不进入任务中心"
+      ],
+      "verification": {
+        "ui": [
+          "audio_b 自动出现并可播放"
+        ],
+        "api": [
+          "preview 返回的 edit 与当前页面一致"
+        ],
+        "db": [
+          "SmartCutEdit 新版本记录正确"
+        ],
+        "worker": [
+          "preview 成功"
+        ],
+        "tos": [
+          "audio_b 与 edited_delay_cuts 存在"
+        ]
+      },
+      "artifacts": [
+        "preview_page_feedback.md"
+      ],
+      "git_requirements": {
+        "branch": "feature/smart-cut-workspace-refactor-R07-preview-feedback",
+        "must_commit": true
+      },
+      "stop_on_failure": true
+    },
+    {
+      "id": "R08",
+      "title": "Finalize 升格为正式任务",
+      "lane": "integration",
+      "parallel_group": "G4",
+      "goal": "点击开始生成视频时，任务正式进入任务中心。",
+      "depends_on": [
+        "R03",
+        "R07"
+      ],
+      "write_scope": [
+        "apps/api/routes/stages.py",
+        "apps/web/components/smart-cut/workspace.tsx",
+        "apps/api/routes/task_center.py"
+      ],
+      "required_context": [
+        "apps/api/routes/stages.py",
+        "apps/web/components/smart-cut/workspace.tsx",
+        "apps/api/routes/task_center.py"
+      ],
+      "start_state": [
+        "中间态和正式态尚未在 finalize 时切分"
+      ],
+      "implementation_steps": [
+        "Finalize 请求前确保 output mode 已选定",
+        "在同一事务内切 visible_in_task_center、写标题、推进状态、创建 finalize 调度任务",
+        "页面提示任务已进入任务列表"
+      ],
+      "expected_end_state": [
+        "任务中心只在 finalize 后新增正式任务卡"
+      ],
+      "verification": {
+        "ui": [
+          "点击开始生成视频后，任务列表新增一条正式任务"
+        ],
+        "api": [
+          "finalize 返回后任务标题正确"
+        ],
+        "db": [
+          "visible_in_task_center=true 且 title 为北京时间戳"
+        ],
+        "worker": [
+          "finalize 调度任务正常创建"
+        ],
+        "tos": []
+      },
+      "artifacts": [
+        "finalize_promotion_checks.md"
+      ],
+      "git_requirements": {
+        "branch": "feature/smart-cut-workspace-refactor-R08-finalize-promotion",
+        "must_commit": true
+      },
+      "stop_on_failure": true
+    },
+    {
+      "id": "R09",
+      "title": "Finalize 后工作台清理",
+      "lane": "frontend",
+      "parallel_group": "G3",
+      "goal": "用户点击开始生成视频后，当前工作台立即恢复初始状态。",
+      "depends_on": [
+        "R07"
+      ],
+      "write_scope": [
+        "apps/web/components/smart-cut/workspace.tsx"
+      ],
+      "required_context": [
+        "apps/web/components/smart-cut/workspace.tsx"
+      ],
+      "start_state": [
+        "Finalize 后工作台还可能保留上一条任务状态"
+      ],
+      "implementation_steps": [
+        "清理页面本地状态",
+        "恢复上传区初始提示和按钮状态",
+        "确保用户可以立即开始下一条"
+      ],
+      "expected_end_state": [
+        "当前页面不保留上一条 finalize 后的草稿痕迹"
+      ],
+      "verification": {
+        "ui": [
+          "工作台回到初始空态"
+        ],
+        "api": [
+          "当前会话活动草稿已完成或被关闭"
+        ],
+        "db": [
+          "不会错误复用上一条草稿"
+        ],
+        "worker": [],
+        "tos": []
+      },
+      "artifacts": [
+        "workspace_reset_checks.md"
+      ],
+      "git_requirements": {
+        "branch": "feature/smart-cut-workspace-refactor-R09-workspace-reset",
+        "must_commit": true
+      },
+      "stop_on_failure": true
+    },
+    {
+      "id": "R10",
+      "title": "真实浏览器回归",
+      "lane": "integration",
+      "parallel_group": "G4",
+      "goal": "按 headed browser 专项包重跑真实样本全链路。",
+      "depends_on": [
+        "R08",
+        "R09"
+      ],
+      "write_scope": [
+        "new_book_rel-0418/20_real_data_chain_2026-04-19/artifacts/*",
+        "new_book_rel-0418/20_real_data_chain_2026-04-19/40_headed_browser_e2e_2026-04-21/*"
+      ],
+      "required_context": [
+        "40_headed_browser_e2e_2026-04-21/task.json",
+        "new_book_rel-0418/基础网络信息和账号信息.md"
+      ],
+      "start_state": [
+        "新交互已落地到可测环境"
+      ],
+      "implementation_steps": [
+        "用 rbzj / 123456 登录",
+        "上传 C2384_reencoded.mp4 与 ref.txt",
+        "运行 analyze",
+        "做最小合法删除线编辑",
+        "运行 preview",
+        "运行 finalize",
+        "在任务中心验证下载"
+      ],
+      "expected_end_state": [
+        "新交互在真实浏览器、真实数据、真实 Worker/TOS 下完整通过"
+      ],
+      "verification": {
+        "ui": [
+          "上传、analyze、preview、finalize、任务列表下载都正确"
+        ],
+        "api": [
+          "任务详情阶段推进正确"
+        ],
+        "db": [
+          "草稿与正式任务状态符合新规则"
+        ],
+        "worker": [
+          "三阶段任务全部成功"
+        ],
+        "tos": [
+          "analyze / preview / finalize 产物链完整"
+        ]
+      },
+      "artifacts": [
+        "headed_real_browser_summary.md"
+      ],
+      "git_requirements": {
+        "branch": "feature/smart-cut-workspace-refactor-R10-headed-e2e",
+        "must_commit": false
+      },
+      "stop_on_failure": true
+    },
+    {
+      "id": "R11",
+      "title": "文档与状态收口",
+      "lane": "docs",
+      "parallel_group": "G4",
+      "goal": "把这次重构结论写回 codebook 与真实链路专项。",
+      "depends_on": [
+        "R10"
+      ],
+      "write_scope": [
+        "new_book_rel-0418/20_real_data_chain_2026-04-19/README.md",
+        "new_book_rel-0418/20_real_data_chain_2026-04-19/03_当前正式链路与缺口.md",
+        "new_book_rel-0418/20_real_data_chain_2026-04-19/40_headed_browser_e2e_2026-04-21/*",
+        "new_book_rel-0418/10_rebuild_2026-04-18/11_2026-04-19_当前系统状态.md",
+        "new_book_rel-0418/10_rebuild_2026-04-18/12_2026-04-19_当前Release与证据索引.md"
+      ],
+      "required_context": [
+        "R00-R10 产物",
+        "真实浏览器验收结果"
+      ],
+      "start_state": [
+        "重构已完成并验证"
+      ],
+      "implementation_steps": [
+        "更新专项 README 入口",
+        "回写当前正式链路状态",
+        "回写 release 与证据索引",
+        "更新 progress.* 为 completed"
+      ],
+      "expected_end_state": [
+        "后续 Agent 不需要翻聊天记录即可理解本轮重构"
+      ],
+      "verification": {
+        "ui": [],
+        "api": [],
+        "db": [],
+        "worker": [],
+        "tos": []
+      },
+      "artifacts": [
+        "progress.md",
+        "progress.json"
+      ],
+      "git_requirements": {
+        "branch": "feature/rel0415-ui-U01-bootstrap",
+        "must_commit": true
+      },
+      "stop_on_failure": true
+    }
+  ],
+  "parallel_groups": {
+    "G0": {
+      "mode": "serial",
+      "tasks": [
+        "R00",
+        "R01",
+        "R02"
+      ]
+    },
+    "G1": {
+      "mode": "parallel",
+      "tasks": [
+        "R03",
+        "R04"
+      ]
+    },
+    "G2": {
+      "mode": "parallel",
+      "tasks": [
+        "R05",
+        "R06"
+      ]
+    },
+    "G3": {
+      "mode": "parallel",
+      "tasks": [
+        "R07",
+        "R09"
+      ]
+    },
+    "G4": {
+      "mode": "serial",
+      "tasks": [
+        "R08",
+        "R10",
+        "R11"
+      ]
+    }
+  }
+}

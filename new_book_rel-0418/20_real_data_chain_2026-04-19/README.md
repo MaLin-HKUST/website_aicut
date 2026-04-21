@@ -46,6 +46,7 @@
 7. [06_热补收口与发布收口.md](./06_热补收口与发布收口.md)
 8. [30_preview_delaycut_issue_2026-04-20/README.md](./30_preview_delaycut_issue_2026-04-20/README.md)
 9. [40_headed_browser_e2e_2026-04-21/README.md](./40_headed_browser_e2e_2026-04-21/README.md)
+10. [50_smart_cut_workspace_refactor_2026-04-21/README.md](./50_smart_cut_workspace_refactor_2026-04-21/README.md)
 
 其中：
 
@@ -53,6 +54,7 @@
 - `05_证据清单与产物目录.md` 是每一步的证据对照表
 - `07_失败处理与回滚条件.md` 是失败时的分叉处理面
 - `40_headed_browser_e2e_2026-04-21/task.json` 是“真实浏览器 + 真实数据 + 页面/API/DB/Worker/TOS 联查”的专项执行清单
+- `50_smart_cut_workspace_refactor_2026-04-21/task.json` 是“Smart Cut 工作台交互生命周期重构”的专项执行清单
 
 ## 当前结论
 
@@ -65,6 +67,7 @@
   - `apps/services/tos_service.py`
   - `apps/api/routes/tasks.py`
 - Worker finalize 环境仍缺 `ffprobe`
+- `/smart-cut` 当前交互生命周期仍与目标产品语义不一致，已拆入 `50_smart_cut_workspace_refactor_2026-04-21/`
 
 因此，本层的目标不是再做一次抽象验证，而是：
 
@@ -88,3 +91,5 @@
   4. 热补收口与发布收口
 - 如果你要把 `preview` 算法定位失败交给新的 coding agent 单独优化，请直接使用：
   - `30_preview_delaycut_issue_2026-04-20/`
+- 如果你要推进 Smart Cut 工作台交互生命周期重构，不要继续在现有页面逻辑上打补丁，直接进入：
+  - `50_smart_cut_workspace_refactor_2026-04-21/`
