@@ -276,7 +276,7 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
         return;
       }
 
-      const draftLookup = await getCurrentSmartCutDraft();
+      const draftLookup = await getCurrentSmartCutDraft(authPayload.user.username);
       if (draftLookup.task) {
         await hydrateTask(draftLookup.task.id, authPayload.user.username);
         return;

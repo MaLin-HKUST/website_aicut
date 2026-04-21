@@ -74,7 +74,7 @@ test("opening /smart-cut no longer auto-creates an empty task", async ({ page })
 
   await routeBaseApis(page);
 
-  await page.route("**/api/proxy/api/smart-cut/draft/current", async (route) => {
+  await page.route("**/api/proxy/api/smart-cut/tasks/draft/current", async (route) => {
     await route.fulfill({
       status: 204,
       body: "",
@@ -109,7 +109,7 @@ test("analyze result renders script and audio_a in the current draft workspace",
 
   await routeBaseApis(page);
 
-  await page.route("**/api/proxy/api/smart-cut/draft/current", async (route) => {
+  await page.route("**/api/proxy/api/smart-cut/tasks/draft/current", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -174,7 +174,7 @@ test("preview keeps正文不可改 and renders audio_b in the current workspace"
 
   await routeBaseApis(page);
 
-  await page.route("**/api/proxy/api/smart-cut/draft/current", async (route) => {
+  await page.route("**/api/proxy/api/smart-cut/tasks/draft/current", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -266,7 +266,7 @@ test("finalize promotes the task and resets the workspace to idle", async ({ pag
 
   await routeBaseApis(page);
 
-  await page.route("**/api/proxy/api/smart-cut/draft/current", async (route) => {
+  await page.route("**/api/proxy/api/smart-cut/tasks/draft/current", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",

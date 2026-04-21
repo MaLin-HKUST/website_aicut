@@ -383,8 +383,9 @@ export async function createSmartCutTask(userId: string): Promise<SmartCutTask> 
   return getSmartCutTask(taskId);
 }
 
-export async function getCurrentSmartCutDraft(): Promise<SmartCutDraftLookup> {
-  const result = await fetchOptionalJson<SmartCutDraftEnvelope>("/api/proxy/api/smart-cut/draft/current");
+export async function getCurrentSmartCutDraft(userId: string): Promise<SmartCutDraftLookup> {
+  const query = `?user_id=${encodeURIComponent(userId)}`;
+  const result = await fetchOptionalJson<SmartCutDraftEnvelope>(`/api/proxy/api/smart-cut/tasks/draft/current${query}`);
   const payload = unwrapDraftTask(result.data);
   return {
     supported: result.supported,
@@ -393,7 +394,7 @@ export async function getCurrentSmartCutDraft(): Promise<SmartCutDraftLookup> {
 }
 
 export async function ensureCurrentSmartCutDraft(userId: string): Promise<SmartCutDraftLookup> {
-  const result = await fetchOptionalJson<SmartCutDraftEnvelope>("/api/proxy/api/smart-cut/draft/current/ensure", {
+  const result = await fetchOptionalJson<SmartCutDraftEnvelope>("/api/proxy/api/smart-cut/tasks/draft/current/ensure", {
     method: "POST",
     body: JSON.stringify({ user_id: userId }),
   });

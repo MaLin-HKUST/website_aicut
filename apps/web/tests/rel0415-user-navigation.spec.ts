@@ -118,7 +118,7 @@ test.beforeEach(async ({ page }) => {
     });
   });
 
-  await page.route("**/api/proxy/api/smart-cut/draft/current", async (route) => {
+  await page.route("**/api/proxy/api/smart-cut/tasks/draft/current", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
