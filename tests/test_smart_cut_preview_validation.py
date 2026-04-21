@@ -95,6 +95,25 @@ def test_preview_rejects_rewritten_script_text(preview_client):
     assert "preserve the current task script text" in response.json()["detail"]
 
 
+def test_preview_accepts_list_shaped_analyze_script(preview_client):
+    client, session_local = preview_client
+    task_id = _create_waiting_user_task(
+        session_local,
+        analyze_script=[
+            {"index": 0, "text": "今天{先删掉这句}继续讲重点。"},
+        ],
+    )
+
+    response = client.post(
+        f"/api/smart-cut/tasks/{task_id}/preview",
+        json={"edited_script": "今天先删掉这句继续讲{重点。}"},
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["status"] == "previewing"
+
+
 def test_preview_rejects_invalid_brace_markers(preview_client):
     client, session_local = preview_client
     task_id = _create_waiting_user_task(session_local)
