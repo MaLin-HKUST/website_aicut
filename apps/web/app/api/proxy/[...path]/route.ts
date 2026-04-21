@@ -21,7 +21,10 @@ async function handler(request: NextRequest, context: { params: Promise<{ path: 
   };
 
   if (!["GET", "HEAD"].includes(request.method)) {
-    init.body = await request.arrayBuffer();
+    // Preserve multipart and large uploads as a stream so the proxy does not
+    // buffer the full request body or break upstream writes on big files.
+    init.body = request.body;
+    (init as RequestInit & { duplex: "half" }).duplex = "half";
   }
 
   const response = await fetch(url, init);
