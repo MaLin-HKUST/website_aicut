@@ -117,8 +117,9 @@ function buildWorkspaceBanner(args: {
   canAnalyze: boolean;
   hasAudioA: boolean;
   hasAudioB: boolean;
+  submittedTaskTitle: string | null;
 }) {
-  const { busyAction, task, uploadState, canAnalyze, hasAudioA, hasAudioB } = args;
+  const { busyAction, task, uploadState, canAnalyze, hasAudioA, hasAudioB, submittedTaskTitle } = args;
 
   if (uploadState === "uploading" || busyAction === "upload") {
     return {
@@ -142,6 +143,12 @@ function buildWorkspaceBanner(args: {
     return {
       title: "正在生成视频",
       detail: "当前任务会转入任务列表，工作台将回到下一条草稿的起点。",
+    };
+  }
+  if (!task && submittedTaskTitle) {
+    return {
+      title: "任务已转入任务列表",
+      detail: `${submittedTaskTitle} 已作为正式任务加入任务列表，当前工作台已清空，可以继续开始下一条。`,
     };
   }
   if (hasAudioB) {
@@ -191,6 +198,8 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [lastSubmittedTaskTitle, setLastSubmittedTaskTitle] = useState<string | null>(null);
+  const [inputResetToken, setInputResetToken] = useState(0);
   const workspace = useUserWorkspaceData(currentUser?.username);
   const scriptEditorRef = useRef<SmartCutScriptEditorHandle>(null);
 
@@ -210,6 +219,7 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
 
     setTask(taskData);
     setEdits(editData);
+    setLastSubmittedTaskTitle(null);
     setOutputMode(taskData.output_mode ?? "original");
     setFeedToAi(taskData.feed_to_ai ?? true);
 
@@ -219,6 +229,30 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
       writeCachedDraftTaskId(username, taskData.id);
     }
     return taskData;
+  }
+
+  function resetWorkspaceForNextDraft(taskTitle: string) {
+    setTask(null);
+    setEdits([]);
+    setScriptDraft("");
+    setVideoFile(null);
+    setReferenceFile(null);
+    setOutputMode("original");
+    setFeedToAi(true);
+    setEditorTab("script");
+    setEditorControls({
+      canMarkDelete: false,
+      canRestore: false,
+      canClear: false,
+      selectedCount: 0,
+    });
+    setBusyAction(null);
+    setUploadProgress(0);
+    setUploadState("idle");
+    setError(null);
+    setNotice(null);
+    setLastSubmittedTaskTitle(taskTitle);
+    setInputResetToken((value) => value + 1);
   }
 
   async function bootstrap() {
@@ -292,7 +326,10 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
   const canUpload = (!task && Boolean(currentUser)) || task?.status === "waiting_upload";
   const canAnalyze = task?.status === "ready_analyze";
   const canPreview = Boolean(task && ["waiting_user", "preview_failed"].includes(task.status) && scriptDraft.length > 0);
-  const canFinalize = Boolean(task && ["waiting_user", "finalize_failed"].includes(task.status));
+  const hasPreviewArtifacts = Boolean(
+    latestEdit?.audio_b_url && latestEdit?.edited_delay_cuts_tos_key && latestEdit?.pause_cuts_on_original_tos_key,
+  );
+  const canFinalize = Boolean(task && ["waiting_user", "finalize_failed"].includes(task.status) && hasPreviewArtifacts);
 
   useEffect(() => {
     if (!canUpload || busyAction !== null || uploadState !== "idle" || !videoFile || !referenceFile) return;
@@ -325,6 +362,7 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
     setUploadState("uploading");
     setError(null);
     setNotice(null);
+    setLastSubmittedTaskTitle(null);
 
     try {
       const ensuredTask = await ensureDraftTask();
@@ -353,6 +391,7 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
     setBusyAction("analyze");
     setError(null);
     setNotice(null);
+    setLastSubmittedTaskTitle(null);
     try {
       const nextTask = await startAnalyze(task.id);
       setTask(nextTask);
@@ -369,6 +408,7 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
     setBusyAction("preview");
     setError(null);
     setNotice(null);
+    setLastSubmittedTaskTitle(null);
     try {
       const nextTask = await startPreview(task.id, scriptDraft);
       setTask(nextTask);
@@ -386,14 +426,16 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
     setBusyAction("finalize");
     setError(null);
     setNotice(null);
+    setLastSubmittedTaskTitle(null);
     try {
-      const nextTask = await startFinalize(task.id, { outputMode, feedToAi });
-      setTask(nextTask);
+      const result = await startFinalize(task.id, { outputMode, feedToAi });
+      if (!result.visibleInTaskCenter) {
+        throw new Error("Finalize 已提交，但任务还没有进入任务列表");
+      }
       if (currentUser?.username) {
         clearCachedDraftTaskId(currentUser.username);
       }
-      setNotice("生成视频任务已提交。按照 0415 规划，最终状态与下载会继续由任务中心接管。");
-      router.push(`/tasks?taskId=${task.id}`);
+      resetWorkspaceForNextDraft(result.taskTitle);
     } catch (err) {
       setError(err instanceof Error ? err.message : "提交生成视频失败");
     } finally {
@@ -411,7 +453,7 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
   const audioPreviewLabel = latestEdit?.audio_b_url ? "试听音频 audio_b" : latestEdit?.audio_a_url ? "分析音频 audio_a" : null;
   const downloadReady = Boolean(task?.final_video_url);
   const stageOneLabel = canPreview ? "可生成试听" : canAnalyze ? "待开始分析" : "待上传素材";
-  const stageTwoLabel = canFinalize ? "可生成视频" : previewReady ? "待确认规格" : "等待试听完成";
+  const stageTwoLabel = canFinalize ? "可生成视频" : previewReady ? "待确认规格" : "请先生成试听";
   const banner = buildWorkspaceBanner({
     busyAction,
     task,
@@ -419,6 +461,7 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
     canAnalyze,
     hasAudioA: audioAReady,
     hasAudioB: previewReady,
+    submittedTaskTitle: lastSubmittedTaskTitle,
   });
   const uploadProgressText = formatPercent(uploadProgress);
   const uploadInFlight = uploadState === "uploading";
@@ -505,6 +548,17 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
             </div>
           </Card>
         ) : null}
+        {!loading && lastSubmittedTaskTitle ? (
+          <Card className="mb-6 rounded-[24px] border-emerald-200 bg-emerald-50/80 p-4 shadow-sm">
+            <p className="text-sm font-semibold text-emerald-800">任务已进入任务列表</p>
+            <p className="mt-2 text-sm leading-7 text-emerald-700">
+              {lastSubmittedTaskTitle} 已升格为正式任务，当前工作台已经清空，可继续上传下一条。
+            </p>
+          </Card>
+        ) : null}
+        {!loading && notice ? <p className="mb-6 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{notice}</p> : null}
+        {!loading && error ? <p className="mb-6 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
+        {!loading && task?.error_message ? <p className="mb-6 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">后端错误：{task.error_message}</p> : null}
         <div className="grid gap-6 xl:grid-cols-[1.7fr_0.62fr]">
           <div className="space-y-5">
             <Card className="rounded-[30px] border-[#dbe4f4] bg-white p-5 shadow-sm">
@@ -515,7 +569,11 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
                   <Input
                     className="hidden"
                     disabled={busyAction === "upload"}
+                    key={`video-input-${inputResetToken}`}
                     onChange={(event) => {
+                      setLastSubmittedTaskTitle(null);
+                      setNotice(null);
+                      setError(null);
                       setVideoFile(event.target.files?.[0] ?? null);
                       setUploadProgress(0);
                       setUploadState("idle");
@@ -528,7 +586,11 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
                   <Input
                     className="hidden"
                     disabled={busyAction === "upload"}
+                    key={`reference-input-${inputResetToken}`}
                     onChange={(event) => {
+                      setLastSubmittedTaskTitle(null);
+                      setNotice(null);
+                      setError(null);
                       setReferenceFile(event.target.files?.[0] ?? null);
                       setUploadProgress(0);
                       setUploadState("idle");
@@ -748,9 +810,6 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
               ) : null}
             </div>
 
-            {notice ? <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{notice}</p> : null}
-            {error ? <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
-            {task?.error_message ? <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">后端错误：{task.error_message}</p> : null}
           </div>
         </div>
       </section>
