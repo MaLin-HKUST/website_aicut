@@ -21,6 +21,13 @@ export default function LoginPage() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const nextUsername = String(formData.get("username") ?? username);
+    const nextPassword = String(formData.get("password") ?? password);
+
+    setUsername(nextUsername);
+    setPassword(nextPassword);
     setSubmitting(true);
     setError(null);
 
@@ -30,7 +37,7 @@ export default function LoginPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username: nextUsername, password: nextPassword }),
       });
 
       if (!response.ok) {
@@ -80,6 +87,7 @@ export default function LoginPage() {
               </label>
               <Input
                 id="login-username"
+                name="username"
                 autoComplete="username"
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
@@ -94,6 +102,7 @@ export default function LoginPage() {
               </label>
               <Input
                 id="login-password"
+                name="password"
                 type="password"
                 autoComplete="current-password"
                 value={password}
