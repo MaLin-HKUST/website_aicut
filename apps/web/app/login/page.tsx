@@ -1,7 +1,6 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,6 @@ type LoginResponse = {
 };
 
 export default function LoginPage() {
-  const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -41,8 +39,8 @@ export default function LoginPage() {
       }
 
       const payload = (await response.json()) as LoginResponse;
-      router.push(payload.user.role === "admin" ? "/admin" : "/welcome");
-      router.refresh();
+      window.location.replace(payload.user.role === "admin" ? "/admin" : "/welcome");
+      return;
     } catch (err) {
       setError(err instanceof Error ? err.message : "登录失败");
     } finally {
