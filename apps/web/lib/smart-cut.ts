@@ -107,6 +107,21 @@ type FinalizeResponseApi = {
   task_title: string;
 };
 
+type UploadPrepareResponseApi = {
+  video_upload_url: string;
+  video_key: string;
+  text_upload_url: string;
+  text_key: string;
+  expires_at: string;
+};
+
+type UploadCompleteResponseApi = {
+  status: string;
+  task_id: string;
+  next_stage: string;
+  message: string;
+};
+
 type SmartCutDraftEnvelope =
   | SmartCutTaskApi
   | {
@@ -466,6 +481,82 @@ async function uploadFileToPresignedUrl(
   });
 }
 
+async function uploadFileToTos(
+  url: string,
+  file: File,
+  options?: {
+    onProgress?: (progress: UploadDirectProgress) => void;
+  },
+): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", url);
+    if (file.type) {
+      xhr.setRequestHeader("Content-Type", file.type);
+    }
+
+    xhr.upload.onprogress = (event) => {
+      if (!event.lengthComputable || !options?.onProgress) return;
+      options.onProgress({
+        loaded: event.loaded,
+        total: event.total,
+        percent: Math.max(0, Math.min(100, Math.round((event.loaded / event.total) * 100))),
+      });
+    };
+
+    xhr.onerror = () => reject(new Error("浏览器直传 TOS 失败，请检查网络后重试"));
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+        return;
+      }
+      reject(new Error(`TOS upload failed: ${xhr.status}`));
+    };
+
+    xhr.send(file);
+  });
+}
+
+async function uploadInputsViaPrepareComplete(
+  taskId: string,
+  videoFile: File,
+  referenceFile: File,
+  options?: {
+    onProgress?: (progress: UploadDirectProgress) => void;
+  },
+): Promise<SmartCutTask> {
+  const extension = videoFile.name.includes(".") ? videoFile.name.split(".").pop() ?? "mp4" : "mp4";
+  const prepare = await fetchJson<UploadPrepareResponseApi>(
+    `/api/proxy/api/smart-cut/tasks/${taskId}/upload-prepare?video_ext=${encodeURIComponent(extension)}`,
+    { method: "POST" },
+  );
+
+  const totalBytes = Math.max(1, videoFile.size + referenceFile.size);
+  const reportCombinedProgress = (baseLoaded: number, loaded: number) => {
+    if (!options?.onProgress) return;
+    const combinedLoaded = Math.min(totalBytes, baseLoaded + loaded);
+    options.onProgress({
+      loaded: combinedLoaded,
+      total: totalBytes,
+      percent: Math.max(0, Math.min(100, Math.round((combinedLoaded / totalBytes) * 100))),
+    });
+  };
+
+  await uploadFileToTos(prepare.video_upload_url, videoFile, {
+    onProgress: (progress) => reportCombinedProgress(0, progress.loaded),
+  });
+  await uploadFileToTos(prepare.text_upload_url, referenceFile, {
+    onProgress: (progress) => reportCombinedProgress(videoFile.size, progress.loaded),
+  });
+
+  await fetchJson<UploadCompleteResponseApi>(`/api/proxy/api/smart-cut/tasks/${taskId}/upload-complete`, {
+    method: "POST",
+    body: JSON.stringify({ uploaded_keys: [prepare.video_key, prepare.text_key] }),
+  });
+
+  return getSmartCutTask(taskId);
+}
+
 export async function uploadDirectInputs(
   taskId: string,
   videoFile: File,
@@ -474,15 +565,19 @@ export async function uploadDirectInputs(
     onProgress?: (progress: UploadDirectProgress) => void;
   },
 ): Promise<SmartCutTask> {
-  const payload = new FormData();
-  payload.append("video_file", videoFile, videoFile.name || "source_video.mp4");
-  payload.append("reference_file", referenceFile, referenceFile.name || "reference.txt");
+  try {
+    return await uploadInputsViaPrepareComplete(taskId, videoFile, referenceFile, options);
+  } catch {
+    const payload = new FormData();
+    payload.append("video_file", videoFile, videoFile.name || "source_video.mp4");
+    payload.append("reference_file", referenceFile, referenceFile.name || "reference.txt");
 
-  const task = await uploadFileToPresignedUrl(`/api/proxy/api/smart-cut/tasks/${taskId}/upload-direct`, payload, {
-    onProgress: options?.onProgress,
-  });
+    const task = await uploadFileToPresignedUrl(`/api/proxy/api/smart-cut/tasks/${taskId}/upload-direct`, payload, {
+      onProgress: options?.onProgress,
+    });
 
-  return normalizeTask(task);
+    return normalizeTask(task);
+  }
 }
 
 export async function startAnalyze(taskId: string): Promise<SmartCutTask> {
