@@ -25,18 +25,20 @@ export async function POST(request: NextRequest) {
 
   if (!upstream.ok) {
     const payload = ((await upstream.json().catch(() => null)) as LoginResponse | null) ?? null;
-    const target = new URL("/login", request.url);
+    const location = new URLSearchParams();
     if (payload?.detail) {
-      target.searchParams.set("error", payload.detail);
+      location.set("error", payload.detail);
     } else {
-      target.searchParams.set("error", "登录失败");
+      location.set("error", "登录失败");
     }
-    return NextResponse.redirect(target, { status: 303 });
+    const response = new NextResponse(null, { status: 303 });
+    response.headers.set("location", `/login?${location.toString()}`);
+    return response;
   }
 
   const payload = (await upstream.json()) as LoginResponse;
-  const target = new URL(payload.user?.role === "admin" ? "/admin" : "/welcome", request.url);
-  const response = NextResponse.redirect(target, { status: 303 });
+  const response = new NextResponse(null, { status: 303 });
+  response.headers.set("location", payload.user?.role === "admin" ? "/admin" : "/welcome");
 
   if (typeof (upstream.headers as Headers & { getSetCookie?: () => string[] }).getSetCookie === "function") {
     const cookies = (upstream.headers as Headers & { getSetCookie: () => string[] }).getSetCookie();
