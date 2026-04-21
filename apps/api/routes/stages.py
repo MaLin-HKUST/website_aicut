@@ -7,6 +7,7 @@
 """
 
 import json
+from datetime import datetime
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -23,6 +24,7 @@ from apps.api.models.schemas import (
     FinalizeRequest,
     FinalizeResponse,
 )
+from apps.services.smart_cut_contract import build_smart_cut_task_title
 
 router = APIRouter(prefix="/api/smart-cut", tags=["stages"])
 
@@ -372,6 +374,7 @@ async def start_finalize(
     original_video_tos_key = task.original_video_url or ""
     
     # 创建 SchedulerTask
+    task_title = task.task_title or build_smart_cut_task_title()
     scheduler_task = SchedulerTask(
         task_type=SchedulerTaskType.SMART_CUT_FINALIZE,
         status=SchedulerTaskStatus.PENDING,
@@ -389,14 +392,20 @@ async def start_finalize(
     db.add(scheduler_task)
     
     # 推进任务状态
+    task.task_title = task_title
+    task.visible_in_task_center = True
     task.status = TaskStatus.FINALIZING
     task.current_stage = CurrentStage.FINALIZE
     task.active_edit_id = edit.id
+    task.updated_at = datetime.utcnow()
     
     db.commit()
     db.refresh(scheduler_task)
+    db.refresh(task)
     
     return FinalizeResponse(
         scheduler_task_id=scheduler_task.id,
         status=task.status.value,
+        visible_in_task_center=task.visible_in_task_center,
+        task_title=task.task_title or task_title,
     )

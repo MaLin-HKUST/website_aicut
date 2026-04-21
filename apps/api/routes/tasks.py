@@ -15,7 +15,7 @@ from datetime import datetime
 from typing import Any, Annotated
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
@@ -31,6 +31,9 @@ from apps.api.models.schemas import (
     TaskCreateRequest,
     TaskCreateData,
     TaskCreateResponse,
+    DraftCurrentResponse,
+    DraftEnsureRequest,
+    DraftEnsureResponse,
     TaskStatusData,
     TaskStatusResponse,
     PresignedUrlData,
@@ -42,6 +45,7 @@ from apps.api.models.schemas import (
 )
 from apps.services.tos_service import TOSService
 from apps.services.cleanup_service import create_cleanup_service
+from apps.services.smart_cut_contract import resolve_session_scope_id
 
 
 router = APIRouter(
@@ -132,6 +136,9 @@ def _build_task_detail(
         user_id=task.user_id,
         status=task.status.value,
         current_stage=task.current_stage.value,
+        task_title=task.task_title,
+        visible_in_task_center=task.visible_in_task_center,
+        session_scope_id=task.session_scope_id,
         created_at=task.created_at,
         updated_at=task.updated_at,
         original_video_url=task.original_video_url,
@@ -154,6 +161,8 @@ def _build_task_summary(task: SmartCutTask) -> SmartCutTaskSummaryRead:
         status=task.status.value,
         current_stage=task.current_stage.value if task.current_stage else None,
         active_edit_id=task.active_edit_id,
+        visible_in_task_center=task.visible_in_task_center,
+        session_scope_id=task.session_scope_id,
         created_at=task.created_at,
         updated_at=task.updated_at,
     )
@@ -222,7 +231,7 @@ def build_task_center_item(
 ) -> TaskCenterTaskRead:
     scheduler_task = _latest_scheduler_task(db, task.id)
     progress, progress_detail = _task_center_progress(task)
-    title = _basename(task.original_video_url, f"smart-cut-{task.id[:8]}")
+    title = task.task_title or _basename(task.original_video_url, f"smart-cut-{task.id[:8]}")
     input_files = [
         _basename(task.original_video_url, "source_video"),
         _basename(task.reference_text_url, "reference.txt"),
@@ -264,6 +273,25 @@ def build_task_center_item(
     )
 
 
+def _find_current_hidden_draft(
+    db: Session,
+    *,
+    user_id: str,
+    session_scope_id: str,
+) -> SmartCutTask | None:
+    return db.execute(
+        select(SmartCutTask)
+        .where(
+            SmartCutTask.user_id == user_id,
+            SmartCutTask.session_scope_id == session_scope_id,
+            SmartCutTask.visible_in_task_center.is_(False),
+            SmartCutTask.status != TaskStatus.ABANDONED,
+        )
+        .order_by(desc(SmartCutTask.updated_at), desc(SmartCutTask.created_at))
+        .limit(1)
+    ).scalar_one_or_none()
+
+
 # ============ F06: 创建任务 ============
 
 @router.post(
@@ -287,6 +315,7 @@ def build_task_center_item(
     },
 )
 async def create_task(
+    http_request: Request,
     request: TaskCreateRequest,
     db: Annotated[Session, Depends(get_db)],
 ) -> TaskCreateResponse:
@@ -303,11 +332,19 @@ async def create_task(
         HTTPException: 当数据库操作失败时抛出 500 错误
     """
     try:
+        session_scope_id = resolve_session_scope_id(
+            request=http_request,
+            explicit_scope_id=request.session_scope_id,
+            required=False,
+        )
+
         # 创建新任务
         task = SmartCutTask(
             user_id=request.user_id,
             status=TaskStatus.WAITING_UPLOAD,
             current_stage=CurrentStage.UPLOAD,
+            visible_in_task_center=False,
+            session_scope_id=session_scope_id,
         )
         
         # 保存到数据库
@@ -332,6 +369,71 @@ async def create_task(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create task: {str(e)}"
         )
+
+
+@router.get(
+    "/draft/current",
+    response_model=DraftCurrentResponse,
+    summary="查询当前登录会话草稿",
+    description="返回当前用户在当前登录会话内的隐藏草稿；若不存在则返回空。",
+)
+async def get_current_draft(
+    http_request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    user_id: str = Query(..., description="用户 ID"),
+) -> DraftCurrentResponse:
+    session_scope_id = resolve_session_scope_id(http_request, required=True)
+    task = _find_current_hidden_draft(
+        db,
+        user_id=user_id,
+        session_scope_id=session_scope_id,
+    )
+    return DraftCurrentResponse(
+        session_scope_id=session_scope_id,
+        task=_build_task_detail(db, task) if task else None,
+    )
+
+
+@router.post(
+    "/draft/current/ensure",
+    response_model=DraftEnsureResponse,
+    summary="确保当前登录会话草稿存在",
+    description="若当前用户当前登录会话已有隐藏草稿则复用，否则创建一条新的隐藏草稿。",
+)
+async def ensure_current_draft(
+    payload: DraftEnsureRequest,
+    http_request: Request,
+    db: Annotated[Session, Depends(get_db)],
+) -> DraftEnsureResponse:
+    session_scope_id = resolve_session_scope_id(
+        request=http_request,
+        explicit_scope_id=payload.session_scope_id,
+        required=True,
+    )
+    task = _find_current_hidden_draft(
+        db,
+        user_id=payload.user_id,
+        session_scope_id=session_scope_id,
+    )
+    created = False
+    if task is None:
+        task = SmartCutTask(
+            user_id=payload.user_id,
+            status=TaskStatus.WAITING_UPLOAD,
+            current_stage=CurrentStage.UPLOAD,
+            visible_in_task_center=False,
+            session_scope_id=session_scope_id,
+        )
+        db.add(task)
+        db.commit()
+        db.refresh(task)
+        created = True
+
+    return DraftEnsureResponse(
+        session_scope_id=session_scope_id,
+        created=created,
+        task=_build_task_detail(db, task),
+    )
 
 
 @router.get(

@@ -1,13 +1,16 @@
 {
   "spec_version": "2026-04-21.v1",
   "track": "smart_cut_workspace_refactor",
-  "current_phase": "R00-R02 planned",
+  "current_phase": "R01-R02 implemented",
   "completed_tasks": [
     "package_bootstrap",
     "interaction_spec_written",
     "task_json_written",
     "progress_files_initialized",
-    "parallel_agent_handoffs_written"
+    "parallel_agent_handoffs_written",
+    "r01_model_contract_coded",
+    "r02_draft_api_coded",
+    "r01_r02_regression_tests_added"
   ],
   "in_progress_tasks": [],
   "blocked_tasks": [],
@@ -54,7 +57,7 @@
   "last_verified_at": "2026-04-21T23:59:00+08:00",
   "last_good_commit": "",
   "notes": [
-    "This package is planning and execution scaffolding only; implementation not started yet.",
+    "R01-R02 are now coded in backend contract layer and documented here.",
     "Follow task.json as the only execution checklist.",
     "Use parallel_agents/ as the only handoff pack for external coding agents."
   ]

@@ -2,9 +2,9 @@
 
 ## 当前阶段
 
-- `R00-R02` 规划完成
+- `R01-R02` 已编码并完成最小回归验证
 - 专项包已建立
-- 尚未开始代码实现
+- 其余任务待后续 agent 继续
 
 ## 已完成任务
 
@@ -14,6 +14,11 @@
 - 建立 `progress.md` 与 `progress.json`
 - 建立并行开发任务书目录 `parallel_agents/`
 - 写入 5 个并行 agent 任务书与统一回交模板
+- 在 `smart_cut_tasks` 上补入 `task_title / visible_in_task_center / session_scope_id`
+- 落地 current draft / ensure draft 接口
+- 将 finalize 的标题写入、可见性切换、状态推进、调度任务创建收敛到同一事务提交
+- 补充现有数据库的运行时补列与历史可见性回填脚本
+- 补充 `tests/test_rel0415_api.py` 回归覆盖
 
 ## 正在进行
 
@@ -41,9 +46,9 @@
 
 ## 最近一次验证结果
 
-- 当前专项文档已落地
-- `task.json` 已通过 JSON 解析校验
-- 并行开发任务书目录已落地
+- `pytest tests/test_rel0415_api.py`
+- current draft / ensure draft 已验证同会话复用、跨会话隔离、缺失会话时报错
+- finalize 已验证同次提交内写入标题并切换 `visible_in_task_center=true`
 
 ## 已知问题记录
 
@@ -60,3 +65,10 @@
 - 症状：任务中心显示 `waiting_upload` / `ready_analyze`
 - 当前判断：task-center 可见性规则需要重构
 - 下一步：在 `R03` 中引入 `visible_in_task_center`
+
+### ISSUE-003
+- 标题：现有仓库无独立 migration 管理面
+- 位置：`configs/database.py`
+- 症状：仅靠 `Base.metadata.create_all()` 无法给已存在数据库补列
+- 当前判断：本轮先用启动时加法式补列 + 显式脚本兜底
+- 下一步：若后续 schema 变更继续增多，需要统一引入正式 migration 管理

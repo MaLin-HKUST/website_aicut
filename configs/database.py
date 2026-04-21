@@ -89,6 +89,51 @@ SessionLocal = sessionmaker(
 Base = declarative_base()
 
 
+def _apply_additive_smart_cut_schema(bind_engine: Engine) -> None:
+    """Apply additive Smart Cut schema changes for existing deployments."""
+    inspector = inspect(bind_engine)
+    if not inspector.has_table("smart_cut_tasks"):
+        return
+
+    dialect = bind_engine.dialect.name
+    column_names = {column["name"] for column in inspector.get_columns("smart_cut_tasks")}
+    statements: list[str] = []
+
+    if "task_title" not in column_names:
+        statements.append("ALTER TABLE smart_cut_tasks ADD COLUMN task_title VARCHAR(128)")
+    if "visible_in_task_center" not in column_names:
+        if dialect == "postgresql":
+            statements.append(
+                "ALTER TABLE smart_cut_tasks ADD COLUMN visible_in_task_center BOOLEAN NOT NULL DEFAULT FALSE"
+            )
+        else:
+            statements.append(
+                "ALTER TABLE smart_cut_tasks ADD COLUMN visible_in_task_center BOOLEAN NOT NULL DEFAULT 0"
+            )
+    if "session_scope_id" not in column_names:
+        statements.append("ALTER TABLE smart_cut_tasks ADD COLUMN session_scope_id VARCHAR(128)")
+
+    true_literal = "TRUE" if dialect == "postgresql" else "1"
+    false_literal = "FALSE" if dialect == "postgresql" else "0"
+    visibility_backfill = text(
+        f"""
+        UPDATE smart_cut_tasks
+        SET visible_in_task_center = CASE
+            WHEN status IN ('finalizing', 'finalize_failed', 'success') THEN {true_literal}
+            ELSE {false_literal}
+        END
+        """
+    )
+
+    with bind_engine.begin() as conn:
+        for statement in statements:
+            conn.execute(text(statement))
+        if "visible_in_task_center" in column_names or any(
+            "visible_in_task_center" in statement for statement in statements
+        ):
+            conn.execute(visibility_backfill)
+
+
 def get_db():
     """获取默认业务数据库会话的依赖函数。"""
     db = SessionLocal()
@@ -106,7 +151,9 @@ def init_db(*, bind_engine: Engine | None = None) -> None:
     from apps.models.device import SmartCutDevice  # noqa: F401
     from apps.models.edit import SmartCutEdit  # noqa: F401
 
-    Base.metadata.create_all(bind=bind_engine or engine)
+    target_engine = bind_engine or engine
+    Base.metadata.create_all(bind=target_engine)
+    _apply_additive_smart_cut_schema(target_engine)
 
 
 def init_scheduler_db(database_url: str) -> Engine:
