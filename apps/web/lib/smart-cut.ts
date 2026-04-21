@@ -411,14 +411,6 @@ type UploadDirectProgress = {
   percent: number;
 };
 
-type UploadPrepareApi = {
-  video_upload_url: string;
-  video_key: string;
-  text_upload_url: string;
-  text_key: string;
-  expires_at: string;
-};
-
 function parseXhrPayload<T>(xhr: XMLHttpRequest): T | null {
   if (xhr.response && typeof xhr.response === "object") {
     return xhr.response as T;
@@ -437,38 +429,40 @@ function parseXhrPayload<T>(xhr: XMLHttpRequest): T | null {
 
 async function uploadFileToPresignedUrl(
   url: string,
-  file: File,
+  payload: FormData,
   options?: {
     onProgress?: (progress: UploadDirectProgress) => void;
-    offset?: number;
-    totalBytes?: number;
   },
-): Promise<void> {
-  await new Promise<void>((resolve, reject) => {
+): Promise<SmartCutTaskApi> {
+  return await new Promise<SmartCutTaskApi>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("PUT", url);
-    xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+    xhr.open("POST", url);
 
     xhr.upload.onprogress = (event) => {
-      if (!event.lengthComputable || !options?.onProgress || !options.totalBytes) return;
-      const loaded = (options.offset ?? 0) + event.loaded;
+      if (!event.lengthComputable || !options?.onProgress) return;
       options.onProgress({
-        loaded,
-        total: options.totalBytes,
-        percent: Math.max(0, Math.min(100, Math.round((loaded / options.totalBytes) * 100))),
+        loaded: event.loaded,
+        total: event.total,
+        percent: Math.max(0, Math.min(100, Math.round((event.loaded / event.total) * 100))),
       });
     };
 
     xhr.onerror = () => reject(new Error("上传到 TOS 失败，请检查网络后重试"));
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
-        resolve();
+        const payload = parseXhrPayload<SmartCutTaskApi>(xhr);
+        if (!payload) {
+          reject(new Error("上传完成，但服务端没有返回任务详情"));
+          return;
+        }
+        resolve(payload);
         return;
       }
-      reject(new Error(`TOS upload failed: ${xhr.status}`));
+      const payload = parseXhrPayload<{ detail?: string }>(xhr);
+      reject(new Error(payload?.detail ?? `Upload failed: ${xhr.status}`));
     };
 
-    xhr.send(file);
+    xhr.send(payload);
   });
 }
 
@@ -480,37 +474,15 @@ export async function uploadDirectInputs(
     onProgress?: (progress: UploadDirectProgress) => void;
   },
 ): Promise<SmartCutTask> {
-  const videoExt = videoFile.name.split(".").pop()?.toLowerCase() ?? "mp4";
-  const prepare = await fetchJson<UploadPrepareApi>(`/api/proxy/api/smart-cut/tasks/${taskId}/upload-prepare?video_ext=${encodeURIComponent(videoExt)}`, {
-    method: "POST",
-  });
+  const payload = new FormData();
+  payload.append("video_file", videoFile, videoFile.name || "source_video.mp4");
+  payload.append("reference_file", referenceFile, referenceFile.name || "reference.txt");
 
-  const totalBytes = videoFile.size + referenceFile.size;
-  await uploadFileToPresignedUrl(prepare.video_upload_url, videoFile, {
+  const task = await uploadFileToPresignedUrl(`/api/proxy/api/smart-cut/tasks/${taskId}/upload-direct`, payload, {
     onProgress: options?.onProgress,
-    offset: 0,
-    totalBytes,
-  });
-  await uploadFileToPresignedUrl(prepare.text_upload_url, referenceFile, {
-    onProgress: options?.onProgress,
-    offset: videoFile.size,
-    totalBytes,
   });
 
-  await fetchJson(`/api/proxy/api/smart-cut/tasks/${taskId}/upload-complete`, {
-    method: "POST",
-    body: JSON.stringify({
-      uploaded_keys: [prepare.video_key, prepare.text_key],
-    }),
-  });
-
-  options?.onProgress?.({
-    loaded: totalBytes,
-    total: totalBytes,
-    percent: 100,
-  });
-
-  return getSmartCutTask(taskId);
+  return normalizeTask(task);
 }
 
 export async function startAnalyze(taskId: string): Promise<SmartCutTask> {

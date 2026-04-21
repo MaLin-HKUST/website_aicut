@@ -492,14 +492,14 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
   const videoProgressHint = videoUploaded
     ? "视频素材已进入任务输入区。"
     : uploadInFlight && videoFile && referenceFile
-      ? `multipart 上传进度 ${uploadProgressText}`
+      ? `上传进度 ${uploadProgressText}`
       : videoFile
         ? "视频已选中，等待标准文案后自动上传。"
         : "请先选择你要处理的视频。";
   const referenceProgressHint = referenceUploaded
     ? "标准文案已进入任务输入区。"
     : uploadInFlight && videoFile && referenceFile
-      ? `multipart 上传进度 ${uploadProgressText}`
+      ? `上传进度 ${uploadProgressText}`
       : referenceFile
         ? "标准文案已选中，等待视频后自动上传。"
         : "请再上传一份标准文案。";
