@@ -1,5 +1,5 @@
-import { SmartCutLandingPage } from "@/components/smart-cut/workspace";
+import { SmartCutWorkspace } from "@/components/smart-cut/workspace";
 
 export default function SmartCutPage() {
-  return <SmartCutLandingPage />;
+  return <SmartCutWorkspace />;
 }

@@ -94,6 +94,19 @@ type TaskCreateApi = {
   };
 };
 
+type SmartCutDraftEnvelope =
+  | SmartCutTaskApi
+  | {
+      task?: SmartCutTaskApi | null;
+      data?: SmartCutTaskApi | null;
+    }
+  | null;
+
+export type SmartCutDraftLookup = {
+  supported: boolean;
+  task: SmartCutTask | null;
+};
+
 export type DeleteRange = { start: number; end: number };
 
 function toScriptText(value: unknown): string | null {
@@ -249,6 +262,53 @@ export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> 
   return (await response.json()) as T;
 }
 
+async function fetchOptionalJson<T>(
+  url: string,
+  init?: RequestInit,
+): Promise<{ supported: boolean; data: T | null }> {
+  const response = await fetch(url, {
+    ...init,
+    headers: {
+      ...(init?.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+      ...(init?.headers ?? {}),
+    },
+  });
+
+  if ([404, 405, 501].includes(response.status)) {
+    return { supported: false, data: null };
+  }
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { detail?: string } | null;
+    throw new Error(payload?.detail ?? `Request failed: ${response.status}`);
+  }
+
+  if (response.status === 204) {
+    return { supported: true, data: null };
+  }
+
+  const text = await response.text();
+  if (!text.trim()) {
+    return { supported: true, data: null };
+  }
+
+  return { supported: true, data: JSON.parse(text) as T };
+}
+
+function unwrapDraftTask(payload: SmartCutDraftEnvelope): SmartCutTaskApi | null {
+  if (!payload) return null;
+  if ("id" in payload && typeof payload.id === "string") {
+    return payload;
+  }
+  if ("task" in payload && payload.task && typeof payload.task.id === "string") {
+    return payload.task;
+  }
+  if ("data" in payload && payload.data && typeof payload.data.id === "string") {
+    return payload.data;
+  }
+  return null;
+}
+
 export async function listSmartCutTasks(userId?: string): Promise<SmartCutTaskSummary[]> {
   const query = userId ? `?user_id=${encodeURIComponent(userId)}` : "";
   return fetchJson<SmartCutTaskSummary[]>(`/api/proxy/api/smart-cut/tasks${query}`);
@@ -279,6 +339,27 @@ export async function createSmartCutTask(userId: string): Promise<SmartCutTask> 
   }
 
   return getSmartCutTask(taskId);
+}
+
+export async function getCurrentSmartCutDraft(): Promise<SmartCutDraftLookup> {
+  const result = await fetchOptionalJson<SmartCutDraftEnvelope>("/api/proxy/api/smart-cut/draft/current");
+  const payload = unwrapDraftTask(result.data);
+  return {
+    supported: result.supported,
+    task: payload ? normalizeTask(payload) : null,
+  };
+}
+
+export async function ensureCurrentSmartCutDraft(userId: string): Promise<SmartCutDraftLookup> {
+  const result = await fetchOptionalJson<SmartCutDraftEnvelope>("/api/proxy/api/smart-cut/draft/current/ensure", {
+    method: "POST",
+    body: JSON.stringify({ user_id: userId }),
+  });
+  const payload = unwrapDraftTask(result.data);
+  return {
+    supported: result.supported,
+    task: payload ? normalizeTask(payload) : null,
+  };
 }
 
 type UploadDirectProgress = {
