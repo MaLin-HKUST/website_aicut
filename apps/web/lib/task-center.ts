@@ -42,6 +42,15 @@ type TaskCenterApiItem = {
   worker_id?: string | null;
 };
 
+const DEFAULT_TOS_PUBLIC_BASE_URL = "https://autocut-malin.tos-cn-shanghai.volces.com";
+
+function resolveTosUrl(value: string | null | undefined): string | null {
+  if (!value) return null;
+  if (/^https?:\/\//i.test(value)) return value;
+  const baseUrl = process.env.NEXT_PUBLIC_TOS_PUBLIC_BASE_URL || DEFAULT_TOS_PUBLIC_BASE_URL;
+  return `${baseUrl.replace(/\/+$/, "")}/${value.replace(/^\/+/, "")}`;
+}
+
 export const STATUS_META: Record<
   TaskCenterStatus,
   {
@@ -98,7 +107,7 @@ function normalizeItem(payload: TaskCenterApiItem): TaskCenterItem {
     updatedAt: payload.updated_at,
     createdAt: payload.created_at,
     queuePosition: payload.queue_position ?? null,
-    downloadUrl: payload.download_url ?? null,
+    downloadUrl: resolveTosUrl(payload.download_url ?? null),
     errorMessage: payload.error_message ?? null,
     inputSummary: payload.input_files ?? [],
     outputSummary: payload.output_files ?? [],
