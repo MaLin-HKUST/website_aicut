@@ -6,10 +6,13 @@
 import os
 import shutil
 import tempfile
+import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, Any
 from urllib.parse import urlencode, parse_qs, urlparse, urlunparse
+
+logger = logging.getLogger(__name__)
 
 
 class TOSResult:
@@ -261,6 +264,10 @@ class RealTOSClient:
             os.environ.get("TOS_CONNECTION_TIMEOUT_SECONDS", "30")
         )
         self.max_retry_count = int(os.environ.get("TOS_MAX_RETRY_COUNT", "5"))
+        self.upload_progress_log_step_percent = max(
+            1,
+            int(os.environ.get("TOS_UPLOAD_PROGRESS_LOG_STEP_PERCENT", "5")),
+        )
         self.client = tos.TosClientV2(
             access_key,
             secret_key,
@@ -269,6 +276,65 @@ class RealTOSClient:
             max_retry_count=self.max_retry_count,
             connection_time=self.connection_timeout_seconds,
             socket_timeout=self.socket_timeout_seconds,
+        )
+
+    def _build_progress_listener(self, bucket: str, key: str, file_size: int):
+        last_logged_percent = -1
+
+        def _listener(consumed_bytes: int, total_bytes: int, _rw_once_bytes: int, event_type) -> None:
+            nonlocal last_logged_percent
+
+            if total_bytes <= 0:
+                total_bytes = file_size
+            if total_bytes <= 0:
+                return
+
+            percent = min(100, int((consumed_bytes / total_bytes) * 100))
+            if percent < 100 and percent // self.upload_progress_log_step_percent == last_logged_percent // self.upload_progress_log_step_percent:
+                return
+
+            last_logged_percent = percent
+            logger.info(
+                "tos multipart progress bucket=%s key=%s consumed=%s total=%s percent=%s event=%s",
+                bucket,
+                key,
+                consumed_bytes,
+                total_bytes,
+                percent,
+                getattr(event_type, "name", str(event_type)),
+            )
+
+        return _listener
+
+    @staticmethod
+    def _log_upload_event(event_type, error, bucket, key, upload_id, file_path, checkpoint_file, part_info) -> None:
+        part_number = getattr(part_info, "part_number", None)
+        part_size = getattr(part_info, "part_size", None)
+        event_name = getattr(event_type, "name", str(event_type))
+        if error is not None:
+            logger.warning(
+                "tos multipart event=%s bucket=%s key=%s upload_id=%s part_number=%s part_size=%s file_path=%s checkpoint=%s error=%s",
+                event_name,
+                bucket,
+                key,
+                upload_id,
+                part_number,
+                part_size,
+                file_path,
+                checkpoint_file,
+                error,
+            )
+            return
+        logger.info(
+            "tos multipart event=%s bucket=%s key=%s upload_id=%s part_number=%s part_size=%s file_path=%s checkpoint=%s",
+            event_name,
+            bucket,
+            key,
+            upload_id,
+            part_number,
+            part_size,
+            file_path,
+            checkpoint_file,
         )
     
     def generate_presigned_url(
@@ -310,6 +376,8 @@ class RealTOSClient:
                     task_num=self.multipart_task_num,
                     enable_checkpoint=True,
                     checkpoint_file=checkpoint_file,
+                    data_transfer_listener=self._build_progress_listener(bucket, key, file_size),
+                    upload_event_listener=self._log_upload_event,
                 )
             else:
                 self.client.put_object_from_file(bucket, key, file_path)
