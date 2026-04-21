@@ -3,8 +3,9 @@
 ## 当前阶段
 
 - `R01-R02` 已编码并完成最小回归验证
+- `Agent 01` 回交已完成审查，契约层可作为后续开发基线
 - 专项包已建立
-- 其余任务待后续 agent 继续
+- `R03` 与 `R04-R06` 可继续推进
 
 ## 已完成任务
 
@@ -19,14 +20,17 @@
 - 将 finalize 的标题写入、可见性切换、状态推进、调度任务创建收敛到同一事务提交
 - 补充现有数据库的运行时补列与历史可见性回填脚本
 - 补充 `tests/test_rel0415_api.py` 回归覆盖
+- 完成 `Agent 01` 回交审查，确认 `branch / commit SHA / 改动文件 / 验证命令` 均可核对
 
 ## 正在进行
 
-- 无
+- 主集成人评估 `configs/database.py` 的运行时补列策略是否原样集成
+- 等待放行 `Agent 02` 与 `Agent 03`
 
 ## 阻塞项
 
 - 无硬阻塞
+- 注意：`configs/database.py` 的加法式补列实现需要在主线集成前单独复核
 
 ## 决策记录
 
@@ -37,6 +41,7 @@
 - preview 后页面必须直接展示 `audio_b`
 - 并行开发按 5 个 agent 分工执行
 - Agent 01 先行锁定契约，其余 agent 按依赖关系启动
+- `commit 51071188253984779ca7ce9bce1d7ce42bad1919` 作为当前 `R01-R02` 契约基线
 
 ## 需要同步给其他 Agent 的上下文
 
@@ -49,6 +54,8 @@
 - `pytest tests/test_rel0415_api.py`
 - current draft / ensure draft 已验证同会话复用、跨会话隔离、缺失会话时报错
 - finalize 已验证同次提交内写入标题并切换 `visible_in_task_center=true`
+- 已核对 `branch=feature/smart-cut-workspace-refactor-R01-R02-contract`
+- 已核对 `commit SHA=51071188253984779ca7ce9bce1d7ce42bad1919`
 
 ## 已知问题记录
 
@@ -72,3 +79,10 @@
 - 症状：仅靠 `Base.metadata.create_all()` 无法给已存在数据库补列
 - 当前判断：本轮先用启动时加法式补列 + 显式脚本兜底
 - 下一步：若后续 schema 变更继续增多，需要统一引入正式 migration 管理
+
+### ISSUE-004
+- 标题：Agent 01 的 write scope 比原任务书略宽
+- 位置：`apps/api/routes/stages.py`, `configs/database.py`
+- 症状：为 finalize 升格事务和补列落地，提交超出最初最窄写入范围
+- 当前判断：扩 scope 有理由，但主集成人需要在合并前逐项确认这些改动不踩后续 Agent 02/03 的责任边界
+- 下一步：主集成人在正式集成 `R01-R02` 时对这两处做额外审阅
