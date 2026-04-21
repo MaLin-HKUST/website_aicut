@@ -9,6 +9,7 @@ from sqlalchemy.orm import sessionmaker
 
 from apps.api.dependencies import get_tos_service
 from apps.api.routes.task_center import router as task_center_router
+from apps.api.routes.stages import router as stages_router
 from apps.api.routes.tasks import router as tasks_router
 from apps.models.edit import EditStatus, SmartCutEdit
 from apps.models.scheduler_task import SchedulerTask, SchedulerTaskStatus, SchedulerTaskType
@@ -26,6 +27,7 @@ def api_client(tmp_path: Path):
 
     app = FastAPI()
     app.include_router(tasks_router)
+    app.include_router(stages_router)
     app.include_router(task_center_router)
 
     def override_get_db():
@@ -148,7 +150,7 @@ def test_rel0415_edits_and_task_center_routes(api_client):
     assert user_center.status_code == 200
     user_payload = user_center.json()
     assert user_payload[0]["id"] == task_id
-    assert user_payload[0]["status"] == "waiting"
+    assert user_payload[0]["status"] == "running"
     assert user_payload[0]["scheduler_task_id"] is None
 
     admin_center = client.get("/api/admin/task-center/tasks")
@@ -157,3 +159,110 @@ def test_rel0415_edits_and_task_center_routes(api_client):
     assert admin_payload[0]["id"] == task_id
     assert admin_payload[0]["scheduler_task_id"] == scheduler_task_id
     assert admin_payload[0]["worker_id"] == "worker-01"
+
+
+def test_current_draft_endpoints_are_scoped_to_login_session(api_client):
+    client, SessionLocal = api_client
+
+    ensure_response = client.post(
+        "/api/smart-cut/tasks/draft/current/ensure",
+        json={"user_id": "alice"},
+        cookies={"session_token": "session-a"},
+    )
+    assert ensure_response.status_code == 200
+    ensure_payload = ensure_response.json()
+    task_id = ensure_payload["task"]["id"]
+    assert ensure_payload["created"] is True
+    assert ensure_payload["task"]["visible_in_task_center"] is False
+    assert ensure_payload["task"]["session_scope_id"].startswith("scs_")
+
+    second_ensure = client.post(
+        "/api/smart-cut/tasks/draft/current/ensure",
+        json={"user_id": "alice"},
+        cookies={"session_token": "session-a"},
+    )
+    assert second_ensure.status_code == 200
+    second_payload = second_ensure.json()
+    assert second_payload["created"] is False
+    assert second_payload["task"]["id"] == task_id
+
+    current_response = client.get(
+        "/api/smart-cut/tasks/draft/current",
+        params={"user_id": "alice"},
+        cookies={"session_token": "session-a"},
+    )
+    assert current_response.status_code == 200
+    current_payload = current_response.json()
+    assert current_payload["task"]["id"] == task_id
+
+    missing_session = client.get(
+        "/api/smart-cut/tasks/draft/current",
+        params={"user_id": "alice"},
+    )
+    assert missing_session.status_code == 400
+
+    other_session = client.get(
+        "/api/smart-cut/tasks/draft/current",
+        params={"user_id": "alice"},
+        cookies={"session_token": "session-b"},
+    )
+    assert other_session.status_code == 200
+    assert other_session.json()["task"] is None
+
+    with SessionLocal() as db:
+        rows = db.query(SmartCutTask).all()
+        assert len(rows) == 1
+        assert rows[0].id == task_id
+        assert rows[0].visible_in_task_center is False
+
+
+def test_finalize_promotes_hidden_draft_into_task_center(api_client):
+    client, SessionLocal = api_client
+
+    with SessionLocal() as db:
+        task = SmartCutTask(
+            user_id="alice",
+            status=TaskStatus.WAITING_USER,
+            current_stage=CurrentStage.USER_SELECT,
+            visible_in_task_center=False,
+            session_scope_id="scs_manual",
+            analyze_script="{demo}",
+            asr_result_tos_key="smart-cut/demo/analyze/asr.json",
+            original_video_url="smart-cut/demo/input/source_video.mp4",
+        )
+        db.add(task)
+        db.flush()
+
+        edit = SmartCutEdit(
+            task_id=task.id,
+            edited_script="{demo}",
+            status=EditStatus.SUCCESS,
+            audio_b_url="smart-cut/demo/preview/edit-1/audio_b.mp3",
+            delay_cuts_tos_key="smart-cut/demo/preview/edit-1/edited_delay_cuts.json",
+            pause_cuts_tos_key="smart-cut/demo/preview/edit-1/pause_cuts_on_original.json",
+            version_number=1,
+        )
+        db.add(edit)
+        db.commit()
+        task_id = task.id
+        edit_id = edit.id
+
+    response = client.post(
+        f"/api/smart-cut/tasks/{task_id}/finalize",
+        json={"output_mode": "original", "feed_to_ai": True, "edit_id": edit_id},
+    )
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["status"] == "finalizing"
+    assert payload["visible_in_task_center"] is True
+    assert payload["task_title"].startswith("智能剪气口-")
+
+    with SessionLocal() as db:
+        task = db.get(SmartCutTask, task_id)
+        scheduler_task = db.query(SchedulerTask).filter_by(business_task_id=task_id).one()
+        assert task is not None
+        assert task.visible_in_task_center is True
+        assert task.task_title == payload["task_title"]
+        assert task.status == TaskStatus.FINALIZING
+        assert task.active_edit_id == edit_id
+        assert scheduler_task.task_type == SchedulerTaskType.SMART_CUT_FINALIZE

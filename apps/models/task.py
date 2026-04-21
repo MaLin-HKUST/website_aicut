@@ -8,7 +8,7 @@ from datetime import datetime
 from enum import Enum as PyEnum
 from typing import Any, Optional, List
 
-from sqlalchemy import String, Text, DateTime, JSON, Enum, ForeignKey
+from sqlalchemy import String, Text, DateTime, JSON, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from configs.database import Base
@@ -99,6 +99,24 @@ class SmartCutTask(Base):
         default=CurrentStage.UPLOAD,
         comment="当前阶段"
     )
+
+    task_title: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        nullable=True,
+        comment="任务中心展示标题"
+    )
+
+    visible_in_task_center: Mapped[bool] = mapped_column(
+        default=False,
+        nullable=False,
+        comment="是否在任务中心可见"
+    )
+
+    session_scope_id: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        nullable=True,
+        comment="当前登录会话的服务端作用域 ID"
+    )
     
     # 输入文件
     original_video_url: Mapped[Optional[str]] = mapped_column(
@@ -182,6 +200,9 @@ class SmartCutTask(Base):
             "user_id": self.user_id,
             "status": self.status.value,
             "current_stage": self.current_stage.value,
+            "task_title": self.task_title,
+            "visible_in_task_center": self.visible_in_task_center,
+            "session_scope_id": self.session_scope_id,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "original_video_url": self.original_video_url,

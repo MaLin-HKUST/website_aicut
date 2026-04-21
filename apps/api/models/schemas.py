@@ -46,6 +46,10 @@ class TaskCreateRequest(BaseModel):
         default="anonymous",
         description="用户ID，不提供则使用匿名用户"
     )
+    session_scope_id: Optional[str] = Field(
+        default=None,
+        description="可选，显式传入当前登录会话作用域 ID"
+    )
 
 
 class TaskCreateData(BaseModel):
@@ -228,6 +232,9 @@ class TaskDetailResponse(BaseModel):
     user_id: str = Field(..., description="用户ID")
     status: str = Field(..., description="任务状态")
     current_stage: str = Field(..., description="当前阶段")
+    task_title: Optional[str] = Field(None, description="任务中心标题")
+    visible_in_task_center: bool = Field(False, description="是否在任务中心可见")
+    session_scope_id: Optional[str] = Field(None, description="当前登录会话作用域 ID")
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
     
@@ -278,6 +285,8 @@ class FinalizeResponse(BaseModel):
     """触发最终生成响应"""
     scheduler_task_id: str = Field(..., description="调度任务ID")
     status: str = Field(..., description="任务状态")
+    visible_in_task_center: bool = Field(..., description="任务是否已进入任务中心")
+    task_title: str = Field(..., description="最终写入的任务标题")
 
 
 # ========== F24: Abandon Task ==========
@@ -315,8 +324,29 @@ class SmartCutTaskSummaryRead(BaseModel):
     status: str = Field(..., description="任务状态")
     current_stage: Optional[str] = Field(None, description="当前阶段")
     active_edit_id: Optional[str] = Field(None, description="当前 edit ID")
+    visible_in_task_center: bool = Field(False, description="是否在任务中心可见")
+    session_scope_id: Optional[str] = Field(None, description="当前登录会话作用域 ID")
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
+
+
+class DraftCurrentResponse(BaseModel):
+    """当前登录会话草稿查询结果。"""
+
+    session_scope_id: str = Field(..., description="当前登录会话作用域 ID")
+    task: Optional[TaskDetailResponse] = Field(None, description="当前会话的隐藏草稿；为空表示不存在")
+
+
+class DraftEnsureRequest(TaskCreateRequest):
+    """确保当前登录会话草稿存在。"""
+
+
+class DraftEnsureResponse(BaseModel):
+    """确保当前登录会话草稿存在的结果。"""
+
+    session_scope_id: str = Field(..., description="当前登录会话作用域 ID")
+    created: bool = Field(..., description="本次是否新建了隐藏草稿")
+    task: TaskDetailResponse = Field(..., description="当前登录会话的隐藏草稿")
 
 
 class SmartCutEditRead(BaseModel):
