@@ -211,7 +211,7 @@ async def start_preview(
     触发 Preview 阶段处理
     
     流程:
-    1. 校验 task.status == waiting_user
+    1. 校验 task.status in {waiting_user, preview_failed}
     2. 创建新的 SmartCutEdit 记录 (version_number 递增)
     3. 创建 SchedulerTask (type=smart_cut_preview)
     4. 推进 task.status = previewing
@@ -225,11 +225,15 @@ async def start_preview(
             detail=f"Task not found: {task_id}"
         )
     
-    # 校验状态: 必须是 waiting_user
-    if task.status != TaskStatus.WAITING_USER:
+    # 校验状态: waiting_user / preview_failed 都允许重试试听
+    if task.status not in {TaskStatus.WAITING_USER, TaskStatus.PREVIEW_FAILED}:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid task status: {task.status.value}, expected: {TaskStatus.WAITING_USER.value}"
+            detail=(
+                "Invalid task status: "
+                f"{task.status.value}, expected one of: "
+                f"{TaskStatus.WAITING_USER.value}, {TaskStatus.PREVIEW_FAILED.value}"
+            ),
         )
     
     # 检查是否有 analyze 产物

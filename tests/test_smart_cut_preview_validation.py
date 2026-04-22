@@ -114,6 +114,39 @@ def test_preview_accepts_list_shaped_analyze_script(preview_client):
     assert payload["status"] == "previewing"
 
 
+def test_preview_allows_retry_from_preview_failed(preview_client):
+    client, session_local = preview_client
+
+    with session_local() as db:
+        task = SmartCutTask(
+            user_id="alice",
+            status=TaskStatus.PREVIEW_FAILED,
+            current_stage=CurrentStage.PREVIEW,
+            analyze_script="今天{先删掉这句}继续讲重点。",
+            asr_result_tos_key="smart-cut/demo/analyze/asr.json",
+            original_video_url="smart-cut/demo/input/source_video.mp4",
+        )
+        db.add(task)
+        db.commit()
+        db.refresh(task)
+        task_id = task.id
+
+    response = client.post(
+        f"/api/smart-cut/tasks/{task_id}/preview",
+        json={"edited_script": "今天先删掉这句继续讲{重点。}"},
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["status"] == "previewing"
+
+    with session_local() as db:
+        task = db.get(SmartCutTask, task_id)
+        assert task is not None
+        assert task.status == TaskStatus.PREVIEWING
+        assert task.current_stage == CurrentStage.PREVIEW
+
+
 def test_preview_rejects_invalid_brace_markers(preview_client):
     client, session_local = preview_client
     task_id = _create_waiting_user_task(session_local)
