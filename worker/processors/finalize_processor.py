@@ -649,6 +649,13 @@ class FinalizeProcessor(BaseProcessor):
         try:
             business_task = db.query(BusinessTask).filter_by(id=self._task.business_task_id).first()
             if business_task:
+                if business_task.status == TaskStatus.ABANDONED:
+                    logger.info(
+                        "Task %s was abandoned during finalize; skipping success promotion",
+                        business_task.id,
+                    )
+                    db.rollback()
+                    return
                 business_task.status = TaskStatus.SUCCESS
                 business_task.current_stage = CurrentStage.COMPLETE
                 business_task.final_video_url = result.get("final_video_url")
@@ -687,6 +694,13 @@ class FinalizeProcessor(BaseProcessor):
                 )
             business_task = db.query(BusinessTask).filter_by(id=self._task.business_task_id).first()
             if business_task:
+                if business_task.status == TaskStatus.ABANDONED:
+                    logger.info(
+                        "Task %s was already abandoned; keep it abandoned after finalize failure",
+                        business_task.id,
+                    )
+                    db.rollback()
+                    return
                 business_task.status = TaskStatus.FINALIZE_FAILED
                 db.commit()
                 logger.info(f"Task marked as finalize_failed: {business_task.id}")

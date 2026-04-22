@@ -485,6 +485,13 @@ class PreviewProcessor(BaseProcessor):
             if self._current_task:
                 business_task = db.query(BusinessTask).filter_by(id=self._current_task.business_task_id).first()
                 if business_task:
+                    if business_task.status == TaskStatus.ABANDONED:
+                        logger.info(
+                            "Task %s was abandoned during preview; skipping workspace restoration writes",
+                            business_task.id,
+                        )
+                        db.rollback()
+                        return
                     business_task.active_edit_id = edit_id
                     business_task.status = TaskStatus.WAITING_USER
                     business_task.current_stage = CurrentStage.USER_SELECT
@@ -542,6 +549,13 @@ class PreviewProcessor(BaseProcessor):
             if self._current_task:
                 business_task = db.query(BusinessTask).filter_by(id=self._current_task.business_task_id).first()
                 if business_task:
+                    if business_task.status == TaskStatus.ABANDONED:
+                        logger.info(
+                            "Task %s was already abandoned; keep it abandoned after preview failure",
+                            business_task.id,
+                        )
+                        db.rollback()
+                        return
                     business_task.status = TaskStatus.PREVIEW_FAILED
             
             db.commit()

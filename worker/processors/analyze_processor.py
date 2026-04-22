@@ -385,6 +385,13 @@ class AnalyzeProcessor(BaseStageProcessor):
             # 更新业务任务
             business_task = db.query(BusinessTask).filter_by(id=self._task_id).first()
             if business_task:
+                if business_task.status == TaskStatus.ABANDONED:
+                    logger.info(
+                        "Task %s was abandoned during analyze; skipping workspace restoration writes",
+                        business_task.id,
+                    )
+                    db.rollback()
+                    return
                 business_task.status = TaskStatus.WAITING_USER
                 business_task.current_stage = CurrentStage.USER_SELECT
                 business_task.analyze_script = result.get("script")
@@ -431,6 +438,13 @@ class AnalyzeProcessor(BaseStageProcessor):
                 )
             business_task = db.query(BusinessTask).filter_by(id=self._task_id).first()
             if business_task:
+                if business_task.status == TaskStatus.ABANDONED:
+                    logger.info(
+                        "Task %s was already abandoned; keep it abandoned after analyze failure",
+                        business_task.id,
+                    )
+                    db.rollback()
+                    return
                 business_task.status = TaskStatus.ANALYZE_FAILED
                 db.commit()
                 logger.info(f"Task marked as analyze_failed: {business_task.id}")

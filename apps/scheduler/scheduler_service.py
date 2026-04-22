@@ -358,6 +358,19 @@ class SchedulerService:
         
         if not business_task:
             return
+
+        if business_task.status == TaskStatus.ABANDONED:
+            scheduler_task.mark_completed(scheduler_task.result)
+            worker.status = DeviceStatus.IDLE
+            worker.current_task_id = None
+            worker.updated_at = datetime.utcnow()
+            self.db.commit()
+            logger.info(
+                "Task %s finished after user abandoned hidden draft %s; worker released without restoring workspace state",
+                scheduler_task.id,
+                business_task.id,
+            )
+            return
         
         task_type = scheduler_task.task_type
         
