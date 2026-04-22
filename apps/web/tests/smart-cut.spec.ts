@@ -136,6 +136,39 @@ test("opening /smart-cut no longer auto-creates an empty task", async ({ page })
   expect(createCount).toBe(0);
 });
 
+test("server-side empty draft clears any stale cached draft id instead of restoring fake analyzing state", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem("smart-cut:draft-task:qa_user", "stale_draft_001");
+  });
+
+  await routeBaseApis(page);
+
+  await page.route(/\/api\/proxy\/api\/smart-cut\/tasks\/draft\/current(\?.*)?$/, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ task: null }),
+    });
+  });
+
+  await page.route("**/api/proxy/api/smart-cut/tasks/stale_draft_001", async (route) => {
+    await route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      body: JSON.stringify({ detail: "Task not found" }),
+    });
+  });
+
+  await page.goto("/smart-cut");
+
+  await expect(page.getByText("空工作台，不自动建任务")).toBeVisible();
+  await expect(page.getByText("正在收到您的信息并处理中")).toHaveCount(0);
+  await expect(page.getByText("已恢复草稿")).toHaveCount(0);
+
+  const cachedValue = await page.evaluate(() => window.localStorage.getItem("smart-cut:draft-task:qa_user"));
+  expect(cachedValue).toBeNull();
+});
+
 test("analyze result renders script and audio_a in the current draft workspace", async ({ page }) => {
   let createCount = 0;
 

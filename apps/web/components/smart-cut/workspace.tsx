@@ -91,11 +91,6 @@ function draftCacheKey(username: string) {
   return `smart-cut:draft-task:${username}`;
 }
 
-function readCachedDraftTaskId(username: string): string | null {
-  if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(draftCacheKey(username));
-}
-
 function writeCachedDraftTaskId(username: string, taskId: string) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(draftCacheKey(username), taskId);
@@ -231,6 +226,33 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
     return taskData;
   }
 
+  function clearDraftWorkspace(username?: string) {
+    if (username) {
+      clearCachedDraftTaskId(username);
+    }
+    setTask(null);
+    setEdits([]);
+    setScriptDraft("");
+    setVideoFile(null);
+    setReferenceFile(null);
+    setOutputMode("original");
+    setFeedToAi(true);
+    setEditorTab("script");
+    setEditorControls({
+      canMarkDelete: false,
+      canRestore: false,
+      canClear: false,
+      selectedCount: 0,
+    });
+    setBusyAction(null);
+    setUploadProgress(0);
+    setUploadState("idle");
+    setNotice(null);
+    setError(null);
+    setLastSubmittedTaskTitle(null);
+    setInputResetToken((value) => value + 1);
+  }
+
   function resetWorkspaceForNextDraft(taskTitle: string) {
     setTask(null);
     setEdits([]);
@@ -282,25 +304,7 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
         return;
       }
 
-      if (!draftLookup.supported) {
-        const cachedTaskId = readCachedDraftTaskId(authPayload.user.username);
-        if (cachedTaskId) {
-          try {
-            await hydrateTask(cachedTaskId, authPayload.user.username);
-            return;
-          } catch {
-            clearCachedDraftTaskId(authPayload.user.username);
-          }
-        }
-      }
-
-      setTask(null);
-      setEdits([]);
-      setScriptDraft("");
-      setNotice(null);
-      setError(null);
-      setUploadState("idle");
-      setUploadProgress(0);
+      clearDraftWorkspace(authPayload.user.username);
     } finally {
       setLoading(false);
     }
