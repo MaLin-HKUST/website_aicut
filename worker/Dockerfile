@@ -8,6 +8,11 @@ ENV PIP_INDEX_URL=${PIP_INDEX_URL}
 # 设置工作目录
 WORKDIR /app
 
+# 系统依赖：算法链需要 ffmpeg / ffprobe 做音频提取与媒体探测
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ffmpeg && \
+    rm -rf /var/lib/apt/lists/*
+
 # 复制依赖文件
 COPY worker/requirements.txt ./requirements.txt
 
