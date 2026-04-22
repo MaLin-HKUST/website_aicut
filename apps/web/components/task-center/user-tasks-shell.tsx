@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { UserWorkspaceShell } from "@/components/navigation/user-workspace-shell";
 import { useUserWorkspaceData } from "@/components/navigation/use-user-workspace-data";
 import { AuthResponse } from "@/lib/auth";
+import { logoutUser } from "@/lib/logout";
 import { listTaskCenterItems, TaskCenterItem } from "@/lib/task-center";
 
 const FILTERS = [
@@ -90,7 +91,7 @@ export function UserTasksShell() {
   }, [searchParams]);
 
   async function logout() {
-    await fetch("/api/proxy/auth/logout", { method: "POST" });
+    await logoutUser(user?.username);
     window.location.href = "/login";
   }
 

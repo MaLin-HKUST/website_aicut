@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { UserWorkspaceShell } from "@/components/navigation/user-workspace-shell";
 import { useUserWorkspaceData } from "@/components/navigation/use-user-workspace-data";
 import { AuthResponse } from "@/lib/auth";
+import { logoutUser } from "@/lib/logout";
 
 type GenerateAudioResponse = {
   audio_base64: string;
@@ -88,7 +89,7 @@ export default function TTSPage() {
   }
 
   async function logout() {
-    await fetch("/api/proxy/auth/logout", { method: "POST" });
+    await logoutUser(user?.username);
     router.replace("/login");
     router.refresh();
   }

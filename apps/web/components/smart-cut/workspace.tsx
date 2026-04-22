@@ -10,6 +10,7 @@ import { UserWorkspaceShell } from "@/components/navigation/user-workspace-shell
 import { useUserWorkspaceData } from "@/components/navigation/use-user-workspace-data";
 import { SmartCutScriptEditor, SmartCutScriptEditorHandle } from "@/components/smart-cut/script-editor";
 import { AuthResponse } from "@/lib/auth";
+import { logoutUser } from "@/lib/logout";
 import {
   createSmartCutTask,
   ensureCurrentSmartCutDraft,
@@ -201,7 +202,7 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
   const latestEdit = edits[0] ?? null;
 
   async function logout() {
-    await fetch("/api/proxy/auth/logout", { method: "POST" });
+    await logoutUser(currentUser?.username);
     if (currentUser?.username) {
       clearCachedDraftTaskId(currentUser.username);
     }

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -170,7 +171,7 @@ def test_rel0415_edits_and_task_center_routes(api_client):
     assert admin_payload[0]["company_id"] == 1
 
 
-def test_current_draft_endpoints_are_scoped_to_login_session(api_client):
+def test_current_draft_endpoints_restore_latest_hidden_draft_for_user_even_across_sessions(api_client):
     client, SessionLocal = api_client
 
     ensure_response = client.post(
@@ -217,7 +218,17 @@ def test_current_draft_endpoints_are_scoped_to_login_session(api_client):
         cookies={"session_token": "session-b"},
     )
     assert other_session.status_code == 200
-    assert other_session.json()["task"] is None
+    assert other_session.json()["task"]["id"] == task_id
+
+    recovered_ensure = client.post(
+        "/api/smart-cut/tasks/draft/current/ensure",
+        json={"user_id": "alice", "company_id": 1},
+        cookies={"session_token": "session-b"},
+    )
+    assert recovered_ensure.status_code == 200
+    recovered_payload = recovered_ensure.json()
+    assert recovered_payload["created"] is False
+    assert recovered_payload["task"]["id"] == task_id
 
     with SessionLocal() as db:
         rows = db.query(SmartCutTask).all()
@@ -225,6 +236,97 @@ def test_current_draft_endpoints_are_scoped_to_login_session(api_client):
         assert rows[0].id == task_id
         assert rows[0].visible_in_task_center is False
         assert rows[0].company_id == 1
+
+
+def test_abandon_all_hidden_drafts_marks_only_current_users_hidden_tasks(api_client):
+    client, SessionLocal = api_client
+
+    with SessionLocal() as db:
+        alice_hidden = SmartCutTask(
+            user_id="alice",
+            company_id=1,
+            status=TaskStatus.ANALYZING,
+            current_stage=CurrentStage.ANALYZE,
+            visible_in_task_center=False,
+            session_scope_id="scs_old_a",
+        )
+        alice_visible = SmartCutTask(
+            user_id="alice",
+            company_id=1,
+            status=TaskStatus.SUCCESS,
+            current_stage=CurrentStage.COMPLETE,
+            visible_in_task_center=True,
+            task_title="智能剪气口-20260422-100001",
+        )
+        bob_hidden = SmartCutTask(
+            user_id="bob",
+            company_id=2,
+            status=TaskStatus.WAITING_UPLOAD,
+            current_stage=CurrentStage.UPLOAD,
+            visible_in_task_center=False,
+            session_scope_id="scs_old_b",
+        )
+        db.add_all([alice_hidden, alice_visible, bob_hidden])
+        db.commit()
+        alice_hidden_id = alice_hidden.id
+        alice_visible_id = alice_visible.id
+        bob_hidden_id = bob_hidden.id
+
+    response = client.post(
+        "/api/smart-cut/tasks/draft/current/abandon-all",
+        json={"user_id": "alice"},
+        cookies={"session_token": "session-a"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["abandoned_count"] == 1
+    assert payload["abandoned_task_ids"] == [alice_hidden_id]
+
+    with SessionLocal() as db:
+        assert db.get(SmartCutTask, alice_hidden_id).status == TaskStatus.ABANDONED
+        assert db.get(SmartCutTask, alice_visible_id).status == TaskStatus.SUCCESS
+        assert db.get(SmartCutTask, bob_hidden_id).status == TaskStatus.WAITING_UPLOAD
+
+
+def test_current_draft_call_cleans_up_expired_abandoned_hidden_tasks(api_client):
+    client, SessionLocal = api_client
+
+    with SessionLocal() as db:
+        old_time = datetime.utcnow() - timedelta(days=8)
+        expired = SmartCutTask(
+            user_id="alice",
+            company_id=1,
+            status=TaskStatus.ABANDONED,
+            current_stage=CurrentStage.COMPLETE,
+            visible_in_task_center=False,
+            session_scope_id="scs_expired",
+            created_at=old_time,
+            updated_at=old_time,
+        )
+        fresh = SmartCutTask(
+            user_id="alice",
+            company_id=1,
+            status=TaskStatus.WAITING_UPLOAD,
+            current_stage=CurrentStage.UPLOAD,
+            visible_in_task_center=False,
+            session_scope_id="scs_fresh",
+        )
+        db.add_all([expired, fresh])
+        db.commit()
+        expired_id = expired.id
+        fresh_id = fresh.id
+
+    response = client.get(
+        "/api/smart-cut/tasks/draft/current",
+        params={"user_id": "alice"},
+        cookies={"session_token": "session-a"},
+    )
+    assert response.status_code == 200
+    assert response.json()["task"]["id"] == fresh_id
+
+    with SessionLocal() as db:
+        assert db.get(SmartCutTask, expired_id) is None
+        assert db.get(SmartCutTask, fresh_id) is not None
 
 
 def test_finalize_promotes_hidden_draft_into_task_center(api_client):

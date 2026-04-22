@@ -355,6 +355,21 @@ class DraftEnsureResponse(BaseModel):
     task: TaskDetailResponse = Field(..., description="当前登录会话的隐藏草稿")
 
 
+class DraftAbandonAllRequest(BaseModel):
+    """放弃当前用户所有隐藏草稿。"""
+
+    user_id: str = Field(..., description="用户 ID")
+
+
+class DraftAbandonAllResponse(BaseModel):
+    """放弃当前用户所有隐藏草稿的结果。"""
+
+    user_id: str = Field(..., description="用户 ID")
+    abandoned_task_ids: List[str] = Field(..., description="被标记为 abandoned 的隐藏草稿 ID 列表")
+    abandoned_count: int = Field(..., description="被标记为 abandoned 的草稿数量")
+    session_scope_id: str = Field(..., description="当前登录会话作用域 ID")
+
+
 class SmartCutEditRead(BaseModel):
     """Smart Cut Edit 只读响应。"""
 

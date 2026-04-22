@@ -11,7 +11,7 @@ import asyncio
 import json
 import os
 import tempfile
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Annotated
 from urllib.parse import urlparse
 
@@ -34,6 +34,8 @@ from apps.api.models.schemas import (
     DraftCurrentResponse,
     DraftEnsureRequest,
     DraftEnsureResponse,
+    DraftAbandonAllRequest,
+    DraftAbandonAllResponse,
     TaskStatusData,
     TaskStatusResponse,
     PresignedUrlData,
@@ -280,19 +282,114 @@ def _find_current_hidden_draft(
     db: Session,
     *,
     user_id: str,
-    session_scope_id: str,
+    session_scope_id: str | None = None,
 ) -> SmartCutTask | None:
-    return db.execute(
+    base_stmt = (
         select(SmartCutTask)
         .where(
             SmartCutTask.user_id == user_id,
-            SmartCutTask.session_scope_id == session_scope_id,
             SmartCutTask.visible_in_task_center.is_(False),
             SmartCutTask.status != TaskStatus.ABANDONED,
         )
         .order_by(desc(SmartCutTask.updated_at), desc(SmartCutTask.created_at))
-        .limit(1)
-    ).scalar_one_or_none()
+    )
+
+    if session_scope_id:
+        session_match = db.execute(
+            base_stmt.where(SmartCutTask.session_scope_id == session_scope_id).limit(1)
+        ).scalar_one_or_none()
+        if session_match is not None:
+            return session_match
+
+    return db.execute(base_stmt.limit(1)).scalar_one_or_none()
+
+
+def _mark_hidden_drafts_abandoned(
+    db: Session,
+    *,
+    user_id: str,
+) -> list[str]:
+    tasks = list(
+        db.execute(
+            select(SmartCutTask)
+            .where(
+                SmartCutTask.user_id == user_id,
+                SmartCutTask.visible_in_task_center.is_(False),
+                SmartCutTask.status.notin_(
+                    [
+                        TaskStatus.ABANDONED,
+                        TaskStatus.SUCCESS,
+                        TaskStatus.ANALYZE_FAILED,
+                        TaskStatus.PREVIEW_FAILED,
+                        TaskStatus.FINALIZE_FAILED,
+                    ]
+                ),
+            )
+            .order_by(desc(SmartCutTask.updated_at), desc(SmartCutTask.created_at))
+        ).scalars().all()
+    )
+
+    if not tasks:
+        return []
+
+    now = datetime.utcnow()
+    abandoned_ids: list[str] = []
+    for task in tasks:
+        task.status = TaskStatus.ABANDONED
+        task.current_stage = CurrentStage.COMPLETE
+        task.updated_at = now
+        abandoned_ids.append(task.id)
+
+    db.commit()
+    return abandoned_ids
+
+
+def _cleanup_expired_abandoned_hidden_tasks(
+    db: Session,
+    tos_service: TOSService,
+    *,
+    retention_days: int = 7,
+) -> int:
+    cutoff = datetime.utcnow() - timedelta(days=retention_days)
+    tasks = list(
+        db.execute(
+            select(SmartCutTask)
+            .where(
+                SmartCutTask.visible_in_task_center.is_(False),
+                SmartCutTask.status == TaskStatus.ABANDONED,
+                SmartCutTask.updated_at < cutoff,
+            )
+            .order_by(SmartCutTask.updated_at.asc())
+            .limit(100)
+        ).scalars().all()
+    )
+
+    if not tasks:
+        return 0
+
+    cleanup_service = create_cleanup_service()
+    cleaned = 0
+
+    for task in tasks:
+        cleanup_service.cleanup_task_workspace(task.id)
+        list_result = tos_service.list_objects(TOS_BUCKET, prefix=f"smart-cut/{task.id}/")
+        if list_result.success:
+            for item in list_result.data.get("objects", []):
+                key = item.get("key")
+                if key:
+                    tos_service.delete_object(TOS_BUCKET, key)
+
+        db.query(SchedulerTask).filter(SchedulerTask.business_task_id == task.id).delete(
+            synchronize_session=False
+        )
+        db.query(SmartCutEdit).filter(SmartCutEdit.task_id == task.id).delete(
+            synchronize_session=False
+        )
+        db.delete(task)
+        cleaned += 1
+
+    db.commit()
+    return cleaned
 
 
 # ============ F06: 创建任务 ============
@@ -384,9 +481,11 @@ async def create_task(
 async def get_current_draft(
     http_request: Request,
     db: Annotated[Session, Depends(get_db)],
+    tos_service: Annotated[TOSService, Depends(get_tos_service)],
     user_id: str = Query(..., description="用户 ID"),
 ) -> DraftCurrentResponse:
     session_scope_id = resolve_session_scope_id(http_request, required=True)
+    _cleanup_expired_abandoned_hidden_tasks(db, tos_service)
     task = _find_current_hidden_draft(
         db,
         user_id=user_id,
@@ -408,12 +507,14 @@ async def ensure_current_draft(
     payload: DraftEnsureRequest,
     http_request: Request,
     db: Annotated[Session, Depends(get_db)],
+    tos_service: Annotated[TOSService, Depends(get_tos_service)],
 ) -> DraftEnsureResponse:
     session_scope_id = resolve_session_scope_id(
         request=http_request,
         explicit_scope_id=payload.session_scope_id,
         required=True,
     )
+    _cleanup_expired_abandoned_hidden_tasks(db, tos_service)
     task = _find_current_hidden_draft(
         db,
         user_id=payload.user_id,
@@ -433,11 +534,40 @@ async def ensure_current_draft(
         db.commit()
         db.refresh(task)
         created = True
+    elif task.session_scope_id != session_scope_id:
+        task.session_scope_id = session_scope_id
+        task.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(task)
 
     return DraftEnsureResponse(
         session_scope_id=session_scope_id,
         created=created,
         task=_build_task_detail(db, task),
+    )
+
+
+@router.post(
+    "/draft/current/abandon-all",
+    response_model=DraftAbandonAllResponse,
+    summary="放弃当前用户所有隐藏草稿",
+    description="用户点击退出登录前调用，标记当前用户所有活动隐藏草稿为 abandoned。",
+)
+async def abandon_all_hidden_drafts(
+    payload: DraftAbandonAllRequest,
+    http_request: Request,
+    db: Annotated[Session, Depends(get_db)],
+) -> DraftAbandonAllResponse:
+    session_scope_id = resolve_session_scope_id(http_request, required=True)
+    abandoned_task_ids = _mark_hidden_drafts_abandoned(
+        db,
+        user_id=payload.user_id,
+    )
+    return DraftAbandonAllResponse(
+        user_id=payload.user_id,
+        abandoned_task_ids=abandoned_task_ids,
+        abandoned_count=len(abandoned_task_ids),
+        session_scope_id=session_scope_id,
     )
 
 
@@ -711,7 +841,7 @@ async def abandon_task(
 ) -> TaskAbandonResponse:
     """F24: 放弃任务
     
-    校验任务状态，更新为 abandoned，并触发 workspace 清理 (F26)。
+    校验任务状态，更新为 abandoned。
     
     Args:
         task_id: 任务唯一标识
@@ -748,34 +878,8 @@ async def abandon_task(
     db.commit()
     db.refresh(task)
     
-    # F26: 触发 workspace 清理 (异步)
-    asyncio.create_task(cleanup_workspace_async(task))
-    
     return TaskAbandonResponse(
         task_id=task.id,
         status=task.status.value,
         abandoned_at=task.updated_at
     )
-
-
-async def cleanup_workspace_async(task: SmartCutTask) -> None:
-    """异步清理 workspace (F26 实现)
-    
-    使用 CleanupService 清理放弃任务的资源。
-    
-    Args:
-        task: SmartCutTask 对象
-    """
-    try:
-        # 创建清理服务实例
-        cleanup_service = create_cleanup_service()
-        
-        # 执行清理
-        result = cleanup_service.cleanup_abandoned_task(task)
-        
-        # 记录清理结果
-        print(f"[CLEANUP] Task {task.id} cleanup result: {result}")
-        
-    except Exception as e:
-        # 清理失败不影响主流程，但应记录错误
-        print(f"[CLEANUP ERROR] Failed to cleanup task {task.id}: {e}")
