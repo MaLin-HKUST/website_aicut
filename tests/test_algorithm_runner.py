@@ -25,6 +25,8 @@ def test_algorithm_runner_builds_deterministic_docker_command(tmp_path: Path) ->
     command = runner.build_command("task-1", "analyze")
 
     assert command[:4] == ["docker", "run", "--rm", "--name"]
+    assert "--entrypoint" in command
+    assert command[command.index("--entrypoint") + 1] == "python"
     assert "algo:test" in command
     assert "/host/jobs:/data/worker-jobs" in command
     assert "--stage" in command
