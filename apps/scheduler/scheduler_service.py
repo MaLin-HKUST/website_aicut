@@ -59,12 +59,14 @@ class SchedulerService:
         Returns:
             各步骤处理结果统计
         """
+        reconciled_count = self.reconcile_stale_worker_claims()
         assigned_count = self.schedule_pending_tasks()
         advanced_count = self.check_device_status_and_advance()
         timeout_count = self.handle_timeouts()
         offline_count = self.check_worker_heartbeats(timeout_seconds=self.worker_timeout_seconds)
 
         cycle_stats = {
+            "reconciled": reconciled_count,
             "assigned": assigned_count,
             "advanced": advanced_count,
             "timeouts": timeout_count,
@@ -72,6 +74,59 @@ class SchedulerService:
         }
         logger.debug("Scheduler cycle stats: %s", cycle_stats)
         return cycle_stats
+
+    def reconcile_stale_worker_claims(self) -> int:
+        """释放仍然指向终态调度任务的 Worker 占用。
+
+        Worker 在任务完成后的 POST/IDLE 状态回收存在竞态：
+        调度中心已经将调度任务推进到 SUCCESS/FAILED/TIMEOUT，
+        但 Worker 稍后又把设备写回 POST + old current_task_id。
+        下一轮调度必须能够识别这种陈旧占用并释放 Worker，
+        否则后续 pending 任务会一直卡在队列里。
+        """
+        terminal_statuses = (
+            SchedulerTaskStatus.SUCCESS,
+            SchedulerTaskStatus.FAILED,
+            SchedulerTaskStatus.TIMEOUT,
+        )
+
+        stmt = select(SmartCutDevice).where(SmartCutDevice.current_task_id.isnot(None))
+        workers = list(self.db.execute(stmt).scalars().all())
+        released = 0
+
+        for worker in workers:
+            scheduler_task = self.db.execute(
+                select(SchedulerTask).where(SchedulerTask.id == worker.current_task_id)
+            ).scalar_one_or_none()
+
+            if scheduler_task is None:
+                worker.status = DeviceStatus.IDLE
+                worker.current_task_id = None
+                worker.updated_at = datetime.utcnow()
+                released += 1
+                logger.warning(
+                    "Released worker %s because current_task_id %s no longer exists",
+                    worker.worker_id,
+                    worker.current_task_id,
+                )
+                continue
+
+            if scheduler_task.status in terminal_statuses:
+                worker.status = DeviceStatus.IDLE
+                worker.current_task_id = None
+                worker.updated_at = datetime.utcnow()
+                released += 1
+                logger.info(
+                    "Released worker %s from terminal task %s (%s)",
+                    worker.worker_id,
+                    scheduler_task.id,
+                    scheduler_task.status.value,
+                )
+
+        if released > 0:
+            self.db.commit()
+
+        return released
     
     async def run_scheduler_loop(self) -> None:
         """运行调度主循环（异步，可停止）

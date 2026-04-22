@@ -192,3 +192,79 @@ def test_finalize_e2e_through_shared_postgres(tmp_path: Path, monkeypatch) -> No
 
     gt_objects = tos.list_objects("smart-cut", prefix="cujian_input_data/")
     assert gt_objects.data["count"] > 0
+
+
+@pytest.mark.skipif(
+    not os.environ.get("TEST_DATABASE_URL"),
+    reason="TEST_DATABASE_URL is required for PostgreSQL-backed finalize e2e",
+)
+def test_scheduler_releases_worker_from_terminal_task_before_next_assignment(tmp_path: Path) -> None:
+    db_url = os.environ["TEST_DATABASE_URL"]
+    init_scheduler_db(db_url)
+    session_factory = create_session_factory(db_url)
+
+    with session_factory() as db:
+        device_service = DeviceService(db)
+        device_service.register_device(
+            worker_id="worker-e2e-reconcile",
+            worker_name="Worker E2E Reconcile",
+            supported_task_types=[SchedulerTaskType.SMART_CUT_FINALIZE.value],
+        )
+
+        stale_business_task = SmartCutTask(
+            user_id="stale-user",
+            status=TaskStatus.SUCCESS,
+            current_stage=CurrentStage.COMPLETE,
+        )
+        db.add(stale_business_task)
+        db.commit()
+        db.refresh(stale_business_task)
+
+        stale_scheduler_task = SchedulerTask(
+            task_type=SchedulerTaskType.SMART_CUT_FINALIZE,
+            status=SchedulerTaskStatus.SUCCESS,
+            business_task_id=stale_business_task.id,
+            assigned_worker_id="worker-e2e-reconcile",
+            payload={},
+            result={"final_video_url": "smart-cut/stale/finalize/final_video.mp4"},
+        )
+        db.add(stale_scheduler_task)
+        db.commit()
+        db.refresh(stale_scheduler_task)
+
+        worker = device_service.get_device("worker-e2e-reconcile")
+        assert worker is not None
+        worker.status = DeviceStatus.POST
+        worker.current_task_id = stale_scheduler_task.id
+        db.commit()
+
+        queued_business_task = SmartCutTask(
+            user_id="queued-user",
+            status=TaskStatus.WAITING_USER,
+            current_stage=CurrentStage.USER_SELECT,
+        )
+        db.add(queued_business_task)
+        db.commit()
+        db.refresh(queued_business_task)
+
+        queued_scheduler_task = SchedulerTask(
+            task_type=SchedulerTaskType.SMART_CUT_FINALIZE,
+            status=SchedulerTaskStatus.PENDING,
+            business_task_id=queued_business_task.id,
+            payload={},
+        )
+        db.add(queued_scheduler_task)
+        db.commit()
+        db.refresh(queued_scheduler_task)
+
+        scheduler = SchedulerService(db, device_service)
+        stats = scheduler.run_cycle()
+        assert stats["reconciled"] >= 1
+
+        db.refresh(queued_scheduler_task)
+        db.refresh(worker)
+
+        assert worker.status == DeviceStatus.IDLE
+        assert worker.current_task_id == queued_scheduler_task.id
+        assert queued_scheduler_task.status == SchedulerTaskStatus.ASSIGNED
+        assert queued_scheduler_task.assigned_worker_id == "worker-e2e-reconcile"
