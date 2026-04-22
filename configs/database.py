@@ -100,20 +100,35 @@ def _apply_additive_smart_cut_schema(bind_engine: Engine) -> None:
     statements: list[str] = []
 
     if "task_title" not in column_names:
-        statements.append("ALTER TABLE smart_cut_tasks ADD COLUMN task_title VARCHAR(128)")
+        if dialect == "postgresql":
+            statements.append(
+                "ALTER TABLE smart_cut_tasks ADD COLUMN IF NOT EXISTS task_title VARCHAR(128)"
+            )
+        else:
+            statements.append("ALTER TABLE smart_cut_tasks ADD COLUMN task_title VARCHAR(128)")
     if "visible_in_task_center" not in column_names:
         if dialect == "postgresql":
             statements.append(
-                "ALTER TABLE smart_cut_tasks ADD COLUMN visible_in_task_center BOOLEAN NOT NULL DEFAULT FALSE"
+                "ALTER TABLE smart_cut_tasks ADD COLUMN IF NOT EXISTS visible_in_task_center BOOLEAN NOT NULL DEFAULT FALSE"
             )
         else:
             statements.append(
                 "ALTER TABLE smart_cut_tasks ADD COLUMN visible_in_task_center BOOLEAN NOT NULL DEFAULT 0"
             )
     if "session_scope_id" not in column_names:
-        statements.append("ALTER TABLE smart_cut_tasks ADD COLUMN session_scope_id VARCHAR(128)")
+        if dialect == "postgresql":
+            statements.append(
+                "ALTER TABLE smart_cut_tasks ADD COLUMN IF NOT EXISTS session_scope_id VARCHAR(128)"
+            )
+        else:
+            statements.append("ALTER TABLE smart_cut_tasks ADD COLUMN session_scope_id VARCHAR(128)")
     if "company_id" not in column_names:
-        statements.append("ALTER TABLE smart_cut_tasks ADD COLUMN company_id INTEGER")
+        if dialect == "postgresql":
+            statements.append(
+                "ALTER TABLE smart_cut_tasks ADD COLUMN IF NOT EXISTS company_id INTEGER"
+            )
+        else:
+            statements.append("ALTER TABLE smart_cut_tasks ADD COLUMN company_id INTEGER")
 
     true_literal = "TRUE" if dialect == "postgresql" else "1"
     false_literal = "FALSE" if dialect == "postgresql" else "0"
