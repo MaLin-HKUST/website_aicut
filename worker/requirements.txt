@@ -18,3 +18,9 @@ pydantic-settings>=2.1.0
 
 # Retry
 tenacity>=8.2.0
+
+# Stage runner runtime
+pyyaml>=6.0.0
+moviepy>=2.0.0
+numpy>=1.24.0
+requests>=2.31.0

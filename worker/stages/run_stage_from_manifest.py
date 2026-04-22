@@ -70,23 +70,24 @@ def _build_failure_metadata(task: dict[str, Any], stage: str) -> dict[str, Any]:
 
 
 def _ensure_runtime_dependencies() -> None:
-    env = os.environ.copy()
-    subprocess.run(
-        [
-            "python",
-            "-m",
-            "pip",
-            "install",
-            "--no-cache-dir",
-            "tenacity",
-            "pyyaml",
-            "moviepy",
-            "numpy",
-            "requests",
-        ],
-        check=True,
-        env=env,
-    )
+    missing: list[str] = []
+    modules = {
+        "tenacity": "tenacity",
+        "yaml": "pyyaml",
+        "moviepy": "moviepy",
+        "numpy": "numpy",
+        "requests": "requests",
+    }
+    for import_name, package_name in modules.items():
+        try:
+            __import__(import_name)
+        except Exception:
+            missing.append(package_name)
+    if missing:
+        raise RuntimeError(
+            "Analyze/preview/finalize runtime is missing bundled dependencies: "
+            + ", ".join(sorted(missing))
+        )
 
 
 def _read_json(path: Path) -> dict[str, Any]:
