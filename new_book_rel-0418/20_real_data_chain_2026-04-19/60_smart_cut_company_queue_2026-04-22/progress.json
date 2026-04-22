@@ -1,7 +1,7 @@
 {
   "spec_version": "2026-04-22.v1",
   "track": "smart_cut_company_queue",
-  "current_phase": "CQ05",
+  "current_phase": "CQ06",
   "completed_tasks": [
     "CQ01",
     "CQ02",
@@ -9,22 +9,25 @@
     "CQ04",
     "CQ05"
   ],
-  "in_progress_tasks": [],
+  "in_progress_tasks": [
+    "CQ06"
+  ],
   "blocked_tasks": [],
   "open_issues": [
     {
-      "id": "CQ-LIVE-QUEUE",
-      "title": "live 双任务排队尚未验证",
-      "where_found": "专项执行层",
-      "symptom": "repo 代码已支持 company_id 维度，但 live 还未跑同公司双任务正式排队",
-      "current_judgement": "需要在 live API/frontend 带上 company_id 后，再做真实验证",
-      "next_action": "部署并执行 CQ06"
+      "id": "CQ-LIVE-FINALIZE-LONG-UPLOAD",
+      "title": "同公司双任务排队验证卡在第一条 finalize 长上传",
+      "where_found": "live CQ06",
+      "symptom": "第一条正式任务已进入 running，第二条已进入 queued，但第一条仍在 finalize 最后一段上传到 TOS，尚未自然释放 worker",
+      "current_judgement": "公司级可见性和 FCFS 入队已经成立，剩余待证实的是长上传完成后第二条自动接棒",
+      "next_action": "继续观察第一条 finalize 收口，拿到第二条自动转 running 的证据"
     }
   ],
-  "last_verified_at": "2026-04-22T00:00:00+08:00",
-  "last_good_commit": "",
+  "last_verified_at": "2026-04-22T09:15:00+08:00",
+  "last_good_commit": "1e14326",
   "notes": [
     "普通用户任务中心必须按 company_id 过滤",
-    "底层单 worker 仍允许全局 FCFS，但页面只展示公司视角队列"
+    "底层单 worker 仍允许全局 FCFS，但页面只展示公司视角队列",
+    "live 测试账号: rbzj / 123456, rbzj_queue2 / 123456, zhangyongqiang / 123456"
   ]
 }
