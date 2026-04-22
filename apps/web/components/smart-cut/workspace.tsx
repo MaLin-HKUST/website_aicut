@@ -279,6 +279,17 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
 
   async function bootstrap() {
     setLoading(true);
+    if (!taskId) {
+      setTask(null);
+      setEdits([]);
+      setScriptDraft("");
+      setError(null);
+      setNotice(null);
+      setBusyAction(null);
+      setUploadProgress(0);
+      setUploadState("idle");
+      setLastSubmittedTaskTitle(null);
+    }
     const authResponse = await fetch("/api/proxy/auth/me");
     if (!authResponse.ok) {
       router.replace("/login");
