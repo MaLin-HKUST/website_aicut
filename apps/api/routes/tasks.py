@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 from configs.database import get_db
 from apps.models.task import SmartCutTask, TaskStatus, CurrentStage
 from apps.models.edit import SmartCutEdit
-from apps.models.scheduler_task import SchedulerTask
+from apps.models.scheduler_task import SchedulerTask, SchedulerTaskType, SchedulerTaskStatus
 from apps.models.task_run import SmartCutTaskRun, TaskRunType, TaskRunStatus
 from apps.api.dependencies import get_tos_service
 from apps.api.models.schemas import (
@@ -637,9 +637,66 @@ async def upload_direct(
 
         task.original_video_url = video_key
         task.reference_text_url = text_key
-        task.status = TaskStatus.READY_ANALYZE
+        task.status = TaskStatus.ANALYZING
         task.current_stage = CurrentStage.ANALYZE
         task.updated_at = datetime.utcnow()
+
+        upload_run = (
+            db.query(SmartCutTaskRun)
+            .filter(
+                SmartCutTaskRun.task_id == task_id,
+                SmartCutTaskRun.run_type == TaskRunType.UPLOAD,
+            )
+            .order_by(desc(SmartCutTaskRun.sequence_number))
+            .first()
+        )
+        if upload_run is None:
+            upload_run = SmartCutTaskRun(
+                task_id=task_id,
+                run_type=TaskRunType.UPLOAD,
+                status=TaskRunStatus.SUCCESS,
+                sequence_number=_next_run_sequence(db, task_id),
+                payload_snapshot={
+                    "video_file": video_file.filename,
+                    "reference_file": reference_file.filename,
+                },
+                result_snapshot={"video_key": video_key, "text_key": text_key},
+                completed_at=datetime.utcnow(),
+            )
+            db.add(upload_run)
+            db.flush()
+        else:
+            upload_run.status = TaskRunStatus.SUCCESS
+            upload_run.result_snapshot = {"video_key": video_key, "text_key": text_key}
+            upload_run.completed_at = datetime.utcnow()
+            upload_run.updated_at = datetime.utcnow()
+
+        scheduler_task = SchedulerTask(
+            task_type=SchedulerTaskType.SMART_CUT_ANALYZE,
+            status=SchedulerTaskStatus.PENDING,
+            business_task_id=task_id,
+            payload={
+                "smart_cut_task_id": task_id,
+                "original_video_tos_key": task.original_video_url,
+                "reference_text_tos_key": task.reference_text_url,
+            },
+        )
+        db.add(scheduler_task)
+        db.flush()
+
+        analyze_run = SmartCutTaskRun(
+            task_id=task_id,
+            run_type=TaskRunType.ANALYZE,
+            status=TaskRunStatus.QUEUED,
+            sequence_number=_next_run_sequence(db, task_id),
+            scheduler_task_id=scheduler_task.id,
+            payload_snapshot=dict(scheduler_task.payload),
+        )
+        db.add(analyze_run)
+        db.flush()
+
+        task.current_run_id = analyze_run.id
+        task.latest_successful_run_id = upload_run.id
         db.commit()
         db.refresh(task)
         return _build_task_detail(db, task)
