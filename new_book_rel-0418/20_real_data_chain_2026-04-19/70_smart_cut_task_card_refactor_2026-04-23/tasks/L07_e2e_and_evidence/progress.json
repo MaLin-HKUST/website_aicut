@@ -1,0 +1,14 @@
+{
+  "large_task_id": "L07",
+  "status": "pending",
+  "owner": "codex",
+  "dependencies": [
+    "L06"
+  ],
+  "commit_log": [],
+  "file_history": [],
+  "verification": [],
+  "open_questions": [
+    "E2E 是否统一使用 xyt1/xyt2 作为默认测试账号"
+  ]
+}

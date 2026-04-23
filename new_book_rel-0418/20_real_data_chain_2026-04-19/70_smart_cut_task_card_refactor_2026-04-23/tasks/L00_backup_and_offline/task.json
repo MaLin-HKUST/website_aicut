@@ -1,0 +1,13 @@
+{
+  "large_task_id": "L00",
+  "title": "备份、下线与隔离",
+  "status": "completed",
+  "dependencies": [],
+  "small_tasks": [
+    { "id": "S001", "title": "定位 A 机 live runtime 与 Smart Cut 前端实现", "status": "completed" },
+    { "id": "S002", "title": "备份 A 机 live web runtime 到 TOS", "status": "completed" },
+    { "id": "S003", "title": "备份 A 机 Smart Cut 前端源码快照到 TOS", "status": "completed" },
+    { "id": "S004", "title": "将旧 Smart Cut 前端移到 quarantine", "status": "completed" },
+    { "id": "S005", "title": "切换线上 3301 到 Smart Cut 维护页 runtime", "status": "completed" }
+  ]
+}

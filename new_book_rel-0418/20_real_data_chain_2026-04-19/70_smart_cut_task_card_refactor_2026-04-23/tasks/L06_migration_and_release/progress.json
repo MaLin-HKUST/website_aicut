@@ -1,0 +1,18 @@
+{
+  "large_task_id": "L06",
+  "status": "pending",
+  "owner": "codex",
+  "dependencies": [
+    "L02",
+    "L03",
+    "L04",
+    "L05"
+  ],
+  "commit_log": [],
+  "file_history": [],
+  "verification": [],
+  "open_questions": [
+    "旧 PG 数据是否直接全清还是按公司保留已完成任务",
+    "重开 /smart-cut 入口的最低验收门槛"
+  ]
+}

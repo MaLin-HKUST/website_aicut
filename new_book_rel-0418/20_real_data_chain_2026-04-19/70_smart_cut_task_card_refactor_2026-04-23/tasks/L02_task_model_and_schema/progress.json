@@ -1,0 +1,30 @@
+{
+  "large_task_id": "L02",
+  "status": "in_progress",
+  "owner": "codex",
+  "dependencies": [
+    "L01"
+  ],
+  "commit_log": [],
+  "file_history": [
+    {
+      "path": "apps/models/task.py",
+      "small_task_id": "S201,S204"
+    },
+    {
+      "path": "apps/models/task_run.py",
+      "small_task_id": "S202"
+    },
+    {
+      "path": "configs/database.py",
+      "small_task_id": "S201,S202,S204"
+    }
+  ],
+  "verification": [
+    "pytest -q tests/test_task_card_schema.py"
+  ],
+  "open_questions": [
+    "旧 smart_cut_tasks 是否允许保留部分字段但改语义",
+    "company_id 应否设置为 not null 并在迁移期回填"
+  ]
+}

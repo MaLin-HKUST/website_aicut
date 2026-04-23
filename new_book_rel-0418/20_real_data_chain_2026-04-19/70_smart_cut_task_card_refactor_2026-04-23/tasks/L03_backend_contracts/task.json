@@ -1,0 +1,18 @@
+{
+  "large_task_id": "L03",
+  "title": "后端 API 契约与状态推进重构",
+  "status": "pending",
+  "dependencies": [
+    "L01",
+    "L02"
+  ],
+  "small_tasks": [
+    { "id": "S301", "title": "定义 start task API", "status": "pending" },
+    { "id": "S302", "title": "定义 upload-complete 自动 analyze", "status": "pending" },
+    { "id": "S303", "title": "定义 preview retry 与 run 级失败语义", "status": "pending" },
+    { "id": "S304", "title": "定义 analyze-only finalize", "status": "pending" },
+    { "id": "S305", "title": "定义 abandon task API", "status": "pending" },
+    { "id": "S306", "title": "定义 runs timeline API", "status": "pending" },
+    { "id": "S307", "title": "定义 draft/current 退役路径", "status": "pending" }
+  ]
+}

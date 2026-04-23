@@ -85,6 +85,15 @@ export const FILTER_OPTIONS = [
   { key: "failed", label: "Failed" },
 ] as const;
 
+const DEFAULT_TOS_PUBLIC_BASE_URL = "https://autocut-malin.tos-cn-shanghai.volces.com";
+
+function resolveTosUrl(value: string | null | undefined): string | null {
+  if (!value) return null;
+  if (/^https?:\/\//i.test(value)) return value;
+  const baseUrl = process.env.NEXT_PUBLIC_TOS_PUBLIC_BASE_URL || DEFAULT_TOS_PUBLIC_BASE_URL;
+  return `${baseUrl.replace(/\/+$/, "")}/${value.replace(/^\/+/, "")}`;
+}
+
 export type TaskCenterFilter = (typeof FILTER_OPTIONS)[number]["key"];
 
 function normalizeItem(payload: TaskCenterApiItem): TaskCenterItem {
@@ -98,7 +107,7 @@ function normalizeItem(payload: TaskCenterApiItem): TaskCenterItem {
     updatedAt: payload.updated_at,
     createdAt: payload.created_at,
     queuePosition: payload.queue_position ?? null,
-    downloadUrl: payload.download_url ?? null,
+    downloadUrl: resolveTosUrl(payload.download_url ?? null),
     errorMessage: payload.error_message ?? null,
     inputSummary: payload.input_files ?? [],
     outputSummary: payload.output_files ?? [],
@@ -150,10 +159,15 @@ export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> 
   return (await response.json()) as T;
 }
 
-export async function listTaskCenterItems(opts: { mode: "user" | "admin"; userId?: string }): Promise<TaskCenterItem[]> {
+export async function listTaskCenterItems(opts: { mode: "user" | "admin"; userId?: string; companyId?: number | null }): Promise<TaskCenterItem[]> {
   const basePath =
     opts.mode === "admin" ? "/api/proxy/api/admin/task-center/tasks" : "/api/proxy/api/task-center/tasks";
-  const query = opts.mode === "user" && opts.userId ? `?user_id=${encodeURIComponent(opts.userId)}` : "";
+  const query =
+    opts.mode === "user" && opts.companyId !== undefined && opts.companyId !== null
+      ? `?company_id=${encodeURIComponent(String(opts.companyId))}`
+      : opts.mode === "user" && opts.userId
+        ? `?user_id=${encodeURIComponent(opts.userId)}`
+        : "";
   const payload = await fetchJson<TaskCenterApiItem[]>(`${basePath}${query}`);
   return payload.map(normalizeItem);
 }

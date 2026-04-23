@@ -1,0 +1,16 @@
+{
+  "large_task_id": "L05",
+  "status": "pending",
+  "owner": "codex",
+  "dependencies": [
+    "L03",
+    "L04"
+  ],
+  "commit_log": [],
+  "file_history": [],
+  "verification": [],
+  "open_questions": [
+    "任务列表详情是否默认展开 timeline",
+    "是否在主任务卡上直接显示最新版本号"
+  ]
+}

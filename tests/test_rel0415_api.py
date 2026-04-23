@@ -67,6 +67,42 @@ def test_rel0415_list_and_detail_routes(api_client):
     assert payload["current_stage"] == "upload"
 
 
+def test_start_task_creates_visible_main_task_and_initial_run(api_client):
+    client, SessionLocal = api_client
+
+    response = client.post(
+        "/api/smart-cut/tasks/start",
+        json={"user_id": "alice", "company_id": 9},
+    )
+    assert response.status_code == 201
+    payload = response.json()
+    task_id = payload["task_id"]
+    assert payload["status"] == "waiting_upload"
+    assert payload["current_stage"] == "upload"
+    assert payload["company_id"] == 9
+    assert payload["task_title"].startswith("智能剪气口-")
+
+    detail_response = client.get(f"/api/smart-cut/tasks/{task_id}")
+    assert detail_response.status_code == 200
+    detail_payload = detail_response.json()
+    assert detail_payload["company_id"] == 9
+    assert detail_payload["visible_in_task_center"] is True
+    assert detail_payload["current_run_id"] is not None
+    assert detail_payload["revision_count"] == 0
+
+    runs_response = client.get(f"/api/smart-cut/tasks/{task_id}/runs")
+    assert runs_response.status_code == 200
+    runs_payload = runs_response.json()
+    assert len(runs_payload) == 1
+    assert runs_payload[0]["run_type"] == "upload"
+    assert runs_payload[0]["status"] == "created"
+
+    with SessionLocal() as db:
+        task = db.query(SmartCutTask).filter_by(id=task_id).first()
+        assert task is not None
+        assert task.company_id == 9
+
+
 def test_rel0415_upload_direct_transitions_to_ready_analyze(api_client, tmp_path: Path):
     client, _SessionLocal = api_client
 
@@ -129,6 +165,7 @@ def test_rel0415_edits_and_task_center_routes(api_client):
 
         visible_task = SmartCutTask(
             user_id="alice",
+            company_id=9,
             status=TaskStatus.SUCCESS,
             current_stage=CurrentStage.COMPLETE,
             task_title="智能剪气口-20260421-101010",
@@ -137,7 +174,19 @@ def test_rel0415_edits_and_task_center_routes(api_client):
             reference_text_url="smart-cut/demo/final/input/reference.txt",
             final_video_url="smart-cut/demo/final/finalize/final_video.mp4",
         )
+        other_company_task = SmartCutTask(
+            user_id="bob",
+            company_id=10,
+            status=TaskStatus.SUCCESS,
+            current_stage=CurrentStage.COMPLETE,
+            task_title="智能剪气口-20260421-111111",
+            visible_in_task_center=True,
+            original_video_url="smart-cut/demo/other/input/source_video.mp4",
+            reference_text_url="smart-cut/demo/other/input/reference.txt",
+            final_video_url="smart-cut/demo/other/finalize/final_video.mp4",
+        )
         db.add(visible_task)
+        db.add(other_company_task)
         db.commit()
 
         task_id = hidden_task.id
@@ -161,9 +210,15 @@ def test_rel0415_edits_and_task_center_routes(api_client):
     admin_center = client.get("/api/admin/task-center/tasks")
     assert admin_center.status_code == 200
     admin_payload = admin_center.json()
-    assert [item["id"] for item in admin_payload] == [visible_task_id]
+    assert visible_task_id in [item["id"] for item in admin_payload]
     assert admin_payload[0]["status"] == "finished"
     assert admin_payload[0]["download_url"].endswith("final_video.mp4")
+
+    company_center = client.get("/api/task-center/tasks", params={"company_id": 9})
+    assert company_center.status_code == 200
+    company_payload = company_center.json()
+    assert [item["id"] for item in company_payload] == [visible_task_id]
+    assert company_payload[0]["company_id"] == 9
 
 
 def test_current_draft_endpoints_are_scoped_to_login_session(api_client):

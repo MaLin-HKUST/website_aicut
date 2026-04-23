@@ -14,6 +14,7 @@ from .scheduler_task import (
     SchedulerTaskType,
     SchedulerTaskStatus,
 )
+from .task_run import SmartCutTaskRun, TaskRunType, TaskRunStatus
 
 __all__ = [
     # F02
@@ -28,4 +29,7 @@ __all__ = [
     "SchedulerTask",
     "SchedulerTaskType",
     "SchedulerTaskStatus",
+    "SmartCutTaskRun",
+    "TaskRunType",
+    "TaskRunStatus",
 ]

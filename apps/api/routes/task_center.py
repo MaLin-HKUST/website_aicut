@@ -53,6 +53,7 @@ def _apply_queue_positions(items: list[TaskCenterTaskRead]) -> list[TaskCenterTa
 async def list_user_task_center(
     db: Session = Depends(get_db),
     user_id: str | None = Query(default=None, description="用户 ID；为空时返回全部任务"),
+    company_id: int | None = Query(default=None, description="企业 ID；传入时优先按企业过滤"),
     limit: int = Query(default=50, ge=1, le=200),
 ) -> list[TaskCenterTaskRead]:
     stmt = (
@@ -61,7 +62,9 @@ async def list_user_task_center(
         .order_by(desc(SmartCutTask.updated_at))
         .limit(limit)
     )
-    if user_id:
+    if company_id is not None:
+        stmt = stmt.where(SmartCutTask.company_id == company_id)
+    elif user_id:
         stmt = stmt.where(SmartCutTask.user_id == user_id)
     tasks = list(db.execute(stmt).scalars().all())
     queue_positions = _queue_positions(db)

@@ -1,0 +1,17 @@
+{
+  "large_task_id": "L06",
+  "title": "迁移、数据清理与上线方案",
+  "status": "pending",
+  "dependencies": [
+    "L02",
+    "L03",
+    "L04",
+    "L05"
+  ],
+  "small_tasks": [
+    { "id": "S601", "title": "定义旧 Smart Cut PG 数据清理策略", "status": "pending" },
+    { "id": "S602", "title": "定义后端 API/worker/scheduler 发布顺序", "status": "pending" },
+    { "id": "S603", "title": "定义前端重新开放入口条件", "status": "pending" },
+    { "id": "S604", "title": "定义失败回滚与恢复流程", "status": "pending" }
+  ]
+}

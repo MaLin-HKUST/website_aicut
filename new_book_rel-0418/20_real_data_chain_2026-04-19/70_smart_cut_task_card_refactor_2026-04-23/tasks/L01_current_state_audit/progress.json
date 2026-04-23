@@ -1,0 +1,25 @@
+{
+  "large_task_id": "L01",
+  "status": "in_progress",
+  "owner": "codex",
+  "dependencies": [
+    "L00"
+  ],
+  "commit_log": [],
+  "file_history": [
+    {
+      "path": "01_当前代码真实状态审计.md",
+      "small_task_id": "S101,S102,S103,S104"
+    },
+    {
+      "path": "README.md",
+      "small_task_id": "S105,S106"
+    }
+  ],
+  "verification": [
+    "审计结论与 apps/models/task.py, apps/api/routes/tasks.py, apps/api/routes/task_center.py 对齐"
+  ],
+  "open_questions": [
+    "analyze 失败回退目标状态需在 L03 固化"
+  ]
+}

@@ -50,6 +50,10 @@ class TaskCreateRequest(BaseModel):
         default=None,
         description="可选，显式传入当前登录会话作用域 ID"
     )
+    company_id: Optional[int] = Field(
+        default=None,
+        description="企业ID；任务卡模型预留字段"
+    )
 
 
 class TaskCreateData(BaseModel):
@@ -230,11 +234,16 @@ class TaskDetailResponse(BaseModel):
     # 基本信息
     id: str = Field(..., description="任务ID")
     user_id: str = Field(..., description="用户ID")
+    company_id: Optional[int] = Field(None, description="企业ID")
     status: str = Field(..., description="任务状态")
     current_stage: str = Field(..., description="当前阶段")
     task_title: Optional[str] = Field(None, description="任务中心标题")
     visible_in_task_center: bool = Field(False, description="是否在任务中心可见")
     session_scope_id: Optional[str] = Field(None, description="当前登录会话作用域 ID")
+    current_run_id: Optional[str] = Field(None, description="当前活跃 run ID")
+    latest_successful_run_id: Optional[str] = Field(None, description="最近成功 run ID")
+    failed_stage: Optional[str] = Field(None, description="最近失败阶段")
+    revision_count: int = Field(0, description="累计修订次数")
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
     
@@ -321,6 +330,7 @@ class SmartCutTaskSummaryRead(BaseModel):
     """Smart Cut 任务摘要 - 用于 landing 页和轻量列表。"""
 
     id: str = Field(..., description="任务 ID")
+    company_id: Optional[int] = Field(None, description="企业 ID")
     status: str = Field(..., description="任务状态")
     current_stage: Optional[str] = Field(None, description="当前阶段")
     active_edit_id: Optional[str] = Field(None, description="当前 edit ID")
@@ -328,6 +338,25 @@ class SmartCutTaskSummaryRead(BaseModel):
     session_scope_id: Optional[str] = Field(None, description="当前登录会话作用域 ID")
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
+
+
+class TaskStartRequest(BaseModel):
+    """显式开启主任务卡请求。"""
+
+    user_id: str = Field(..., description="用户ID")
+    company_id: Optional[int] = Field(None, description="企业ID")
+    task_title: Optional[str] = Field(None, description="可选任务标题")
+
+
+class TaskStartResponse(BaseModel):
+    """显式开启主任务卡响应。"""
+
+    task_id: str = Field(..., description="主任务ID")
+    status: str = Field(..., description="任务状态")
+    current_stage: str = Field(..., description="当前阶段")
+    company_id: Optional[int] = Field(None, description="企业ID")
+    task_title: str = Field(..., description="任务标题")
+    created_at: datetime = Field(..., description="创建时间")
 
 
 class DraftCurrentResponse(BaseModel):
@@ -366,6 +395,25 @@ class SmartCutEditRead(BaseModel):
     updated_at: datetime = Field(..., description="更新时间")
 
 
+class TaskRunRead(BaseModel):
+    """主任务子执行记录。"""
+
+    id: str = Field(..., description="run ID")
+    task_id: str = Field(..., description="主任务ID")
+    run_type: str = Field(..., description="执行类型")
+    status: str = Field(..., description="执行状态")
+    sequence_number: int = Field(..., description="顺序号")
+    scheduler_task_id: Optional[str] = Field(None, description="底层调度任务ID")
+    source_edit_id: Optional[str] = Field(None, description="来源 edit ID")
+    payload_snapshot: Any = Field(..., description="请求快照")
+    result_snapshot: Optional[Any] = Field(None, description="结果快照")
+    error_message: Optional[str] = Field(None, description="错误信息")
+    created_at: datetime = Field(..., description="创建时间")
+    started_at: Optional[datetime] = Field(None, description="开始时间")
+    completed_at: Optional[datetime] = Field(None, description="完成时间")
+    updated_at: datetime = Field(..., description="更新时间")
+
+
 class TaskCenterTaskRead(BaseModel):
     """任务中心列表项。当前版本底层数据源为 Smart Cut。"""
 
@@ -384,6 +432,7 @@ class TaskCenterTaskRead(BaseModel):
     input_files: List[str] = Field(default_factory=list, description="输入文件摘要")
     output_files: List[str] = Field(default_factory=list, description="输出文件摘要")
     user_id: Optional[str] = Field(None, description="用户 ID（admin 可见）")
+    company_id: Optional[int] = Field(None, description="企业 ID（admin 或新任务卡模型可见）")
     scheduler_task_id: Optional[str] = Field(None, description="最近一次调度任务 ID（admin 可见）")
     scheduler_status: Optional[str] = Field(None, description="最近一次调度任务状态（admin 可见）")
     worker_id: Optional[str] = Field(None, description="当前/最近一次 Worker（admin 可见）")

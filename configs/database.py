@@ -112,6 +112,25 @@ def _apply_additive_smart_cut_schema(bind_engine: Engine) -> None:
             )
     if "session_scope_id" not in column_names:
         statements.append("ALTER TABLE smart_cut_tasks ADD COLUMN session_scope_id VARCHAR(128)")
+    if "company_id" not in column_names:
+        statements.append("ALTER TABLE smart_cut_tasks ADD COLUMN company_id INTEGER")
+    if "current_run_id" not in column_names:
+        statements.append("ALTER TABLE smart_cut_tasks ADD COLUMN current_run_id VARCHAR(36)")
+    if "latest_successful_run_id" not in column_names:
+        statements.append("ALTER TABLE smart_cut_tasks ADD COLUMN latest_successful_run_id VARCHAR(36)")
+    if "failed_stage" not in column_names:
+        statements.append("ALTER TABLE smart_cut_tasks ADD COLUMN failed_stage VARCHAR(32)")
+    if "abandoned_at" not in column_names:
+        statements.append("ALTER TABLE smart_cut_tasks ADD COLUMN abandoned_at DATETIME")
+    if "revision_count" not in column_names:
+        if dialect == "postgresql":
+            statements.append(
+                "ALTER TABLE smart_cut_tasks ADD COLUMN revision_count INTEGER NOT NULL DEFAULT 0"
+            )
+        else:
+            statements.append(
+                "ALTER TABLE smart_cut_tasks ADD COLUMN revision_count INTEGER NOT NULL DEFAULT 0"
+            )
 
     true_literal = "TRUE" if dialect == "postgresql" else "1"
     false_literal = "FALSE" if dialect == "postgresql" else "0"
@@ -150,6 +169,7 @@ def init_db(*, bind_engine: Engine | None = None) -> None:
     from apps.models.scheduler_task import SchedulerTask  # noqa: F401
     from apps.models.device import SmartCutDevice  # noqa: F401
     from apps.models.edit import SmartCutEdit  # noqa: F401
+    from apps.models.task_run import SmartCutTaskRun  # noqa: F401
 
     target_engine = bind_engine or engine
     Base.metadata.create_all(bind=target_engine)

@@ -1,0 +1,16 @@
+{
+  "large_task_id": "L01",
+  "title": "当前代码审计与旧方案废止",
+  "status": "in_progress",
+  "dependencies": [
+    "L00"
+  ],
+  "small_tasks": [
+    { "id": "S101", "title": "审计当前 SmartCutTask 字段与状态机", "status": "completed" },
+    { "id": "S102", "title": "审计 draft/current 系列接口与草稿恢复逻辑", "status": "completed" },
+    { "id": "S103", "title": "审计 task center 当前过滤条件与可见性", "status": "completed" },
+    { "id": "S104", "title": "补录仍然活跃的前端影响面文件", "status": "completed" },
+    { "id": "S105", "title": "明确 50_* 与 70_* 的主次关系", "status": "completed" },
+    { "id": "S106", "title": "把审计结果写成后续实现前提", "status": "in_progress" }
+  ]
+}

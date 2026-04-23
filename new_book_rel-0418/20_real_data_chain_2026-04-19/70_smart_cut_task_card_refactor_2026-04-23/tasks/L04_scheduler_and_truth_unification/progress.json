@@ -1,0 +1,36 @@
+{
+  "large_task_id": "L04",
+  "status": "in_progress",
+  "owner": "codex",
+  "dependencies": [
+    "L02",
+    "L03"
+  ],
+  "commit_log": [],
+  "file_history": [
+    {
+      "path": "apps/api/routes/task_center.py",
+      "small_task_id": "S404"
+    },
+    {
+      "path": "apps/api/routes/tasks.py",
+      "small_task_id": "S404"
+    },
+    {
+      "path": "apps/web/lib/task-center.ts",
+      "small_task_id": "S404"
+    },
+    {
+      "path": "tests/test_rel0415_api.py",
+      "small_task_id": "S404"
+    }
+  ],
+  "verification": [
+    "pytest -q tests/test_rel0415_api.py",
+    "cd apps/web && npx tsc --noEmit"
+  ],
+  "open_questions": [
+    "ghost task 的检测是 runtime 检查还是定时清理",
+    "task-center 是否需要直接暴露 run 摘要"
+  ]
+}

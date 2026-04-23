@@ -1,0 +1,201 @@
+{
+  "project_id": "70_smart_cut_task_card_refactor_2026-04-23",
+  "phase": "L01_current_state_audit_and_spec_pack",
+  "status": "in_progress",
+  "current_execution_branch": "feature/smart-cut-taskcard-refactor",
+  "historical_source_branches": [
+    "feature/smart-cut-workspace-refactor-R10-R11-integration"
+  ],
+  "completed_tasks": [
+    "L00",
+    "S001",
+    "S002",
+    "S003",
+    "S004",
+    "S005",
+    "S101",
+    "S102",
+    "S103",
+    "S104",
+    "S105",
+    "S201",
+    "S202",
+    "S204",
+    "S301",
+    "S306"
+  ],
+  "in_progress_tasks": [
+    "L01",
+    "S106",
+    "L02",
+    "S203",
+    "L03",
+    "L04",
+    "S404"
+  ],
+  "blocked_tasks": [],
+  "decisions": [
+    "50_* downgraded to historical reference; 70_* is the sole execution package.",
+    "Smart Cut must move from hidden draft semantics to explicit main-task cards.",
+    "Preview is optional and no longer a hard prerequisite for finalize.",
+    "Task center must show main task cards only; sub-runs belong in timeline detail.",
+    "All new implementation work moves to feature/smart-cut-taskcard-refactor; the old R10-R11 branch remains historical only."
+  ],
+  "commit_log": [
+    {
+      "ts": "2026-04-23T14:56:00+08:00",
+      "sha": "fcb3e11",
+      "branch": "feature/smart-cut-workspace-refactor-R10-R11-integration",
+      "record_type": "historical_import",
+      "large_task_id": "L00",
+      "small_task_id": "S004,S005",
+      "message": "Retire the live Smart Cut entry before task-card rearchitecture",
+      "verification": [
+        "apps/web TypeScript compile",
+        "apps/web Next.js production build",
+        "live /smart-cut returns maintenance page"
+      ]
+    }
+  ],
+  "file_history": [
+    {
+      "path": "new_book_rel-0418/20_real_data_chain_2026-04-19/70_smart_cut_task_card_refactor_2026-04-23/01_当前代码真实状态审计.md",
+      "ts": "2026-04-23T23:30:00+08:00",
+      "sha": null,
+      "small_task_id": "S101,S102,S103,S104",
+      "summary": "Document current hidden-draft model, task-center filtering, and active frontend impact surface."
+    },
+    {
+      "path": "new_book_rel-0418/20_real_data_chain_2026-04-19/70_smart_cut_task_card_refactor_2026-04-23/02_产品模型与状态机.md",
+      "ts": "2026-04-23T23:30:00+08:00",
+      "sha": null,
+      "small_task_id": "S106",
+      "summary": "Define the explicit main-task card model and product state machine."
+    },
+    {
+      "path": "new_book_rel-0418/20_real_data_chain_2026-04-19/70_smart_cut_task_card_refactor_2026-04-23/03_数据模型与表结构.md",
+      "ts": "2026-04-23T23:30:00+08:00",
+      "sha": null,
+      "small_task_id": "L02",
+      "summary": "Define target table structure for tasks, runs, and edits."
+    },
+    {
+      "path": "new_book_rel-0418/20_real_data_chain_2026-04-19/70_smart_cut_task_card_refactor_2026-04-23/04_API契约与状态推进.md",
+      "ts": "2026-04-23T23:30:00+08:00",
+      "sha": null,
+      "small_task_id": "L03",
+      "summary": "Define new API surface and status transitions."
+    },
+    {
+      "path": "new_book_rel-0418/20_real_data_chain_2026-04-19/70_smart_cut_task_card_refactor_2026-04-23/05_前端工作台与任务列表重构.md",
+      "ts": "2026-04-23T23:30:00+08:00",
+      "sha": null,
+      "small_task_id": "L05",
+      "summary": "Define smart-cut workspace and task-center frontend redesign."
+    },
+    {
+      "path": "new_book_rel-0418/20_real_data_chain_2026-04-19/70_smart_cut_task_card_refactor_2026-04-23/07_迁移、上线与E2E验收.md",
+      "ts": "2026-04-23T23:30:00+08:00",
+      "sha": null,
+      "small_task_id": "L06,L07",
+      "summary": "Define migration sequencing, release gating, and real E2E acceptance."
+    },
+    {
+      "path": "new_book_rel-0418/20_real_data_chain_2026-04-19/70_smart_cut_task_card_refactor_2026-04-23/08_旧版本问题清单与退役边界.md",
+      "ts": "2026-04-23T23:45:00+08:00",
+      "sha": null,
+      "small_task_id": "S105,S106",
+      "summary": "Enumerate all confirmed old-version issues and define retirement boundaries."
+    },
+    {
+      "path": "apps/models/task.py",
+      "ts": "2026-04-24T00:15:00+08:00",
+      "sha": null,
+      "small_task_id": "S201,S204",
+      "summary": "Add task-card fields such as company_id, current_run_id, latest_successful_run_id, failed_stage, abandoned_at, and revision_count."
+    },
+    {
+      "path": "apps/models/task_run.py",
+      "ts": "2026-04-24T00:15:00+08:00",
+      "sha": null,
+      "small_task_id": "S202",
+      "summary": "Add the new SmartCutTaskRun model for upload/analyze/preview/finalize sub-executions."
+    },
+    {
+      "path": "configs/database.py",
+      "ts": "2026-04-24T00:15:00+08:00",
+      "sha": null,
+      "small_task_id": "S201,S202,S204",
+      "summary": "Ensure init_db creates smart_cut_task_runs and additive smart_cut_tasks columns."
+    },
+    {
+      "path": "apps/api/models/schemas.py",
+      "ts": "2026-04-24T00:30:00+08:00",
+      "sha": null,
+      "small_task_id": "S301,S306,S404",
+      "summary": "Add schemas for start task, task runs, company_id-aware task details, and task-center items."
+    },
+    {
+      "path": "apps/api/routes/tasks.py",
+      "ts": "2026-04-24T00:30:00+08:00",
+      "sha": null,
+      "small_task_id": "S301,S306",
+      "summary": "Add explicit start_task and list_task_runs endpoints while preserving old draft APIs."
+    },
+    {
+      "path": "apps/api/routes/task_center.py",
+      "ts": "2026-04-24T00:35:00+08:00",
+      "sha": null,
+      "small_task_id": "S404",
+      "summary": "Prefer company_id filtering for user task-center queries and fall back to user_id."
+    },
+    {
+      "path": "apps/web/lib/task-center.ts",
+      "ts": "2026-04-24T00:35:00+08:00",
+      "sha": null,
+      "small_task_id": "S404",
+      "summary": "Allow user task-center requests to pass companyId when available."
+    },
+    {
+      "path": "tests/test_task_card_schema.py",
+      "ts": "2026-04-24T00:20:00+08:00",
+      "sha": null,
+      "small_task_id": "S201,S202,S204",
+      "summary": "Verify smart_cut_task_runs creation and additive smart_cut_tasks fields."
+    },
+    {
+      "path": "tests/test_rel0415_api.py",
+      "ts": "2026-04-24T00:35:00+08:00",
+      "sha": null,
+      "small_task_id": "S301,S306,S404",
+      "summary": "Cover start task, runs listing, and company-aware task-center filtering."
+    }
+  ],
+  "backup_records": [
+    {
+      "label": "a_machine_live_web_runtime",
+      "tos_object_key": "backups/website_aicut/20260423_pre_smartcut_refactor/a_machine_web_runtime_20260422_15cd641_finalizeclear.tgz",
+      "url": "https://autocut-malin.tos-cn-shanghai.volces.com/backups/website_aicut/20260423_pre_smartcut_refactor/a_machine_web_runtime_20260422_15cd641_finalizeclear.tgz"
+    },
+    {
+      "label": "a_machine_frontend_smartcut_source_snapshot",
+      "tos_object_key": "backups/website_aicut/20260423_pre_smartcut_refactor/a_machine_frontend_smartcut_source_20260423.tgz",
+      "url": "https://autocut-malin.tos-cn-shanghai.volces.com/backups/website_aicut/20260423_pre_smartcut_refactor/a_machine_frontend_smartcut_source_20260423.tgz"
+    },
+    {
+      "label": "local_quarantine_frontend_smartcut",
+      "tos_object_key": "backups/website_aicut/20260423_pre_smartcut_refactor/local_quarantine_frontend_smartcut_20260423.tgz",
+      "url": "https://autocut-malin.tos-cn-shanghai.volces.com/backups/website_aicut/20260423_pre_smartcut_refactor/local_quarantine_frontend_smartcut_20260423.tgz"
+    },
+    {
+      "label": "backup_manifest",
+      "tos_object_key": "backups/website_aicut/20260423_pre_smartcut_refactor/backup_manifest.json",
+      "url": "https://autocut-malin.tos-cn-shanghai.volces.com/backups/website_aicut/20260423_pre_smartcut_refactor/backup_manifest.json"
+    }
+  ],
+  "open_questions": [
+    "L02 should decide whether existing smart_cut_tasks rows are hard-reset before migration or migrated with best effort.",
+    "L03 should decide analyze failure fallback state: waiting_upload or waiting_user.",
+    "L05 should decide whether task cards expose version switching inline or only in task detail."
+  ]
+}

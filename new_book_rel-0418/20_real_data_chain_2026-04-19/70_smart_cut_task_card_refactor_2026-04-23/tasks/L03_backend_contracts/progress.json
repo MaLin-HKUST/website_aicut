@@ -1,0 +1,31 @@
+{
+  "large_task_id": "L03",
+  "status": "in_progress",
+  "owner": "codex",
+  "dependencies": [
+    "L01",
+    "L02"
+  ],
+  "commit_log": [],
+  "file_history": [
+    {
+      "path": "apps/api/models/schemas.py",
+      "small_task_id": "S301,S306"
+    },
+    {
+      "path": "apps/api/routes/tasks.py",
+      "small_task_id": "S301,S306"
+    },
+    {
+      "path": "tests/test_rel0415_api.py",
+      "small_task_id": "S301,S306"
+    }
+  ],
+  "verification": [
+    "pytest -q tests/test_rel0415_api.py"
+  ],
+  "open_questions": [
+    "analyze 失败后是否回 waiting_upload",
+    "finalize 失败时主任务是否一定回 waiting_user"
+  ]
+}

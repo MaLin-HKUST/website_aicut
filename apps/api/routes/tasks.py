@@ -23,6 +23,7 @@ from configs.database import get_db
 from apps.models.task import SmartCutTask, TaskStatus, CurrentStage
 from apps.models.edit import SmartCutEdit
 from apps.models.scheduler_task import SchedulerTask
+from apps.models.task_run import SmartCutTaskRun, TaskRunType, TaskRunStatus
 from apps.api.dependencies import get_tos_service
 from apps.api.models.schemas import (
     SmartCutEditRead,
@@ -34,6 +35,9 @@ from apps.api.models.schemas import (
     DraftCurrentResponse,
     DraftEnsureRequest,
     DraftEnsureResponse,
+    TaskStartRequest,
+    TaskStartResponse,
+    TaskRunRead,
     TaskStatusData,
     TaskStatusResponse,
     PresignedUrlData,
@@ -134,11 +138,16 @@ def _build_task_detail(
     return TaskDetailResponse(
         id=task.id,
         user_id=task.user_id,
+        company_id=task.company_id,
         status=task.status.value,
         current_stage=task.current_stage.value,
         task_title=task.task_title,
         visible_in_task_center=task.visible_in_task_center,
         session_scope_id=task.session_scope_id,
+        current_run_id=task.current_run_id,
+        latest_successful_run_id=task.latest_successful_run_id,
+        failed_stage=task.failed_stage,
+        revision_count=task.revision_count,
         created_at=task.created_at,
         updated_at=task.updated_at,
         original_video_url=task.original_video_url,
@@ -158,6 +167,7 @@ def _build_task_detail(
 def _build_task_summary(task: SmartCutTask) -> SmartCutTaskSummaryRead:
     return SmartCutTaskSummaryRead(
         id=task.id,
+        company_id=task.company_id,
         status=task.status.value,
         current_stage=task.current_stage.value if task.current_stage else None,
         active_edit_id=task.active_edit_id,
@@ -182,6 +192,25 @@ def _serialize_edit(edit: SmartCutEdit) -> SmartCutEditRead:
         version_number=edit.version_number,
         created_at=edit.created_at,
         updated_at=edit.updated_at,
+    )
+
+
+def _serialize_run(run: SmartCutTaskRun) -> TaskRunRead:
+    return TaskRunRead(
+        id=run.id,
+        task_id=run.task_id,
+        run_type=run.run_type.value,
+        status=run.status.value,
+        sequence_number=run.sequence_number,
+        scheduler_task_id=run.scheduler_task_id,
+        source_edit_id=run.source_edit_id,
+        payload_snapshot=run.payload_snapshot,
+        result_snapshot=run.result_snapshot,
+        error_message=run.error_message,
+        created_at=run.created_at,
+        started_at=run.started_at,
+        completed_at=run.completed_at,
+        updated_at=run.updated_at,
     )
 
 
@@ -267,6 +296,7 @@ def build_task_center_item(
         input_files=[item for item in input_files if item],
         output_files=output_files,
         user_id=task.user_id if include_admin_fields else None,
+        company_id=task.company_id if (include_admin_fields or task.company_id is not None) else None,
         scheduler_task_id=scheduler_task.id if include_admin_fields and scheduler_task else None,
         scheduler_status=scheduler_status if include_admin_fields and scheduler_task else None,
         worker_id=scheduler_task.assigned_worker_id if include_admin_fields and scheduler_task else None,
@@ -292,7 +322,70 @@ def _find_current_hidden_draft(
     ).scalar_one_or_none()
 
 
+def _next_run_sequence(db: Session, task_id: str) -> int:
+    latest = db.execute(
+        select(SmartCutTaskRun)
+        .where(SmartCutTaskRun.task_id == task_id)
+        .order_by(desc(SmartCutTaskRun.sequence_number))
+        .limit(1)
+    ).scalar_one_or_none()
+    if latest is None:
+        return 1
+    return latest.sequence_number + 1
+
+
+def _default_task_title() -> str:
+    return f"智能剪气口-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+
+
 # ============ F06: 创建任务 ============
+
+@router.post(
+    "/start",
+    response_model=TaskStartResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="显式开启 Smart Cut 主任务",
+    description="任务卡模型入口：显式创建一个可见主任务卡，并初始化首条 upload run。",
+)
+async def start_task(
+    payload: TaskStartRequest,
+    db: Annotated[Session, Depends(get_db)],
+) -> TaskStartResponse:
+    title = payload.task_title or _default_task_title()
+    task = SmartCutTask(
+        user_id=payload.user_id,
+        company_id=payload.company_id,
+        status=TaskStatus.WAITING_UPLOAD,
+        current_stage=CurrentStage.UPLOAD,
+        task_title=title,
+        visible_in_task_center=True,
+        revision_count=0,
+    )
+    db.add(task)
+    db.flush()
+
+    run = SmartCutTaskRun(
+        task_id=task.id,
+        run_type=TaskRunType.UPLOAD,
+        status=TaskRunStatus.CREATED,
+        sequence_number=_next_run_sequence(db, task.id),
+        payload_snapshot={"source": "start_task"},
+    )
+    db.add(run)
+    db.flush()
+
+    task.current_run_id = run.id
+    db.commit()
+    db.refresh(task)
+
+    return TaskStartResponse(
+        task_id=task.id,
+        status=task.status.value,
+        current_stage=task.current_stage.value,
+        company_id=task.company_id,
+        task_title=task.task_title or title,
+        created_at=task.created_at,
+    )
 
 @router.post(
     "",
@@ -475,6 +568,29 @@ async def list_task_edits(
         ).scalars().all()
     )
     return [_serialize_edit(edit) for edit in edits]
+
+
+@router.get(
+    "/{task_id}/runs",
+    response_model=list[TaskRunRead],
+    summary="列出任务的子执行记录",
+)
+async def list_task_runs(
+    task_id: str,
+    db: Annotated[Session, Depends(get_db)],
+) -> list[TaskRunRead]:
+    task = db.get(SmartCutTask, task_id)
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="任务不存在")
+
+    runs = list(
+        db.execute(
+            select(SmartCutTaskRun)
+            .where(SmartCutTaskRun.task_id == task_id)
+            .order_by(SmartCutTaskRun.sequence_number.asc(), SmartCutTaskRun.created_at.asc())
+        ).scalars().all()
+    )
+    return [_serialize_run(run) for run in runs]
 
 
 @router.post(

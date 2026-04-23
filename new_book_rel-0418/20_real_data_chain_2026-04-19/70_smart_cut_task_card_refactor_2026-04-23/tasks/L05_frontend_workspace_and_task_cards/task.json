@@ -1,0 +1,17 @@
+{
+  "large_task_id": "L05",
+  "title": "前端工作台与任务卡重构",
+  "status": "pending",
+  "dependencies": [
+    "L03",
+    "L04"
+  ],
+  "small_tasks": [
+    { "id": "S501", "title": "定义 /smart-cut 空态与开启任务交互", "status": "pending" },
+    { "id": "S502", "title": "定义 upload 后自动 analyze 的前端行为", "status": "pending" },
+    { "id": "S503", "title": "定义 preview 循环与 analyze-only finalize 交互", "status": "pending" },
+    { "id": "S504", "title": "定义任务列表主卡和 timeline 详情", "status": "pending" },
+    { "id": "S505", "title": "定义 编辑任务/继续处理/放弃任务 入口", "status": "pending" },
+    { "id": "S506", "title": "退役本地草稿缓存和 session 恢复逻辑", "status": "pending" }
+  ]
+}

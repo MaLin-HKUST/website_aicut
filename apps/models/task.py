@@ -1,6 +1,7 @@
-"""Smart Cut Task 模型 - F02 实现
+"""Smart Cut Task 模型。
 
-smart_cut_tasks 表 - 业务任务主表
+当前仓库仍在从“隐藏草稿模型”迁移到“显式主任务卡模型”。
+本文件优先保持现有接口兼容，同时增量补齐新模型需要的字段。
 """
 
 import uuid
@@ -8,7 +9,7 @@ from datetime import datetime
 from enum import Enum as PyEnum
 from typing import Any, Optional, List
 
-from sqlalchemy import String, Text, DateTime, JSON, Enum
+from sqlalchemy import String, Text, DateTime, JSON, Enum, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from configs.database import Base
@@ -71,6 +72,12 @@ class SmartCutTask(Base):
         nullable=False,
         comment="用户ID"
     )
+    company_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+        index=True,
+        comment="企业ID；任务卡重构后作为主任务可见性维度"
+    )
     
     # 时间戳
     created_at: Mapped[datetime] = mapped_column(
@@ -116,6 +123,32 @@ class SmartCutTask(Base):
         String(128),
         nullable=True,
         comment="当前登录会话的服务端作用域 ID"
+    )
+    current_run_id: Mapped[Optional[str]] = mapped_column(
+        String(36),
+        nullable=True,
+        comment="当前活跃 run ID；任务卡重构新增"
+    )
+    latest_successful_run_id: Mapped[Optional[str]] = mapped_column(
+        String(36),
+        nullable=True,
+        comment="最近一次成功 run ID；任务卡重构新增"
+    )
+    failed_stage: Mapped[Optional[str]] = mapped_column(
+        String(32),
+        nullable=True,
+        comment="最近一次失败阶段；任务卡重构新增"
+    )
+    abandoned_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime,
+        nullable=True,
+        comment="显式放弃时间；任务卡重构新增"
+    )
+    revision_count: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        comment="累计编辑/修订次数；任务卡重构新增"
     )
     
     # 输入文件
@@ -182,6 +215,13 @@ class SmartCutTask(Base):
         lazy="dynamic",
         order_by="SmartCutEdit.version_number"
     )
+    task_runs: Mapped[Optional[List["SmartCutTaskRun"]]] = relationship(
+        "SmartCutTaskRun",
+        back_populates="task",
+        cascade="all, delete-orphan",
+        lazy="dynamic",
+        order_by="SmartCutTaskRun.sequence_number"
+    )
     
     def __repr__(self) -> str:
         return (
@@ -198,11 +238,17 @@ class SmartCutTask(Base):
         return {
             "id": self.id,
             "user_id": self.user_id,
+            "company_id": self.company_id,
             "status": self.status.value,
             "current_stage": self.current_stage.value,
             "task_title": self.task_title,
             "visible_in_task_center": self.visible_in_task_center,
             "session_scope_id": self.session_scope_id,
+            "current_run_id": self.current_run_id,
+            "latest_successful_run_id": self.latest_successful_run_id,
+            "failed_stage": self.failed_stage,
+            "abandoned_at": self.abandoned_at.isoformat() if self.abandoned_at else None,
+            "revision_count": self.revision_count,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "original_video_url": self.original_video_url,
@@ -220,9 +266,6 @@ class SmartCutTask(Base):
         return self.status in {
             TaskStatus.SUCCESS,
             TaskStatus.ABANDONED,
-            TaskStatus.ANALYZE_FAILED,
-            TaskStatus.PREVIEW_FAILED,
-            TaskStatus.FINALIZE_FAILED,
         }
     
     def can_transition_to(self, new_status: TaskStatus) -> bool:

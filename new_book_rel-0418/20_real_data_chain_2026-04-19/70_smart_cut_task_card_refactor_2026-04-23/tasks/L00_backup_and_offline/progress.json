@@ -1,0 +1,25 @@
+{
+  "large_task_id": "L00",
+  "status": "completed",
+  "owner": "codex",
+  "dependencies": [],
+  "commit_log": [
+    {
+      "sha": "fcb3e11",
+      "branch": "feature/smart-cut-workspace-refactor-R10-R11-integration",
+      "record_type": "historical_import",
+      "small_task_id": "S004,S005",
+      "verification": [
+        "apps/web TypeScript compile",
+        "apps/web Next.js production build",
+        "live /smart-cut maintenance page"
+      ]
+    }
+  ],
+  "file_history": [],
+  "verification": [
+    "备份 URL 已写入总包文档",
+    "live /smart-cut 已显示维护页"
+  ],
+  "open_questions": []
+}
