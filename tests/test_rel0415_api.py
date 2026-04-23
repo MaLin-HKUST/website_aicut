@@ -103,7 +103,7 @@ def test_start_task_creates_visible_main_task_and_initial_run(api_client):
         assert task.company_id == 9
 
 
-def test_rel0415_upload_direct_transitions_to_ready_analyze(api_client, tmp_path: Path):
+def test_rel0415_upload_direct_auto_transitions_to_analyzing(api_client, tmp_path: Path):
     client, _SessionLocal = api_client
 
     create_response = client.post("/api/smart-cut/tasks", json={"user_id": "alice"})
@@ -125,10 +125,17 @@ def test_rel0415_upload_direct_transitions_to_ready_analyze(api_client, tmp_path
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["status"] == "ready_analyze"
+    assert payload["status"] == "analyzing"
     assert payload["current_stage"] == "analyze"
     assert payload["original_video_url"].endswith("/input/source_video.mp4")
     assert payload["reference_text_url"].endswith("/input/reference.txt")
+
+    runs_response = client.get(f"/api/smart-cut/tasks/{task_id}/runs")
+    assert runs_response.status_code == 200
+    runs_payload = runs_response.json()
+    assert [run["run_type"] for run in runs_payload] == ["upload", "analyze"]
+    assert runs_payload[0]["status"] == "success"
+    assert runs_payload[1]["status"] == "queued"
 
 
 def test_rel0415_edits_and_task_center_routes(api_client):
@@ -273,7 +280,58 @@ def test_current_draft_endpoints_are_scoped_to_login_session(api_client):
         rows = db.query(SmartCutTask).all()
         assert len(rows) == 1
         assert rows[0].id == task_id
-        assert rows[0].visible_in_task_center is False
+
+
+def test_finalize_allows_analyze_only_without_pause_cuts(api_client):
+    client, SessionLocal = api_client
+
+    with SessionLocal() as db:
+        task = SmartCutTask(
+            user_id="alice",
+            company_id=9,
+            status=TaskStatus.WAITING_USER,
+            current_stage=CurrentStage.USER_SELECT,
+            visible_in_task_center=True,
+            original_video_url="smart-cut/demo/input/source_video.mp4",
+            reference_text_url="smart-cut/demo/input/reference.txt",
+            asr_result_tos_key="smart-cut/demo/analyze/asr.json",
+        )
+        db.add(task)
+        db.flush()
+
+        edit = SmartCutEdit(
+            task_id=task.id,
+            edited_script="今天先删掉这句继续讲重点。",
+            status=EditStatus.SUCCESS,
+            audio_a_url="smart-cut/demo/analyze/audio_a.mp3",
+            delay_cuts_tos_key="smart-cut/demo/analyze/delay_cuts.json",
+            pause_cuts_tos_key=None,
+            version_number=1,
+        )
+        db.add(edit)
+        db.flush()
+        task.active_edit_id = edit.id
+        db.commit()
+        task_id = task.id
+        edit_id = edit.id
+
+    response = client.post(
+        f"/api/smart-cut/tasks/{task_id}/finalize",
+        json={"output_mode": "original", "feed_to_ai": True},
+    )
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["status"] == "finalizing"
+
+    with SessionLocal() as db:
+        task = db.query(SmartCutTask).filter_by(id=task_id).first()
+        scheduler_task = db.query(SchedulerTask).filter_by(id=payload["scheduler_task_id"]).first()
+        assert task is not None
+        assert scheduler_task is not None
+        assert task.status == TaskStatus.FINALIZING
+        assert task.active_edit_id == edit_id
+        assert task.visible_in_task_center is True
+        assert scheduler_task.payload["pause_cuts_on_original_tos_key"] is None
 
 
 def test_finalize_promotes_hidden_draft_into_task_center(api_client):

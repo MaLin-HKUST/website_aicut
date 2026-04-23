@@ -2,7 +2,7 @@
 
 ## 状态
 
-- 进行中
+- 已完成
 
 ## 目标
 
@@ -13,9 +13,14 @@
 - 显式 `start task` 接口已落地
 - `runs` 查询接口已落地
 
-## 进行中
+## 已完成范围
 
-- 继续推进 auto-analyze、analyze-only finalize 和 draft/current 退役
+- `start task` 接口已落地
+- upload 完成后自动 analyze 已落地
+- `preview_failed` 可继续重试
+- analyze-only finalize 已落地
+- `runs` 查询接口已落地
+- 新前端已不再依赖 `draft/current`
 
 ## 关联文档
 

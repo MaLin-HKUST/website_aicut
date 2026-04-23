@@ -14,11 +14,21 @@
 - `L02` 已启动：
   - 主任务字段增量补齐
   - `smart_cut_task_runs` 新表落地
-- `L03` 已启动：
-  - `start task`
+- `L03` 已完成：
+  - 显式 `start task`
+  - upload 完成后自动 analyze
+  - preview retry
+  - analyze-only finalize
   - `runs` 查询接口
-- `L04` 已启动：
+- `L04` 已完成：
+  - 主任务 / run / scheduler_task 映射
+  - ghost task 自动回收
   - task center 优先按 `company_id` 过滤
+- `L05` 已完成：
+  - `/smart-cut` 空态与开启任务
+  - 新工作台
+  - 任务列表继续处理入口
+  - 本地草稿缓存退出主路径
 
 ## 这次修正后的结论
 
@@ -84,8 +94,16 @@
   - `POST /api/smart-cut/tasks/start`
   - `GET /api/smart-cut/tasks/{task_id}/runs`
 - 任务中心普通用户列表新增 `company_id` 优先过滤
+- 上传直达和 `upload-complete` 现在会自动创建 analyze run + scheduler task
+- preview 失败和 finalize 失败现在会回到 `waiting_user`
+- finalize 现在允许 analyze-only（无 pause cuts 时走空配置）
+- scheduler 现在会同步更新 task_run，并回收 orphaned business tasks
+- `/smart-cut` 已替换为显式任务卡工作台
+- `/smart-cut/[taskId]` 可继续处理指定主任务
+- 任务列表已可跳回 `/smart-cut/{taskId}`
 - 新增最小验证：
   - `tests/test_task_card_schema.py`
+  - `tests/test_task_truth_reconcile.py`
 
 ## 进行中
 
@@ -145,17 +163,43 @@
   - 新增显式 `start task` 与 `runs` 查询接口
 - `apps/api/routes/task_center.py`
   - 新增 `company_id` 优先过滤
+- `apps/api/routes/upload.py`
+  - 上传后自动触发 analyze 并创建 run/scheduler task
+- `apps/api/routes/stages.py`
+  - preview retry、analyze-only finalize、run 创建
+- `apps/scheduler/scheduler_service.py`
+  - run 状态同步和 orphaned task 回收
 - `apps/web/lib/task-center.ts`
   - 前端 task-center 查询支持 `companyId`
+- `apps/web/lib/smart-cut.ts`
+  - 新任务卡前端 API 客户端
+- `apps/web/components/smart-cut/script-editor.tsx`
+  - 删除线编辑器恢复到新工作台
+- `apps/web/components/smart-cut/workspace.tsx`
+  - 新显式任务卡工作台
+- `apps/web/app/smart-cut/page.tsx`
+  - 新工作台入口
+- `apps/web/app/smart-cut/[taskId]/page.tsx`
+  - 继续处理指定任务入口
+- `apps/web/components/navigation/user-workspace-shell.tsx`
+  - 重新开放 smart-cut 导航入口
+- `apps/web/components/navigation/use-user-workspace-data.ts`
+  - workspace 数据改用 company 维度
+- `apps/web/components/task-center/task-center-shell.tsx`
+  - smart_cut 任务增加“继续处理”入口
 - `tests/test_task_card_schema.py`
   - 验证新表和新增字段
 - `tests/test_rel0415_api.py`
   - 回归 `start task` / `runs` / company filter
+- `tests/test_smart_cut_preview_validation.py`
+  - 锁住 `preview_failed` 可重试
+- `tests/test_task_truth_reconcile.py`
+  - 锁住 ghost task 回收
 
 ## 已知风险
 
 - 这一步完成的是 **可执行设计包**，不是重构代码本身
-- 当前仓库业务代码仍然是旧隐藏草稿模型
-- `L02-L04` 只完成了第一批基础设施，旧 draft 流程还在
-- `L05-L07` 尚未开始真正实现
+- 当前仓库仍同时保留旧 draft 接口，虽然前端已经不再走它们
+- 这次还没有重新部署 live runtime/API/worker
+- `L06-L07` 尚未开始真正实现
 - `L00` 的历史提交仍来自旧分支，但后续实现已经切到 `feature/smart-cut-taskcard-refactor`

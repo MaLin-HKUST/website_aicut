@@ -13,6 +13,8 @@ from sqlalchemy.orm import Session
 
 from configs.database import get_db
 from apps.models.task import SmartCutTask, TaskStatus, CurrentStage
+from apps.models.scheduler_task import SchedulerTask, SchedulerTaskType, SchedulerTaskStatus
+from apps.models.task_run import SmartCutTaskRun, TaskRunStatus, TaskRunType
 from apps.services.tos_service import TOSService
 from apps.api.models.schemas import (
     UploadPrepareResponse,
@@ -27,6 +29,16 @@ URL_EXPIRE_SECONDS = int(os.getenv("UPLOAD_URL_EXPIRE_SECONDS", "3600"))
 
 # 创建路由
 router = APIRouter(prefix="/api/smart-cut/tasks", tags=["upload"])
+
+
+def _next_run_sequence(db: Session, task_id: str) -> int:
+    latest = (
+        db.query(SmartCutTaskRun)
+        .filter(SmartCutTaskRun.task_id == task_id)
+        .order_by(SmartCutTaskRun.sequence_number.desc())
+        .first()
+    )
+    return 1 if latest is None else latest.sequence_number + 1
 
 
 def get_tos_service() -> TOSService:
@@ -268,20 +280,19 @@ async def upload_complete(
         elif "reference" in key:
             text_key = key
     
-    # 3. 推进状态到 ready_analyze
-    # 验证状态转换是否合法
-    if not task.can_transition_to(TaskStatus.READY_ANALYZE):
+    # 3. 推进状态到 analyzing，并自动创建 analyze run + scheduler task
+    if task.status not in {TaskStatus.WAITING_UPLOAD, TaskStatus.READY_ANALYZE}:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={
                 "error": "InvalidStateTransition",
-                "message": f"无法从状态 {task.status.value} 转换到 ready_analyze",
+                "message": f"无法从状态 {task.status.value} 继续上传并自动分析",
                 "task_id": task_id,
             },
         )
     
     # 更新 task
-    task.status = TaskStatus.READY_ANALYZE
+    task.status = TaskStatus.ANALYZING
     task.current_stage = CurrentStage.ANALYZE
     
     # 更新 URL（这里使用 TOS key 作为 URL，实际可能需要生成下载 URL）
@@ -304,13 +315,67 @@ async def upload_complete(
         if download_result.success:
             task.reference_text_url = download_result.data["url"]
     
+    upload_run = (
+        db.query(SmartCutTaskRun)
+        .filter(
+            SmartCutTaskRun.task_id == task_id,
+            SmartCutTaskRun.run_type == TaskRunType.UPLOAD,
+        )
+        .order_by(SmartCutTaskRun.sequence_number.desc())
+        .first()
+    )
+    if upload_run is None:
+        upload_run = SmartCutTaskRun(
+            task_id=task_id,
+            run_type=TaskRunType.UPLOAD,
+            status=TaskRunStatus.SUCCESS,
+            sequence_number=_next_run_sequence(db, task_id),
+            payload_snapshot={"uploaded_keys": request.uploaded_keys},
+            result_snapshot={"video_key": video_key, "text_key": text_key},
+            completed_at=datetime.utcnow(),
+        )
+        db.add(upload_run)
+        db.flush()
+    else:
+        upload_run.status = TaskRunStatus.SUCCESS
+        upload_run.result_snapshot = {"video_key": video_key, "text_key": text_key}
+        upload_run.completed_at = datetime.utcnow()
+        upload_run.updated_at = datetime.utcnow()
+
+    analyze_scheduler_task = SchedulerTask(
+        task_type=SchedulerTaskType.SMART_CUT_ANALYZE,
+        status=SchedulerTaskStatus.PENDING,
+        business_task_id=task_id,
+        payload={
+            "smart_cut_task_id": task_id,
+            "original_video_tos_key": task.original_video_url or video_key,
+            "reference_text_tos_key": task.reference_text_url or text_key,
+        },
+    )
+    db.add(analyze_scheduler_task)
+    db.flush()
+
+    analyze_run = SmartCutTaskRun(
+        task_id=task_id,
+        run_type=TaskRunType.ANALYZE,
+        status=TaskRunStatus.QUEUED,
+        sequence_number=_next_run_sequence(db, task_id),
+        scheduler_task_id=analyze_scheduler_task.id,
+        payload_snapshot=dict(analyze_scheduler_task.payload),
+    )
+    db.add(analyze_run)
+    db.flush()
+
+    task.current_run_id = analyze_run.id
+    task.latest_successful_run_id = upload_run.id
+
     # 提交事务
     db.commit()
     db.refresh(task)
-    
+
     return UploadCompleteResponse(
         status="success",
         task_id=task_id,
         next_stage="analyze",
-        message="上传完成，准备分析",
+        message="上传完成，已自动开始分析",
     )

@@ -95,6 +95,33 @@ def test_preview_rejects_rewritten_script_text(preview_client):
     assert "preserve the current task script text" in response.json()["detail"]
 
 
+def test_preview_allows_retry_from_preview_failed(preview_client):
+    client, session_local = preview_client
+
+    with session_local() as db:
+        task = SmartCutTask(
+            user_id="alice",
+            status=TaskStatus.PREVIEW_FAILED,
+            current_stage=CurrentStage.USER_SELECT,
+            analyze_script="今天先删掉这句继续讲重点。",
+            asr_result_tos_key="smart-cut/demo/analyze/asr.json",
+            original_video_url="smart-cut/demo/input/source_video.mp4",
+        )
+        db.add(task)
+        db.commit()
+        db.refresh(task)
+        task_id = task.id
+
+    response = client.post(
+        f"/api/smart-cut/tasks/{task_id}/preview",
+        json={"edited_script": "今天先删掉这句继续讲{重点。}"},
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["status"] == "previewing"
+
+
 def test_preview_rejects_invalid_brace_markers(preview_client):
     client, session_local = preview_client
     task_id = _create_waiting_user_task(session_local)

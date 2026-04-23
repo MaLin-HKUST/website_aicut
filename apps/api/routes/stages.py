@@ -17,6 +17,7 @@ from configs.database import get_db
 from apps.models.task import SmartCutTask, TaskStatus, CurrentStage
 from apps.models.scheduler_task import SchedulerTask, SchedulerTaskType, SchedulerTaskStatus
 from apps.models.edit import SmartCutEdit, EditStatus
+from apps.models.task_run import SmartCutTaskRun, TaskRunType, TaskRunStatus
 from apps.api.models.schemas import (
     StartAnalyzeResponse,
     PreviewRequest,
@@ -27,6 +28,16 @@ from apps.api.models.schemas import (
 from apps.services.smart_cut_contract import build_smart_cut_task_title
 
 router = APIRouter(prefix="/api/smart-cut", tags=["stages"])
+
+
+def _next_run_sequence(db: Session, task_id: str) -> int:
+    latest = (
+        db.query(SmartCutTaskRun)
+        .filter(SmartCutTaskRun.task_id == task_id)
+        .order_by(SmartCutTaskRun.sequence_number.desc())
+        .first()
+    )
+    return 1 if latest is None else latest.sequence_number + 1
 
 
 def get_scheduler_service(db: Session = Depends(get_db)) -> Any:
@@ -169,10 +180,22 @@ async def start_analyze(
         },
     )
     db.add(scheduler_task)
+    db.flush()
+
+    analyze_run = SmartCutTaskRun(
+        task_id=task_id,
+        run_type=TaskRunType.ANALYZE,
+        status=TaskRunStatus.QUEUED,
+        sequence_number=_next_run_sequence(db, task_id),
+        scheduler_task_id=scheduler_task.id,
+        payload_snapshot=dict(scheduler_task.payload),
+    )
+    db.add(analyze_run)
     
     # 推进任务状态
     task.status = TaskStatus.ANALYZING
     task.current_stage = CurrentStage.ANALYZE
+    task.current_run_id = analyze_run.id
     
     db.commit()
     db.refresh(scheduler_task)
@@ -216,10 +239,10 @@ async def start_preview(
         )
     
     # 校验状态: 必须是 waiting_user
-    if task.status != TaskStatus.WAITING_USER:
+    if task.status not in {TaskStatus.WAITING_USER, TaskStatus.PREVIEW_FAILED}:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid task status: {task.status.value}, expected: {TaskStatus.WAITING_USER.value}"
+            detail=f"Invalid task status: {task.status.value}, expected: waiting_user or preview_failed"
         )
     
     # 检查是否有 analyze 产物
@@ -262,11 +285,25 @@ async def start_preview(
         },
     )
     db.add(scheduler_task)
+    db.flush()
+
+    preview_run = SmartCutTaskRun(
+        task_id=task_id,
+        run_type=TaskRunType.PREVIEW,
+        status=TaskRunStatus.QUEUED,
+        sequence_number=_next_run_sequence(db, task_id),
+        scheduler_task_id=scheduler_task.id,
+        source_edit_id=edit.id,
+        payload_snapshot=dict(scheduler_task.payload),
+    )
+    db.add(preview_run)
     
     # 推进任务状态
     task.status = TaskStatus.PREVIEWING
     task.current_stage = CurrentStage.PREVIEW
     task.active_edit_id = edit.id
+    task.current_run_id = preview_run.id
+    task.revision_count = max(task.revision_count, next_version)
     
     db.commit()
     db.refresh(edit)
@@ -364,11 +401,6 @@ async def start_finalize(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Delay cuts not available for the selected edit"
         )
-    if not edit.pause_cuts_tos_key:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Pause cuts not available for the selected edit"
-        )
     
     # 获取原始视频 TOS key
     original_video_tos_key = task.original_video_url or ""
@@ -390,6 +422,18 @@ async def start_finalize(
         },
     )
     db.add(scheduler_task)
+    db.flush()
+
+    finalize_run = SmartCutTaskRun(
+        task_id=task_id,
+        run_type=TaskRunType.FINALIZE,
+        status=TaskRunStatus.QUEUED,
+        sequence_number=_next_run_sequence(db, task_id),
+        scheduler_task_id=scheduler_task.id,
+        source_edit_id=edit.id,
+        payload_snapshot=dict(scheduler_task.payload),
+    )
+    db.add(finalize_run)
     
     # 推进任务状态
     task.task_title = task_title
@@ -397,6 +441,7 @@ async def start_finalize(
     task.status = TaskStatus.FINALIZING
     task.current_stage = CurrentStage.FINALIZE
     task.active_edit_id = edit.id
+    task.current_run_id = finalize_run.id
     task.updated_at = datetime.utcnow()
     
     db.commit()

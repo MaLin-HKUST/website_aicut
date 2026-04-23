@@ -2,7 +2,7 @@
 
 ## 状态
 
-- 进行中
+- 已完成
 
 ## 目标
 
@@ -12,9 +12,12 @@
 
 - task center 普通用户列表已支持 `company_id` 优先过滤
 
-## 进行中
+## 已完成范围
 
-- 继续推进主任务卡和 scheduler_task/run 的真实映射
+- scheduler 会同步更新对应的 task_run
+- task_run 会记录 queued/running/success/failed
+- orphaned business task 会自动回收
+- task center 普通用户列表已按 `company_id` 优先过滤
 
 ## 关联文档
 

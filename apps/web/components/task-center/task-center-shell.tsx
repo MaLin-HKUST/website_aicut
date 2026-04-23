@@ -16,13 +16,7 @@ import {
   TaskCenterFilter,
   TaskCenterItem,
 } from "@/lib/task-center";
-
-type AuthResponse = {
-  user: {
-    username: string;
-    role: "admin" | "user";
-  };
-};
+import { AuthResponse } from "@/lib/auth";
 
 function ProgressBar({ progress, className }: { progress: number; className: string }) {
   return (
@@ -61,6 +55,7 @@ export function TaskCenterShell({ mode = "user" }: { mode?: "user" | "admin" }) 
         const taskItems = await listTaskCenterItems({
           mode,
           userId: mode === "user" ? authPayload.user.username : undefined,
+          companyId: mode === "user" ? authPayload.user.company_id : undefined,
         });
         setItems(taskItems);
         const requestedTaskId = searchParams.get("taskId");
@@ -304,9 +299,15 @@ export function TaskCenterShell({ mode = "user" }: { mode?: "user" | "admin" }) 
                         <div className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{selectedTask.errorMessage}</div>
                       ) : null}
                       <div className="mt-5 flex flex-wrap gap-3">
-                        <Button disabled type="button">
-                          Smart Cut 重构中
-                        </Button>
+                        {selectedTask.taskType === "smart_cut" ? (
+                          <Button onClick={() => router.push(`/smart-cut/${encodeURIComponent(selectedTask.id)}`)} type="button">
+                            继续处理
+                          </Button>
+                        ) : (
+                          <Button disabled type="button">
+                            当前任务不可编辑
+                          </Button>
+                        )}
                         {selectedTask.downloadUrl ? (
                           <a className="inline-flex" href={selectedTask.downloadUrl} target="_blank">
                             <Button type="button" variant="secondary">

@@ -1,6 +1,6 @@
 {
   "large_task_id": "L03",
-  "status": "in_progress",
+  "status": "completed",
   "owner": "codex",
   "dependencies": [
     "L01",
@@ -22,7 +22,7 @@
     }
   ],
   "verification": [
-    "pytest -q tests/test_rel0415_api.py"
+    "pytest -q tests/test_rel0415_api.py tests/test_smart_cut_preview_validation.py"
   ],
   "open_questions": [
     "analyze 失败后是否回 waiting_upload",

@@ -1,14 +1,42 @@
 {
   "large_task_id": "L05",
-  "status": "pending",
+  "status": "completed",
   "owner": "codex",
   "dependencies": [
     "L03",
     "L04"
   ],
   "commit_log": [],
-  "file_history": [],
-  "verification": [],
+  "file_history": [
+    {
+      "path": "apps/web/lib/smart-cut.ts",
+      "small_task_id": "S501,S502,S503,S506"
+    },
+    {
+      "path": "apps/web/components/smart-cut/workspace.tsx",
+      "small_task_id": "S501,S502,S503,S505,S506"
+    },
+    {
+      "path": "apps/web/components/smart-cut/script-editor.tsx",
+      "small_task_id": "S503"
+    },
+    {
+      "path": "apps/web/app/smart-cut/page.tsx",
+      "small_task_id": "S501"
+    },
+    {
+      "path": "apps/web/app/smart-cut/[taskId]/page.tsx",
+      "small_task_id": "S505"
+    },
+    {
+      "path": "apps/web/components/task-center/task-center-shell.tsx",
+      "small_task_id": "S504,S505"
+    }
+  ],
+  "verification": [
+    "cd apps/web && npx tsc --noEmit",
+    "cd apps/web && npm run build"
+  ],
   "open_questions": [
     "任务列表详情是否默认展开 timeline",
     "是否在主任务卡上直接显示最新版本号"

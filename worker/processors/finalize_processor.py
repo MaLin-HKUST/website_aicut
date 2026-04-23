@@ -251,7 +251,9 @@ class FinalizeProcessor(BaseProcessor):
                 with open(pause_cuts_path, 'r', encoding='utf-8') as f:
                     self._input_data["pause_cuts"] = json.load(f)
             else:
-                raise ValueError("Missing pause_cuts_tos_key in edit")
+                pause_cuts_path = input_dir / "pause_cuts_on_original.json"
+                pause_cuts_path.write_text("[]", encoding="utf-8")
+                self._input_data["pause_cuts"] = []
             
             # 下载ASR结果
             if business_task.asr_result_tos_key:
@@ -687,9 +689,11 @@ class FinalizeProcessor(BaseProcessor):
                 )
             business_task = db.query(BusinessTask).filter_by(id=self._task.business_task_id).first()
             if business_task:
-                business_task.status = TaskStatus.FINALIZE_FAILED
+                business_task.status = TaskStatus.WAITING_USER
+                business_task.current_stage = CurrentStage.USER_SELECT
+                business_task.failed_stage = "finalize"
                 db.commit()
-                logger.info(f"Task marked as finalize_failed: {business_task.id}")
+                logger.info(f"Task returned to waiting_user after finalize failure: {business_task.id}")
         except Exception as e:
             db.rollback()
             logger.error(f"Failed to update failure status: {e}")

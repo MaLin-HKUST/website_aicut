@@ -27,7 +27,7 @@ const PRIMARY_ITEMS: Array<{
   disabled?: boolean;
 }> = [
   { key: "tts", label: "文案生成语音", href: "/tts", icon: "M" },
-  { key: "smart-cut", label: "智能剪气口（重构中）", href: "/smart-cut", icon: "V", disabled: true },
+  { key: "smart-cut", label: "智能剪气口", href: "/smart-cut", icon: "V" },
   { key: "tasks", label: "任务列表", href: "/tasks", icon: "T" },
 ];
 

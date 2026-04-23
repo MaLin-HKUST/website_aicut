@@ -11,7 +11,7 @@ import { AuthResponse } from "@/lib/auth";
 export default function WelcomePage() {
   const router = useRouter();
   const [user, setUser] = useState<AuthResponse["user"] | null>(null);
-  const workspace = useUserWorkspaceData(user?.username);
+  const workspace = useUserWorkspaceData(user?.username, user?.company_id);
 
   useEffect(() => {
     async function bootstrap() {
@@ -50,7 +50,7 @@ export default function WelcomePage() {
       <Card className="flex min-h-[640px] items-center justify-center rounded-[32px] border-[#e5dacd] bg-[#f8f5ef] shadow-panel">
         <div className="space-y-4 text-center">
           <p className="text-lg font-medium text-stone-400">请点击左侧「文案生成语音」开始使用</p>
-          <p className="text-sm text-stone-400">任务列表仍可查看已完成任务；智能剪气口入口当前已关闭，等待重构完成后恢复。</p>
+          <p className="text-sm text-stone-400">你可以从左侧进入智能剪气口，按显式主任务卡模型开始新的剪辑任务。</p>
         </div>
       </Card>
     </UserWorkspaceShell>

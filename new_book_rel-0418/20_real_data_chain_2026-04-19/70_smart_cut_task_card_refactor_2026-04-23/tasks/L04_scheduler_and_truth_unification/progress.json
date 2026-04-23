@@ -1,6 +1,6 @@
 {
   "large_task_id": "L04",
-  "status": "in_progress",
+  "status": "completed",
   "owner": "codex",
   "dependencies": [
     "L02",
@@ -26,7 +26,7 @@
     }
   ],
   "verification": [
-    "pytest -q tests/test_rel0415_api.py",
+    "pytest -q tests/test_rel0415_api.py tests/test_task_truth_reconcile.py",
     "cd apps/web && npx tsc --noEmit"
   ],
   "open_questions": [

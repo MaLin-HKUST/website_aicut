@@ -48,42 +48,42 @@
     {
       "id": "L03",
       "title": "后端 API 契约与状态推进重构",
-      "status": "in_progress",
+      "status": "completed",
       "artifact_dir": "tasks/L03_backend_contracts",
       "small_tasks": [
         { "id": "S301", "title": "定义 start task API", "status": "completed" },
-        { "id": "S302", "title": "定义 upload-complete 自动 analyze", "status": "pending" },
-        { "id": "S303", "title": "定义 preview retry 与 run 级失败语义", "status": "pending" },
-        { "id": "S304", "title": "定义 analyze-only finalize", "status": "pending" },
-        { "id": "S305", "title": "定义 abandon task API", "status": "pending" },
+        { "id": "S302", "title": "定义 upload-complete 自动 analyze", "status": "completed" },
+        { "id": "S303", "title": "定义 preview retry 与 run 级失败语义", "status": "completed" },
+        { "id": "S304", "title": "定义 analyze-only finalize", "status": "completed" },
+        { "id": "S305", "title": "定义 abandon task API", "status": "completed" },
         { "id": "S306", "title": "定义 runs timeline API", "status": "completed" },
-        { "id": "S307", "title": "定义 draft/current 退役路径", "status": "pending" }
+        { "id": "S307", "title": "定义 draft/current 退役路径", "status": "completed" }
       ]
     },
     {
       "id": "L04",
       "title": "调度、worker、task-center 单一真相收口",
-      "status": "in_progress",
+      "status": "completed",
       "artifact_dir": "tasks/L04_scheduler_and_truth_unification",
       "small_tasks": [
-        { "id": "S401", "title": "定义主任务与 scheduler_task 的映射关系", "status": "pending" },
-        { "id": "S402", "title": "定义 run 与 scheduler_task 的关联契约", "status": "pending" },
-        { "id": "S403", "title": "定义 ghost task 检测与一致性修复策略", "status": "pending" },
-        { "id": "S404", "title": "定义 task center 仅消费主任务卡", "status": "in_progress" }
+        { "id": "S401", "title": "定义主任务与 scheduler_task 的映射关系", "status": "completed" },
+        { "id": "S402", "title": "定义 run 与 scheduler_task 的关联契约", "status": "completed" },
+        { "id": "S403", "title": "定义 ghost task 检测与一致性修复策略", "status": "completed" },
+        { "id": "S404", "title": "定义 task center 仅消费主任务卡", "status": "completed" }
       ]
     },
     {
       "id": "L05",
       "title": "前端工作台与任务卡重构",
-      "status": "pending",
+      "status": "completed",
       "artifact_dir": "tasks/L05_frontend_workspace_and_task_cards",
       "small_tasks": [
-        { "id": "S501", "title": "定义 /smart-cut 空态与开启任务交互", "status": "pending" },
-        { "id": "S502", "title": "定义 upload 后自动 analyze 的前端行为", "status": "pending" },
-        { "id": "S503", "title": "定义 preview 循环与 analyze-only finalize 交互", "status": "pending" },
-        { "id": "S504", "title": "定义任务列表主卡和 timeline 详情", "status": "pending" },
-        { "id": "S505", "title": "定义 编辑任务/继续处理/放弃任务 入口", "status": "pending" },
-        { "id": "S506", "title": "退役本地草稿缓存和 session 恢复逻辑", "status": "pending" }
+        { "id": "S501", "title": "定义 /smart-cut 空态与开启任务交互", "status": "completed" },
+        { "id": "S502", "title": "定义 upload 后自动 analyze 的前端行为", "status": "completed" },
+        { "id": "S503", "title": "定义 preview 循环与 analyze-only finalize 交互", "status": "completed" },
+        { "id": "S504", "title": "定义任务列表主卡和 timeline 详情", "status": "completed" },
+        { "id": "S505", "title": "定义 编辑任务/继续处理/放弃任务 入口", "status": "completed" },
+        { "id": "S506", "title": "退役本地草稿缓存和 session 恢复逻辑", "status": "completed" }
       ]
     },
     {

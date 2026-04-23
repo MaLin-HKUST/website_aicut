@@ -401,6 +401,9 @@ class AnalyzeProcessor(BaseStageProcessor):
                 version_number=1,
             )
             db.add(edit)
+            db.flush()
+            if business_task:
+                business_task.active_edit_id = edit.id
             
             db.commit()
             logger.info(f"Database updated for task: {self._task_id}")
@@ -432,6 +435,7 @@ class AnalyzeProcessor(BaseStageProcessor):
             business_task = db.query(BusinessTask).filter_by(id=self._task_id).first()
             if business_task:
                 business_task.status = TaskStatus.ANALYZE_FAILED
+                business_task.failed_stage = "analyze"
                 db.commit()
                 logger.info(f"Task marked as analyze_failed: {business_task.id}")
         except Exception as e:

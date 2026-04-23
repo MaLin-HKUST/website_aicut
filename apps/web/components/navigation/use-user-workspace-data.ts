@@ -5,15 +5,24 @@ import { useEffect, useMemo, useState } from "react";
 import { listTaskCenterItems, TaskCenterItem } from "@/lib/task-center";
 import { UserWorkspaceMetric, UserWorkspacePreviewTask } from "@/components/navigation/user-workspace-shell";
 
+function prettifyTitle(item: TaskCenterItem): string {
+  if (/\.[a-z0-9]{2,5}$/i.test(item.title)) {
+    if (item.taskType === "tts") return "品牌口播任务";
+    if (item.taskType === "smart_cut") return "视频剪辑任务";
+    return "待处理任务";
+  }
+  return item.title;
+}
+
 function toPreviewTasks(items: TaskCenterItem[]): UserWorkspacePreviewTask[] {
   return items.slice(0, 3).map((item) => ({
     id: item.id,
-    title: item.title,
+    title: prettifyTitle(item),
     status: item.status,
   }));
 }
 
-export function useUserWorkspaceData(userId?: string) {
+export function useUserWorkspaceData(userId?: string, companyId?: number | null) {
   const [items, setItems] = useState<TaskCenterItem[]>([]);
 
   useEffect(() => {
@@ -25,7 +34,7 @@ export function useUserWorkspaceData(userId?: string) {
 
     async function bootstrap() {
       try {
-        const nextItems = await listTaskCenterItems({ mode: "user", userId });
+          const nextItems = await listTaskCenterItems({ mode: "user", userId, companyId });
         if (!cancelled) {
           setItems(nextItems);
         }
@@ -40,7 +49,7 @@ export function useUserWorkspaceData(userId?: string) {
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [companyId, userId]);
 
   const metrics = useMemo<UserWorkspaceMetric[]>(
     () => [

@@ -21,9 +21,19 @@ from apps.models.scheduler_task import (
 from apps.models.task import SmartCutTask, TaskStatus, CurrentStage
 from apps.models.device import SmartCutDevice, DeviceStatus
 from apps.models.edit import SmartCutEdit, EditStatus
+from apps.models.task_run import SmartCutTaskRun, TaskRunStatus, TaskRunType
 from apps.services.device_service import DeviceService
 
 logger = logging.getLogger(__name__)
+
+
+def _task_type_to_run_type(task_type: SchedulerTaskType) -> TaskRunType:
+    mapping = {
+        SchedulerTaskType.SMART_CUT_ANALYZE: TaskRunType.ANALYZE,
+        SchedulerTaskType.SMART_CUT_PREVIEW: TaskRunType.PREVIEW,
+        SchedulerTaskType.SMART_CUT_FINALIZE: TaskRunType.FINALIZE,
+    }
+    return mapping[task_type]
 
 
 class SchedulerService:
@@ -59,12 +69,14 @@ class SchedulerService:
         Returns:
             各步骤处理结果统计
         """
+        reconciled_count = self.reconcile_orphaned_business_tasks()
         assigned_count = self.schedule_pending_tasks()
         advanced_count = self.check_device_status_and_advance()
         timeout_count = self.handle_timeouts()
         offline_count = self.check_worker_heartbeats(timeout_seconds=self.worker_timeout_seconds)
 
         cycle_stats = {
+            "reconciled": reconciled_count,
             "assigned": assigned_count,
             "advanced": advanced_count,
             "timeouts": timeout_count,
@@ -96,6 +108,63 @@ class SchedulerService:
             await asyncio.sleep(self.check_interval)
         
         logger.info("Scheduler loop stopped")
+
+    def reconcile_orphaned_business_tasks(self) -> int:
+        """回收没有可执行调度真相的业务任务。
+
+        处理典型 ghost task：
+        - 业务任务显示为 analyzing / previewing / finalizing
+        - 但没有对应的 pending/assigned/running/post scheduler_task
+        """
+        count = 0
+        active_statuses = {TaskStatus.ANALYZING, TaskStatus.PREVIEWING, TaskStatus.FINALIZING}
+        tasks = list(
+            self.db.execute(
+                select(SmartCutTask).where(SmartCutTask.status.in_(active_statuses))
+            ).scalars().all()
+        )
+
+        for task in tasks:
+            scheduler_tasks = list(
+                self.db.execute(
+                    select(SchedulerTask).where(SchedulerTask.business_task_id == task.id)
+                ).scalars().all()
+            )
+            active_scheduler = any(
+                scheduler_task.status in {
+                    SchedulerTaskStatus.PENDING,
+                    SchedulerTaskStatus.ASSIGNED,
+                    SchedulerTaskStatus.RUNNING,
+                    SchedulerTaskStatus.POST,
+                }
+                for scheduler_task in scheduler_tasks
+            )
+            if active_scheduler:
+                continue
+
+            if task.status == TaskStatus.ANALYZING:
+                if task.analyze_script or task.active_edit_id:
+                    task.status = TaskStatus.WAITING_USER
+                    task.current_stage = CurrentStage.USER_SELECT
+                else:
+                    task.status = TaskStatus.WAITING_UPLOAD
+                    task.current_stage = CurrentStage.UPLOAD
+                task.failed_stage = "analyze"
+            elif task.status in {TaskStatus.PREVIEWING, TaskStatus.FINALIZING}:
+                failed_stage = "preview" if task.status == TaskStatus.PREVIEWING else "finalize"
+                task.status = TaskStatus.WAITING_USER
+                task.current_stage = CurrentStage.USER_SELECT
+                task.failed_stage = failed_stage
+
+            task.current_run_id = None
+            task.updated_at = datetime.utcnow()
+            count += 1
+
+        if count:
+            self.db.commit()
+            logger.warning("Reconciled %s orphaned business tasks", count)
+
+        return count
     
     def stop(self) -> None:
         """停止调度循环
@@ -201,7 +270,13 @@ class SchedulerService:
         business_task = scheduler_task.business_task
         if business_task:
             self._update_business_task_on_assign(business_task, scheduler_task.task_type)
-        
+            run = self._get_or_create_run_for_scheduler_task(business_task.id, scheduler_task)
+            if run:
+                run.status = TaskRunStatus.QUEUED
+                run.scheduler_task_id = scheduler_task.id
+                run.updated_at = datetime.utcnow()
+                business_task.current_run_id = run.id
+
         self.db.commit()
         self.db.refresh(scheduler_task)
         self.db.refresh(worker)
@@ -263,6 +338,11 @@ class SchedulerService:
                 if scheduler_task and scheduler_task.status == SchedulerTaskStatus.ASSIGNED:
                     # Worker 开始执行，更新调度任务状态
                     scheduler_task.mark_running()
+                    run = self._get_or_create_run_for_scheduler_task(scheduler_task.business_task_id, scheduler_task)
+                    if run:
+                        run.status = TaskRunStatus.RUNNING
+                        run.started_at = run.started_at or datetime.utcnow()
+                        run.updated_at = datetime.utcnow()
                     self.db.commit()
                     advanced_count += 1
                     logger.info(f"Task {scheduler_task.id} is now running")
@@ -359,6 +439,23 @@ class SchedulerService:
                     business_task.groundtruth_upload_status = "completed"
         
         business_task.updated_at = datetime.utcnow()
+        run = self._get_or_create_run_for_scheduler_task(business_task.id, scheduler_task)
+        if run:
+            run.status = TaskRunStatus.SUCCESS
+            run.result_snapshot = scheduler_task.result
+            run.completed_at = datetime.utcnow()
+            run.updated_at = datetime.utcnow()
+            business_task.latest_successful_run_id = run.id
+            business_task.current_run_id = None
+        if task_type == SchedulerTaskType.SMART_CUT_ANALYZE:
+            latest_edit = (
+                self.db.query(SmartCutEdit)
+                .filter(SmartCutEdit.task_id == business_task.id)
+                .order_by(SmartCutEdit.version_number.desc())
+                .first()
+            )
+            if latest_edit:
+                business_task.active_edit_id = latest_edit.id
         
         # 更新调度任务状态为 success
         scheduler_task.mark_completed(scheduler_task.result)
@@ -445,12 +542,65 @@ class SchedulerService:
         """
         if task_type == SchedulerTaskType.SMART_CUT_ANALYZE:
             business_task.status = TaskStatus.ANALYZE_FAILED
+            business_task.current_stage = CurrentStage.ANALYZE
         elif task_type == SchedulerTaskType.SMART_CUT_PREVIEW:
-            business_task.status = TaskStatus.PREVIEW_FAILED
+            business_task.status = TaskStatus.WAITING_USER
+            business_task.current_stage = CurrentStage.USER_SELECT
         elif task_type == SchedulerTaskType.SMART_CUT_FINALIZE:
-            business_task.status = TaskStatus.FINALIZE_FAILED
+            business_task.status = TaskStatus.WAITING_USER
+            business_task.current_stage = CurrentStage.USER_SELECT
         
+        business_task.failed_stage = _task_type_to_run_type(task_type).value
+        run = (
+            self.db.query(SmartCutTaskRun)
+            .filter(SmartCutTaskRun.scheduler_task_id == scheduler_task.id)
+            .order_by(SmartCutTaskRun.sequence_number.desc())
+            .first()
+        )
+        if run:
+            run.status = TaskRunStatus.FAILED
+            run.error_message = scheduler_task.error_message
+            run.completed_at = datetime.utcnow()
+            run.updated_at = datetime.utcnow()
+        business_task.current_run_id = None
         business_task.updated_at = datetime.utcnow()
+
+    def _get_or_create_run_for_scheduler_task(
+        self,
+        business_task_id: str,
+        scheduler_task: SchedulerTask,
+    ) -> SmartCutTaskRun | None:
+        run = (
+            self.db.query(SmartCutTaskRun)
+            .filter(SmartCutTaskRun.scheduler_task_id == scheduler_task.id)
+            .order_by(SmartCutTaskRun.sequence_number.desc())
+            .first()
+        )
+        if run:
+            return run
+
+        task = self.db.query(SmartCutTask).filter(SmartCutTask.id == business_task_id).first()
+        if not task:
+            return None
+
+        latest = (
+            self.db.query(SmartCutTaskRun)
+            .filter(SmartCutTaskRun.task_id == business_task_id)
+            .order_by(SmartCutTaskRun.sequence_number.desc())
+            .first()
+        )
+        next_sequence = 1 if latest is None else latest.sequence_number + 1
+        run = SmartCutTaskRun(
+            task_id=business_task_id,
+            run_type=_task_type_to_run_type(scheduler_task.task_type),
+            status=TaskRunStatus.CREATED,
+            sequence_number=next_sequence,
+            scheduler_task_id=scheduler_task.id,
+            payload_snapshot=dict(scheduler_task.payload or {}),
+        )
+        self.db.add(run)
+        self.db.flush()
+        return run
     
     def check_worker_heartbeats(self, timeout_seconds: int = 60) -> int:
         """检查 Worker 心跳超时

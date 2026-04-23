@@ -542,10 +542,12 @@ class PreviewProcessor(BaseProcessor):
             if self._current_task:
                 business_task = db.query(BusinessTask).filter_by(id=self._current_task.business_task_id).first()
                 if business_task:
-                    business_task.status = TaskStatus.PREVIEW_FAILED
+                    business_task.status = TaskStatus.WAITING_USER
+                    business_task.current_stage = CurrentStage.USER_SELECT
+                    business_task.failed_stage = "preview"
             
             db.commit()
-            logger.info(f"Task marked as preview_failed: {self._current_task.business_task_id if self._current_task else 'unknown'}")
+            logger.info(f"Task returned to waiting_user after preview failure: {self._current_task.business_task_id if self._current_task else 'unknown'}")
             
         except Exception as e:
             db.rollback()
