@@ -18,8 +18,13 @@
   ],
   "verification": [
     "fresh short-sample task 2ca436b1-3fbf-4d67-9c6e-d1ee1e41d736 reached success/complete",
+    "fresh short-sample task 47f6c954-bfb6-47dd-8060-955354ce1787 reached preview success then finalize success",
+    "fresh task 0ece49c8-8af6-4f68-880f-18b90b766fa6 reached abandoned/complete after abandon API",
     "task-center returned finished for 2ca436b1-3fbf-4d67-9c6e-d1ee1e41d736",
+    "task-center returned finished for 47f6c954-bfb6-47dd-8060-955354ce1787",
     "HEAD 200 for smart-cut/2ca436b1-3fbf-4d67-9c6e-d1ee1e41d736/finalize/final_video.mp4"
+    ,
+    "HEAD 200 for smart-cut/47f6c954-bfb6-47dd-8060-955354ce1787/finalize/final_video.mp4"
   ],
   "open_questions": [
     "E2E 是否统一使用 xyt1/xyt2 作为默认测试账号"

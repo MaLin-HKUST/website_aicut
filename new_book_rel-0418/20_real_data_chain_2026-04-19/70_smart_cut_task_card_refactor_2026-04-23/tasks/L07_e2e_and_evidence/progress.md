@@ -15,12 +15,17 @@
 - `E2E: analyze-only finalize`
   - 已通（短样本）
   - 最终视频已写入 TOS 并 `HEAD 200`
+- `E2E: preview loop -> finalize`
+  - 已通（短样本）
+  - preview 成功回到 `waiting_user`
+  - finalize 最终成功并产出视频
+- `E2E: 放弃任务`
+  - 已通
+  - fresh task 放弃后进入 `abandoned / complete`
 
 ## 未完成
 
-- `preview loop -> finalize` 需要按新任务卡模型再做一轮 fresh live 验证
 - `编辑已完成任务形成新版本`
-- `放弃任务`
 - `同公司共享、跨公司隔离` 的 live 任务卡复验
 
 ## 关联文档

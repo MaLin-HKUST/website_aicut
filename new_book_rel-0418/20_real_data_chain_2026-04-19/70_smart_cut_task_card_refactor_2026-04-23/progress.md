@@ -222,16 +222,27 @@
 
 - 成功任务：
   - `2ca436b1-3fbf-4d67-9c6e-d1ee1e41d736`
+  - `47f6c954-bfb6-47dd-8060-955354ce1787`
+- 放弃任务：
+  - `0ece49c8-8af6-4f68-880f-18b90b766fa6`
 - 最终状态：
   - `success / complete`
+- preview-loop 任务最终状态：
+  - `success / complete`
+- 放弃任务最终状态：
+  - `abandoned / complete`
 - 下载对象：
   - `smart-cut/2ca436b1-3fbf-4d67-9c6e-d1ee1e41d736/finalize/final_video.mp4`
+  - `smart-cut/47f6c954-bfb6-47dd-8060-955354ce1787/finalize/final_video.mp4`
 - 对象检查：
   - `HEAD 200`
   - `Content-Length: 2706475`
+  - `HEAD 200`
+  - `Content-Length: 2842808`
 
 ## 本轮新增根因记录
 
 1. A 机 API `.venv313` 缺 `tos` 及其依赖，导致真实 TOS 模式无法稳定工作。
 2. worker gateway 初次重建时未传 ASR 凭证，导致 analyze 子容器 `run_raw_cut.py --flow-a` 失败。
 3. analyze-only finalize 的空 `pause_cuts` 结构错误，算法期望对象而不是列表。
+4. preview 校验对 `analyze_script` 的 `list[dict]` 形态没有正确抽取正文文本，导致 fresh preview-loop 被误判为“改写正文”。

@@ -50,6 +50,16 @@ def _coerce_script_text(value: Any) -> str:
         return ""
     if isinstance(value, str):
         return value
+    if isinstance(value, list):
+        parts: list[str] = []
+        for segment in value:
+            if isinstance(segment, str):
+                parts.append(segment)
+            elif isinstance(segment, dict):
+                parts.append(str(segment.get("text", "")))
+            else:
+                parts.append(str(segment))
+        return "".join(parts)
     if isinstance(value, dict) and isinstance(value.get("segments"), list):
         parts: list[str] = []
         for segment in value["segments"]:
