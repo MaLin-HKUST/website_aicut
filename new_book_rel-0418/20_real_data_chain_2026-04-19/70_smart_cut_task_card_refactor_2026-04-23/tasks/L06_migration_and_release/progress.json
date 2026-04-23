@@ -1,6 +1,6 @@
 {
   "large_task_id": "L06",
-  "status": "pending",
+  "status": "in_progress",
   "owner": "codex",
   "dependencies": [
     "L02",
@@ -9,8 +9,17 @@
     "L05"
   ],
   "commit_log": [],
-  "file_history": [],
-  "verification": [],
+  "file_history": [
+    {
+      "path": "scripts/rebuild_phase6/remote_build_worker_candidate.sh",
+      "small_task_id": "S602"
+    }
+  ],
+  "verification": [
+    "live 18002 /docs returned 200",
+    "live 3301 /smart-cut returned 200",
+    "worker gateway env points at 127.0.0.1:65433 / 61001 tunnel"
+  ],
   "open_questions": [
     "旧 PG 数据是否直接全清还是按公司保留已完成任务",
     "重开 /smart-cut 入口的最低验收门槛"

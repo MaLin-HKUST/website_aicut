@@ -104,6 +104,14 @@
 - 新增最小验证：
   - `tests/test_task_card_schema.py`
   - `tests/test_task_truth_reconcile.py`
+- live fresh 短样本链路：
+  - `start`
+  - `upload-prepare`
+  - 直传 TOS
+  - `upload-complete`
+  - 自动 `analyze`
+  - analyze-only `finalize`
+  已跑通并产出最终视频
 
 ## 进行中
 
@@ -195,11 +203,35 @@
   - 锁住 `preview_failed` 可重试
 - `tests/test_task_truth_reconcile.py`
   - 锁住 ghost task 回收
+- `worker/services/algorithm_runner.py`
+  - 强制算法子容器走 `--entrypoint python`
+- `worker/processors/finalize_processor.py`
+  - analyze-only finalize 的空 pause cuts 改成结构化对象
+- `scripts/rebuild_phase6/remote_build_worker_candidate.sh`
+  - worker gateway 重建时显式传入 `BYTEDANCE_ASR_APPID/TOKEN`
 
 ## 已知风险
 
 - 这一步完成的是 **可执行设计包**，不是重构代码本身
 - 当前仓库仍同时保留旧 draft 接口，虽然前端已经不再走它们
 - 这次还没有重新部署 live runtime/API/worker
-- `L06-L07` 尚未开始真正实现
+- `L06-L07` 已部分完成：analyze-only live E2E 已通；preview-loop / 继续编辑 / 放弃任务 尚未重新做一轮 live fresh 验证
 - `L00` 的历史提交仍来自旧分支，但后续实现已经切到 `feature/smart-cut-taskcard-refactor`
+
+## Live 证据
+
+- 成功任务：
+  - `2ca436b1-3fbf-4d67-9c6e-d1ee1e41d736`
+- 最终状态：
+  - `success / complete`
+- 下载对象：
+  - `smart-cut/2ca436b1-3fbf-4d67-9c6e-d1ee1e41d736/finalize/final_video.mp4`
+- 对象检查：
+  - `HEAD 200`
+  - `Content-Length: 2706475`
+
+## 本轮新增根因记录
+
+1. A 机 API `.venv313` 缺 `tos` 及其依赖，导致真实 TOS 模式无法稳定工作。
+2. worker gateway 初次重建时未传 ASR 凭证，导致 analyze 子容器 `run_raw_cut.py --flow-a` 失败。
+3. analyze-only finalize 的空 `pause_cuts` 结构错误，算法期望对象而不是列表。

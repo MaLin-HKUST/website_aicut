@@ -252,8 +252,9 @@ class FinalizeProcessor(BaseProcessor):
                     self._input_data["pause_cuts"] = json.load(f)
             else:
                 pause_cuts_path = input_dir / "pause_cuts_on_original.json"
-                pause_cuts_path.write_text("[]", encoding="utf-8")
-                self._input_data["pause_cuts"] = []
+                empty_pause_cuts = {"config": {}, "segments": []}
+                pause_cuts_path.write_text(json.dumps(empty_pause_cuts, ensure_ascii=False, indent=2), encoding="utf-8")
+                self._input_data["pause_cuts"] = empty_pause_cuts
             
             # 下载ASR结果
             if business_task.asr_result_tos_key:

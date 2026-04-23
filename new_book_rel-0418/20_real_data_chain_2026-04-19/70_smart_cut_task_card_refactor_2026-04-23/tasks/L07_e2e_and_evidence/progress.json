@@ -1,13 +1,26 @@
 {
   "large_task_id": "L07",
-  "status": "pending",
+  "status": "in_progress",
   "owner": "codex",
   "dependencies": [
     "L06"
   ],
   "commit_log": [],
-  "file_history": [],
-  "verification": [],
+  "file_history": [
+    {
+      "path": "worker/services/algorithm_runner.py",
+      "small_task_id": "S702"
+    },
+    {
+      "path": "worker/processors/finalize_processor.py",
+      "small_task_id": "S702"
+    }
+  ],
+  "verification": [
+    "fresh short-sample task 2ca436b1-3fbf-4d67-9c6e-d1ee1e41d736 reached success/complete",
+    "task-center returned finished for 2ca436b1-3fbf-4d67-9c6e-d1ee1e41d736",
+    "HEAD 200 for smart-cut/2ca436b1-3fbf-4d67-9c6e-d1ee1e41d736/finalize/final_video.mp4"
+  ],
   "open_questions": [
     "E2E 是否统一使用 xyt1/xyt2 作为默认测试账号"
   ]
