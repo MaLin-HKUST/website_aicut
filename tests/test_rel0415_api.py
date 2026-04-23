@@ -334,6 +334,48 @@ def test_finalize_allows_analyze_only_without_pause_cuts(api_client):
         assert scheduler_task.payload["pause_cuts_on_original_tos_key"] is None
 
 
+def test_finalize_allows_completed_task_to_generate_new_version(api_client):
+    client, SessionLocal = api_client
+
+    with SessionLocal() as db:
+        task = SmartCutTask(
+            user_id="alice",
+            company_id=9,
+            status=TaskStatus.SUCCESS,
+            current_stage=CurrentStage.COMPLETE,
+            task_title="智能剪气口-已完成任务",
+            visible_in_task_center=True,
+            original_video_url="smart-cut/demo/input/source_video.mp4",
+            reference_text_url="smart-cut/demo/input/reference.txt",
+            asr_result_tos_key="smart-cut/demo/analyze/asr.json",
+        )
+        db.add(task)
+        db.flush()
+
+        edit = SmartCutEdit(
+            task_id=task.id,
+            edited_script="今天先删掉这句继续讲重点。",
+            status=EditStatus.SUCCESS,
+            audio_a_url="smart-cut/demo/analyze/audio_a.mp3",
+            delay_cuts_tos_key="smart-cut/demo/analyze/delay_cuts.json",
+            pause_cuts_tos_key=None,
+            version_number=1,
+        )
+        db.add(edit)
+        db.flush()
+        task.active_edit_id = edit.id
+        db.commit()
+        task_id = task.id
+
+    response = client.post(
+        f"/api/smart-cut/tasks/{task_id}/finalize",
+        json={"output_mode": "original", "feed_to_ai": True},
+    )
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["status"] == "finalizing"
+
+
 def test_finalize_promotes_hidden_draft_into_task_center(api_client):
     client, SessionLocal = api_client
 

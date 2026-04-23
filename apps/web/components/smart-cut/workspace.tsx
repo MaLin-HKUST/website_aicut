@@ -102,8 +102,8 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
 
   const currentEdit = useMemo(() => latestSuccessfulEdit(edits), [edits]);
   const canUpload = Boolean(task && task.status === "waiting_upload" && videoFile && referenceFile && busy === null);
-  const canPreview = Boolean(task && task.status === "waiting_user" && scriptDraft.trim().length > 0 && busy === null);
-  const canFinalize = Boolean(task && task.status === "waiting_user" && currentEdit?.edited_delay_cuts_tos_key && busy === null);
+  const canPreview = Boolean(task && ["waiting_user", "success"].includes(task.status) && scriptDraft.trim().length > 0 && busy === null);
+  const canFinalize = Boolean(task && ["waiting_user", "success"].includes(task.status) && currentEdit?.edited_delay_cuts_tos_key && busy === null);
   const audioUrl = currentEdit?.audio_b_url ?? currentEdit?.audio_a_url ?? null;
   const audioLabel = currentEdit?.audio_b_url ? "试听音频 audio_b" : currentEdit?.audio_a_url ? "分析音频 audio_a" : null;
 

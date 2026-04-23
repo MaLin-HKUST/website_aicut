@@ -249,10 +249,10 @@ async def start_preview(
         )
     
     # 校验状态: 必须是 waiting_user
-    if task.status not in {TaskStatus.WAITING_USER, TaskStatus.PREVIEW_FAILED}:
+    if task.status not in {TaskStatus.WAITING_USER, TaskStatus.PREVIEW_FAILED, TaskStatus.SUCCESS}:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid task status: {task.status.value}, expected: waiting_user or preview_failed"
+            detail=f"Invalid task status: {task.status.value}, expected: waiting_user, preview_failed or success"
         )
     
     # 检查是否有 analyze 产物
@@ -359,10 +359,10 @@ async def start_finalize(
         )
     
     # 校验状态: 必须是 waiting_user
-    if task.status != TaskStatus.WAITING_USER:
+    if task.status not in {TaskStatus.WAITING_USER, TaskStatus.SUCCESS}:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid task status: {task.status.value}, expected: {TaskStatus.WAITING_USER.value}"
+            detail=f"Invalid task status: {task.status.value}, expected: waiting_user or success"
         )
     
     # 获取要使用的 edit
