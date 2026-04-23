@@ -20,8 +20,10 @@
     "fresh short-sample task 2ca436b1-3fbf-4d67-9c6e-d1ee1e41d736 reached success/complete",
     "fresh short-sample task 47f6c954-bfb6-47dd-8060-955354ce1787 reached preview success then finalize success",
     "fresh task 0ece49c8-8af6-4f68-880f-18b90b766fa6 reached abandoned/complete after abandon API",
+    "completed task 47f6c954-bfb6-47dd-8060-955354ce1787 accepted a new preview edit 685258aa-5386-4be5-b766-5ab6e3963b3a and completed finalize again",
     "task-center returned finished for 2ca436b1-3fbf-4d67-9c6e-d1ee1e41d736",
     "task-center returned finished for 47f6c954-bfb6-47dd-8060-955354ce1787",
+    "task-center company_id=9 returned shared smart_cut cards while company_id=2 returned []",
     "HEAD 200 for smart-cut/2ca436b1-3fbf-4d67-9c6e-d1ee1e41d736/finalize/final_video.mp4"
     ,
     "HEAD 200 for smart-cut/47f6c954-bfb6-47dd-8060-955354ce1787/finalize/final_video.mp4"

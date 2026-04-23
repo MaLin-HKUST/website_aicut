@@ -231,6 +231,10 @@
   - `success / complete`
 - 放弃任务最终状态：
   - `abandoned / complete`
+- 已完成任务重新编辑后再次生成：
+  - 主任务仍为 `47f6c954-bfb6-47dd-8060-955354ce1787`
+  - 新 edit：`685258aa-5386-4be5-b766-5ab6e3963b3a`
+  - 再次 `finalize` 成功
 - 下载对象：
   - `smart-cut/2ca436b1-3fbf-4d67-9c6e-d1ee1e41d736/finalize/final_video.mp4`
   - `smart-cut/47f6c954-bfb6-47dd-8060-955354ce1787/finalize/final_video.mp4`
@@ -246,3 +250,4 @@
 2. worker gateway 初次重建时未传 ASR 凭证，导致 analyze 子容器 `run_raw_cut.py --flow-a` 失败。
 3. analyze-only finalize 的空 `pause_cuts` 结构错误，算法期望对象而不是列表。
 4. preview 校验对 `analyze_script` 的 `list[dict]` 形态没有正确抽取正文文本，导致 fresh preview-loop 被误判为“改写正文”。
+5. 启动时 additive schema bootstrap 会把可见主任务卡重新刷回隐藏，导致 company 维度列表为空。
