@@ -121,7 +121,10 @@ def _apply_additive_smart_cut_schema(bind_engine: Engine) -> None:
     if "failed_stage" not in column_names:
         statements.append("ALTER TABLE smart_cut_tasks ADD COLUMN failed_stage VARCHAR(32)")
     if "abandoned_at" not in column_names:
-        statements.append("ALTER TABLE smart_cut_tasks ADD COLUMN abandoned_at DATETIME")
+        if dialect == "postgresql":
+            statements.append("ALTER TABLE smart_cut_tasks ADD COLUMN abandoned_at TIMESTAMP")
+        else:
+            statements.append("ALTER TABLE smart_cut_tasks ADD COLUMN abandoned_at DATETIME")
     if "revision_count" not in column_names:
         if dialect == "postgresql":
             statements.append(
