@@ -275,26 +275,53 @@ export async function uploadDirectInputs(
   referenceFile: File,
   options?: { onProgress?: (percent: number) => void },
 ): Promise<SmartCutTask> {
-  const formData = new FormData();
-  formData.set("video_file", videoFile);
-  formData.set("reference_file", referenceFile);
+  const videoExt = videoFile.name.split(".").pop()?.toLowerCase() ?? "mp4";
+  const prepare = await fetchJson<{
+    video_upload_url: string;
+    video_key: string;
+    text_upload_url: string;
+    text_key: string;
+    expires_at: string;
+  }>(`/api/proxy/api/smart-cut/tasks/${taskId}/upload-prepare?video_ext=${encodeURIComponent(videoExt)}`, {
+    method: "POST",
+  });
 
-  await new Promise<void>((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", `/api/proxy/api/smart-cut/tasks/${taskId}/upload-direct`);
-    xhr.upload.onprogress = (event) => {
-      if (!event.lengthComputable || !options?.onProgress) return;
-      options.onProgress(Math.round((event.loaded / event.total) * 100));
-    };
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve();
-      } else {
-        reject(new Error(`Upload failed: ${xhr.status}`));
-      }
-    };
-    xhr.onerror = () => reject(new Error("Upload failed"));
-    xhr.send(formData);
+  const totalBytes = videoFile.size + referenceFile.size;
+
+  async function uploadToPresignedUrl(
+    url: string,
+    file: File,
+    offset: number,
+  ): Promise<void> {
+    await new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("PUT", url);
+      xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+      xhr.upload.onprogress = (event) => {
+        if (!event.lengthComputable || !options?.onProgress) return;
+        const loaded = offset + event.loaded;
+        options.onProgress(Math.round((loaded / totalBytes) * 100));
+      };
+      xhr.onerror = () => reject(new Error("上传到 TOS 失败，请检查网络后重试"));
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve();
+          return;
+        }
+        reject(new Error(`TOS upload failed: ${xhr.status}`));
+      };
+      xhr.send(file);
+    });
+  }
+
+  await uploadToPresignedUrl(prepare.video_upload_url, videoFile, 0);
+  await uploadToPresignedUrl(prepare.text_upload_url, referenceFile, videoFile.size);
+
+  await fetchJson(`/api/proxy/api/smart-cut/tasks/${taskId}/upload-complete`, {
+    method: "POST",
+    body: JSON.stringify({
+      uploaded_keys: [prepare.video_key, prepare.text_key],
+    }),
   });
 
   options?.onProgress?.(100);
