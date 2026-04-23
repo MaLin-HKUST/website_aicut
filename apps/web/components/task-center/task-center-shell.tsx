@@ -126,8 +126,8 @@ export function TaskCenterShell({ mode = "user" }: { mode?: "user" | "admin" }) 
                 <Button onClick={() => router.refresh()} type="button">
                   Refresh
                 </Button>
-                <Button onClick={() => router.push(mode === "admin" ? "/admin" : "/smart-cut")} type="button" variant="secondary">
-                  {mode === "admin" ? "Back to Admin" : "Back to Smart Cut"}
+                <Button onClick={() => router.push(mode === "admin" ? "/admin" : "/welcome")} type="button" variant="secondary">
+                  {mode === "admin" ? "Back to Admin" : "Back to Workspace"}
                 </Button>
               </div>
             </div>
@@ -304,8 +304,8 @@ export function TaskCenterShell({ mode = "user" }: { mode?: "user" | "admin" }) 
                         <div className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{selectedTask.errorMessage}</div>
                       ) : null}
                       <div className="mt-5 flex flex-wrap gap-3">
-                        <Button onClick={() => router.push(`/smart-cut/${selectedTask.id}`)} type="button">
-                          View
+                        <Button disabled type="button">
+                          Smart Cut 重构中
                         </Button>
                         {selectedTask.downloadUrl ? (
                           <a className="inline-flex" href={selectedTask.downloadUrl} target="_blank">
@@ -314,8 +314,8 @@ export function TaskCenterShell({ mode = "user" }: { mode?: "user" | "admin" }) 
                             </Button>
                           </a>
                         ) : (
-                          <Button onClick={() => router.push(`/smart-cut/${selectedTask.id}`)} type="button" variant="secondary">
-                            Continue
+                          <Button disabled type="button" variant="secondary">
+                            等待重构版本
                           </Button>
                         )}
                       </div>

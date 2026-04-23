@@ -1,10 +1,5 @@
-import { SmartCutWorkspace } from "@/components/smart-cut/workspace";
+import { SmartCutDisabledView } from "../disabled-view";
 
-export default async function SmartCutTaskPage({
-  params,
-}: {
-  params: Promise<{ taskId: string }>;
-}) {
-  const { taskId } = await params;
-  return <SmartCutWorkspace taskId={taskId} />;
+export default function SmartCutTaskPage() {
+  return <SmartCutDisabledView />;
 }

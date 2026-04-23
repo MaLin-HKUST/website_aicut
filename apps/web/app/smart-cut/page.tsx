@@ -1,5 +1,5 @@
-import { SmartCutWorkspace } from "@/components/smart-cut/workspace";
+import { SmartCutDisabledView } from "./disabled-view";
 
 export default function SmartCutPage() {
-  return <SmartCutWorkspace />;
+  return <SmartCutDisabledView />;
 }

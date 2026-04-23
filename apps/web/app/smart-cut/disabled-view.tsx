@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { Card } from "@/components/ui/card";
 import { UserWorkspaceShell } from "@/components/navigation/user-workspace-shell";
-import { useUserWorkspaceData } from "@/components/navigation/use-user-workspace-data";
+import { Card } from "@/components/ui/card";
 import { AuthResponse } from "@/lib/auth";
+import { useUserWorkspaceData } from "@/components/navigation/use-user-workspace-data";
 
-export default function WelcomePage() {
+export function SmartCutDisabledView() {
   const router = useRouter();
   const [user, setUser] = useState<AuthResponse["user"] | null>(null);
   const workspace = useUserWorkspaceData(user?.username);
@@ -30,7 +30,7 @@ export default function WelcomePage() {
     }
 
     void bootstrap();
-  }, []);
+  }, [router]);
 
   async function logout() {
     await fetch("/api/proxy/auth/logout", { method: "POST" });
@@ -40,17 +40,22 @@ export default function WelcomePage() {
 
   return (
     <UserWorkspaceShell
-      activeItem="tts"
+      activeItem="smart-cut"
       currentUser={user?.username ?? "..."}
-      headline={user?.company_name ? `你好，${user.company_name}，小马AI准备就绪~` : undefined}
+      headline={user?.company_name ? `你好，${user.company_name}，智能剪气口正在重构中` : "智能剪气口正在重构中"}
       metrics={workspace.metrics}
       onLogout={logout}
       previewTasks={workspace.previewTasks}
     >
       <Card className="flex min-h-[640px] items-center justify-center rounded-[32px] border-[#e5dacd] bg-[#f8f5ef] shadow-panel">
-        <div className="space-y-4 text-center">
-          <p className="text-lg font-medium text-stone-400">请点击左侧「文案生成语音」开始使用</p>
-          <p className="text-sm text-stone-400">任务列表仍可查看已完成任务；智能剪气口入口当前已关闭，等待重构完成后恢复。</p>
+        <div className="max-w-2xl space-y-4 text-center">
+          <p className="text-2xl font-semibold text-[#241714]">Smart Cut 入口已关闭</p>
+          <p className="text-sm leading-7 text-stone-500">
+            当前线上 Smart Cut 正在做任务卡模型重构。旧版隐藏草稿、试听和生成入口已经全部下线，避免继续产生分裂状态。
+          </p>
+          <p className="text-sm leading-7 text-stone-500">
+            已完成任务仍可在左侧「任务列表」查看和下载。新的重构版本上线后，这里会恢复为新的显式任务入口。
+          </p>
         </div>
       </Card>
     </UserWorkspaceShell>

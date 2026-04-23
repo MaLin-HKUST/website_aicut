@@ -24,9 +24,10 @@ const PRIMARY_ITEMS: Array<{
   label: string;
   href: string;
   icon: string;
+  disabled?: boolean;
 }> = [
   { key: "tts", label: "文案生成语音", href: "/tts", icon: "M" },
-  { key: "smart-cut", label: "智能剪气口", href: "/smart-cut", icon: "V" },
+  { key: "smart-cut", label: "智能剪气口（重构中）", href: "/smart-cut", icon: "V", disabled: true },
   { key: "tasks", label: "任务列表", href: "/tasks", icon: "T" },
 ];
 
@@ -84,15 +85,23 @@ export function UserWorkspaceShell({
                   key={item.key}
                   className={[
                     "flex items-center gap-3 rounded-[18px] px-4 py-3 text-left text-[15px] font-medium transition",
-                    active ? "bg-[#243444] text-white shadow-[0_8px_18px_rgba(36,52,68,0.12)]" : "bg-white text-[#241714] hover:bg-[#faf7f2]",
+                    item.disabled
+                      ? "cursor-not-allowed bg-white text-stone-400"
+                      : active
+                        ? "bg-[#243444] text-white shadow-[0_8px_18px_rgba(36,52,68,0.12)]"
+                        : "bg-white text-[#241714] hover:bg-[#faf7f2]",
                   ].join(" ")}
-                  onClick={() => router.push(item.href)}
+                  disabled={item.disabled}
+                  onClick={() => {
+                    if (item.disabled) return;
+                    router.push(item.href);
+                  }}
                   type="button"
                 >
                   <span
                     className={[
                       "flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold",
-                      active ? "bg-white/18 text-white" : "bg-[#f2efe9] text-stone-500",
+                      item.disabled ? "bg-[#f2efe9] text-stone-300" : active ? "bg-white/18 text-white" : "bg-[#f2efe9] text-stone-500",
                     ].join(" ")}
                   >
                     {item.icon}
