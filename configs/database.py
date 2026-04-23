@@ -147,12 +147,14 @@ def _apply_additive_smart_cut_schema(bind_engine: Engine) -> None:
         """
     )
 
+    created_visibility_column = any(
+        "visible_in_task_center" in statement for statement in statements
+    )
+
     with bind_engine.begin() as conn:
         for statement in statements:
             conn.execute(text(statement))
-        if "visible_in_task_center" in column_names or any(
-            "visible_in_task_center" in statement for statement in statements
-        ):
+        if created_visibility_column:
             conn.execute(visibility_backfill)
 
 
