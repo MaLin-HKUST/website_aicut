@@ -131,8 +131,8 @@ const CASES: Array<{
   {
     path: "/smart-cut",
     assertVisible: async (page) => {
-      await expect(page).toHaveURL(/\/smart-cut\/smartcut_route_smoke_001$/);
-      await expect(page.getByRole("heading", { name: "上传与分析" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "开启任务" })).toBeVisible();
+      await expect(page.getByText("空工作台，等待开启任务")).toBeVisible();
     },
   },
   {
