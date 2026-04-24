@@ -1,16 +1,16 @@
 {
   "large_task_id": "L07",
   "title": "真实 E2E 验收与证据收口",
-  "status": "pending",
+  "status": "in_progress",
   "dependencies": [
     "L06"
   ],
   "small_tasks": [
-    { "id": "S701", "title": "E2E: start -> upload -> auto-analyze", "status": "pending" },
-    { "id": "S702", "title": "E2E: analyze-only finalize", "status": "pending" },
-    { "id": "S703", "title": "E2E: preview loop -> finalize", "status": "pending" },
-    { "id": "S704", "title": "E2E: 编辑已完成任务形成新版本", "status": "pending" },
-    { "id": "S705", "title": "E2E: 放弃任务", "status": "pending" },
-    { "id": "S706", "title": "E2E: 同公司共享、跨公司隔离", "status": "pending" }
+    { "id": "S701", "title": "E2E: start -> upload -> auto-analyze", "status": "in_progress" },
+    { "id": "S702", "title": "E2E: analyze-only finalize", "status": "in_progress" },
+    { "id": "S703", "title": "E2E: preview loop -> finalize", "status": "in_progress" },
+    { "id": "S704", "title": "E2E: 编辑已完成任务形成新版本", "status": "in_progress" },
+    { "id": "S705", "title": "E2E: 放弃任务", "status": "in_progress" },
+    { "id": "S706", "title": "E2E: 同公司共享、跨公司隔离", "status": "in_progress" }
   ]
 }

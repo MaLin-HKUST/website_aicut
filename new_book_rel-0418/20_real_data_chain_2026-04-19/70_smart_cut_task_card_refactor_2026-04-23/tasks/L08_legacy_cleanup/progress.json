@@ -1,0 +1,21 @@
+{
+  "large_task_id": "L08",
+  "phase": "legacy_cleanup_and_doc_finalization",
+  "status": "in_progress",
+  "completed_tasks": [
+    "S804_partial"
+  ],
+  "in_progress_tasks": [
+    "S804"
+  ],
+  "blocked_tasks": [
+    "S801",
+    "S802",
+    "S803"
+  ],
+  "decisions": [
+    "Old draft endpoints will return 410 Gone instead of being silently removed",
+    "Old fields will be marked DEPRECATED in comments rather than physically deleted to preserve schema compatibility",
+    "Quarantine files will be checked for references before deletion"
+  ]
+}

@@ -21,7 +21,7 @@
     {
       "id": "L01",
       "title": "当前代码审计与旧方案废止",
-      "status": "in_progress",
+      "status": "completed",
       "artifact_dir": "tasks/L01_current_state_audit",
       "small_tasks": [
         { "id": "S101", "title": "审计当前 SmartCutTask 字段与状态机", "status": "completed" },
@@ -29,20 +29,20 @@
         { "id": "S103", "title": "审计 task center 当前过滤条件与可见性", "status": "completed" },
         { "id": "S104", "title": "补录仍然活跃的前端影响面文件", "status": "completed" },
         { "id": "S105", "title": "明确 50_* 与 70_* 的主次关系", "status": "completed" },
-        { "id": "S106", "title": "把审计结果写成可执行设计前提", "status": "in_progress" }
+        { "id": "S106", "title": "把审计结果写成可执行设计前提", "status": "completed" }
       ]
     },
     {
       "id": "L02",
       "title": "主任务模型与数据库设计",
-      "status": "in_progress",
+      "status": "completed",
       "artifact_dir": "tasks/L02_task_model_and_schema",
       "small_tasks": [
         { "id": "S201", "title": "定义主任务表新语义与字段调整", "status": "completed" },
         { "id": "S202", "title": "定义 smart_cut_task_runs 表结构", "status": "completed" },
-        { "id": "S203", "title": "定义 smart_cut_edits 与主任务/run 的关系", "status": "in_progress" },
+        { "id": "S203", "title": "定义 smart_cut_edits 与主任务/run 的关系", "status": "completed" },
         { "id": "S204", "title": "定义 company_id 与任务可见性规则", "status": "completed" },
-        { "id": "S205", "title": "定义 abandoned 保留与清理规则", "status": "pending" }
+        { "id": "S205", "title": "定义 abandoned 保留与清理规则", "status": "completed" }
       ]
     },
     {
@@ -101,15 +101,27 @@
     {
       "id": "L07",
       "title": "真实 E2E 验收与证据收口",
-      "status": "pending",
+      "status": "in_progress",
       "artifact_dir": "tasks/L07_e2e_and_evidence",
       "small_tasks": [
-        { "id": "S701", "title": "E2E: start -> upload -> auto-analyze", "status": "pending" },
-        { "id": "S702", "title": "E2E: analyze-only finalize", "status": "pending" },
-        { "id": "S703", "title": "E2E: preview loop -> finalize", "status": "pending" },
-        { "id": "S704", "title": "E2E: 编辑已完成任务形成新版本", "status": "pending" },
-        { "id": "S705", "title": "E2E: 放弃任务", "status": "pending" },
-        { "id": "S706", "title": "E2E: 同公司共享、跨公司隔离", "status": "pending" }
+        { "id": "S701", "title": "E2E: start -> upload -> auto-analyze", "status": "in_progress" },
+        { "id": "S702", "title": "E2E: analyze-only finalize", "status": "in_progress" },
+        { "id": "S703", "title": "E2E: preview loop -> finalize", "status": "in_progress" },
+        { "id": "S704", "title": "E2E: 编辑已完成任务形成新版本", "status": "in_progress" },
+        { "id": "S705", "title": "E2E: 放弃任务", "status": "in_progress" },
+        { "id": "S706", "title": "E2E: 同公司共享、跨公司隔离", "status": "in_progress" }
+      ]
+    },
+    {
+      "id": "L08",
+      "title": "旧代码清理与文档全面收口",
+      "status": "pending",
+      "artifact_dir": "tasks/L08_legacy_cleanup",
+      "small_tasks": [
+        { "id": "S801", "title": "退役 draft/current 系列接口", "status": "pending" },
+        { "id": "S802", "title": "退役 visible_in_task_center 和 session_scope_id 语义", "status": "pending" },
+        { "id": "S803", "title": "清理 quarantine 和废弃测试文件", "status": "pending" },
+        { "id": "S804", "title": "统一更新所有 task.json 和 progress", "status": "in_progress" }
       ]
     }
   ]

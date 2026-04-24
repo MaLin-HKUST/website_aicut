@@ -2,33 +2,16 @@
 
 ## 当前阶段
 
-- `L00` 已完成：
-  - live Smart Cut 前端备份
-  - 旧入口下线
-  - 旧前端实现 quarantine
-- `L01` 正在完成：
-  - 当前代码真实状态审计
-  - 旧方案废止边界
-  - 新执行包结构重写
-  - 旧分支历史切割
-- `L02` 已启动：
-  - 主任务字段增量补齐
-  - `smart_cut_task_runs` 新表落地
-- `L03` 已完成：
-  - 显式 `start task`
-  - upload 完成后自动 analyze
-  - preview retry
-  - analyze-only finalize
-  - `runs` 查询接口
-- `L04` 已完成：
-  - 主任务 / run / scheduler_task 映射
-  - ghost task 自动回收
-  - task center 优先按 `company_id` 过滤
-- `L05` 已完成：
-  - `/smart-cut` 空态与开启任务
-  - 新工作台
-  - 任务列表继续处理入口
-  - 本地草稿缓存退出主路径
+- `L00-L05` 已完成：代码已落地，线上已运行新模型
+  - L00: live Smart Cut 前端备份、旧入口下线、旧前端 quarantine
+  - L01: 当前代码真实状态审计、旧方案废止边界、新执行包结构
+  - L02: 主任务字段增量补齐、`smart_cut_task_runs` 新表落地
+  - L03: 显式 `start task`、upload 自动 analyze、preview retry、analyze-only finalize、`runs` 查询
+  - L04: 主任务/run/scheduler_task 映射、ghost task 回收、task center `company_id` 过滤
+  - L05: `/smart-cut` 空态与开启任务、新工作台、任务列表继续处理入口、本地草稿缓存退出主路径
+- `L06` 准备中：迁移、发布顺序、回滚方案
+- `L07` 进行中：E2E 已部分跑通（A 机重装前），待全部正式化并记录证据
+- `L08` 待开始：旧代码清理与文档最终收口（含 `09_方案B完整收官计划.md`）
 
 ## 这次修正后的结论
 
@@ -37,29 +20,20 @@
 - `50_*` 降级为历史参考
 - 后续实现、验收、回滚文档都优先回写 `70_*`
 
-### 2. 当前仓库仍然是旧隐藏草稿模型
+### 2. 旧模型代码尚未完全清理（技术债务）
 
-已经写入审计文档的关键事实：
+以下代码仍存在但不再被前端调用，计划 L08 清理：
 
-- `apps/models/task.py` 仍然使用 `visible_in_task_center`
-- `apps/models/task.py` 仍然有 `session_scope_id`
-- `apps/api/routes/tasks.py` 仍然有 `draft/current*`
-- `apps/api/routes/task_center.py` 普通用户列表仍按 `user_id`
-- Smart Cut 后端主模型里还没有 `company_id`
-- 当前没有 `smart_cut_task_runs`
+- `draft/current*` 接口（L08/S801）
+- `visible_in_task_center` 字段（L08/S802）
+- `session_scope_id` 字段（L08/S802）
 
-### 3. 之前 codebook 的主要缺口已补方向
+### 3. Codebook 已完成全面更新
 
-此前缺口：
-- 只有 L00，没有可执行设计正文
-- 没有拆到每个大任务的独立目录
-- 没有说明 50_* 与 70_* 的关系
-- 没有把当前真实代码现状写清楚
-
-当前已补：
-- 01~07 设计文档骨架与正文
-- `08_旧版本问题清单与退役边界.md`
-- `tasks/L00~L07` 子目录
+已补：
+- 01~08 设计文档骨架与正文
+- `09_方案B完整收官计划.md`（新增）
+- `tasks/L00~L08` 子目录（含新增的 L08）
 - 每个大任务独立 `task.json/progress.md/progress.json`
 - `git/branch_strategy.md`
 
@@ -212,11 +186,12 @@
 
 ## 已知风险
 
-- 这一步完成的是 **可执行设计包**，不是重构代码本身
-- 当前仓库仍同时保留旧 draft 接口，虽然前端已经不再走它们
-- 这次还没有重新部署 live runtime/API/worker
-- `L06-L07` 已部分完成：analyze-only live E2E 已通；preview-loop / 继续编辑 / 放弃任务 尚未重新做一轮 live fresh 验证
-- `L00` 的历史提交仍来自旧分支，但后续实现已经切到 `feature/smart-cut-taskcard-refactor`
+- 代码已落地并通过 live E2E 验证（A 机重装前）
+- A 机重装后需要重新验证 Worker 连通性和 ASR 凭证
+- `L02/S203` edits 与 runs 的关系代码层面已存在，但需确认每次运行都正确记录 `source_edit_id`
+- `L02/S205` 7天清理规则已定义，但清理脚本尚未实现
+- `L06` 发布顺序和回滚方案尚未文档化为可执行脚本
+- 旧 draft 接口代码仍在，但前端已不再调用（待 L08 清理）
 
 ## Live 证据
 

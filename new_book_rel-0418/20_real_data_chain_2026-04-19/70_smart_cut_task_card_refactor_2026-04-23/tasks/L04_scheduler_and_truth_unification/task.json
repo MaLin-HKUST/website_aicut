@@ -1,15 +1,15 @@
 {
   "large_task_id": "L04",
   "title": "调度、worker、task-center 单一真相收口",
-  "status": "pending",
+  "status": "completed",
   "dependencies": [
     "L02",
     "L03"
   ],
   "small_tasks": [
-    { "id": "S401", "title": "定义主任务与 scheduler_task 的映射关系", "status": "pending" },
-    { "id": "S402", "title": "定义 run 与 scheduler_task 的关联契约", "status": "pending" },
-    { "id": "S403", "title": "定义 ghost task 检测与一致性修复策略", "status": "pending" },
-    { "id": "S404", "title": "定义 task center 仅消费主任务卡", "status": "pending" }
+    { "id": "S401", "title": "定义主任务与 scheduler_task 的映射关系", "status": "completed" },
+    { "id": "S402", "title": "定义 run 与 scheduler_task 的关联契约", "status": "completed" },
+    { "id": "S403", "title": "定义 ghost task 检测与一致性修复策略", "status": "completed" },
+    { "id": "S404", "title": "定义 task center 仅消费主任务卡", "status": "completed" }
   ]
 }

@@ -1,6 +1,6 @@
 {
   "project_id": "70_smart_cut_task_card_refactor_2026-04-23",
-  "phase": "L01_current_state_audit_and_spec_pack",
+  "phase": "L06_L07_migration_and_e2e_formalization",
   "status": "in_progress",
   "current_execution_branch": "feature/smart-cut-taskcard-refactor",
   "historical_source_branches": [
@@ -13,25 +13,49 @@
     "S003",
     "S004",
     "S005",
+    "L01",
     "S101",
     "S102",
     "S103",
     "S104",
     "S105",
-    "S201",
-    "S202",
-    "S204",
-    "S301",
-    "S306"
-  ],
-  "in_progress_tasks": [
-    "L01",
     "S106",
     "L02",
+    "S201",
+    "S202",
     "S203",
+    "S204",
+    "S205",
     "L03",
+    "S301",
+    "S302",
+    "S303",
+    "S304",
+    "S305",
+    "S306",
+    "S307",
     "L04",
-    "S404"
+    "S401",
+    "S402",
+    "S403",
+    "S404",
+    "L05",
+    "S501",
+    "S502",
+    "S503",
+    "S504",
+    "S505",
+    "S506"
+  ],
+  "in_progress_tasks": [
+    "L06",
+    "L07",
+    "S701",
+    "S702",
+    "S703",
+    "S704",
+    "S705",
+    "S706"
   ],
   "blocked_tasks": [],
   "decisions": [
@@ -194,8 +218,8 @@
     }
   ],
   "open_questions": [
-    "L02 should decide whether existing smart_cut_tasks rows are hard-reset before migration or migrated with best effort.",
-    "L03 should decide analyze failure fallback state: waiting_upload or waiting_user.",
-    "L05 should decide whether task cards expose version switching inline or only in task detail."
+    "L06 should create executable release scripts and validate rollback procedure.",
+    "L07 should re-run all E2E after A-machine reinstall and document evidence.",
+    "L08 should decide whether to physically delete old draft code or just mark deprecated."
   ]
 }

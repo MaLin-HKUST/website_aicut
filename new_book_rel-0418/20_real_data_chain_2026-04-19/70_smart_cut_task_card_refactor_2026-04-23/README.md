@@ -43,21 +43,27 @@
 
 ## 当前结论
 
-当前仓库代码仍然是旧模型：
+代码已落地，线上已运行新模型：
 
-- `smart_cut_tasks` 仍然是隐藏草稿语义
-- `draft/current` / `draft/current/ensure` 仍然存在
-- `visible_in_task_center` 仍然是“隐藏/显示”的关键字段
-- `session_scope_id` 仍然参与草稿恢复
-- `task_center` 普通用户列表仍按 `user_id` 查
-- Smart Cut 主模型里还没有 `company_id`
-- 也还没有 `smart_cut_task_runs` 这张子执行表
+- `smart_cut_tasks` 已增量补齐 `company_id`, `current_run_id`, `latest_successful_run_id`, `failed_stage`, `abandoned_at`, `revision_count`
+- `smart_cut_task_runs` 新表已创建，记录 upload/analyze/preview/finalize 子执行
+- `POST /api/smart-cut/tasks/start` 已上线
+- `GET /api/smart-cut/tasks/{task_id}/runs` 已上线
+- `/smart-cut` 已替换为显式任务卡工作台
+- 任务列表已按 `company_id` 过滤
+- analyze-only finalize 已支持
 
-所以这个专项包不是“记录已完成重构”，而是：
+旧模型代码尚未完全清理（技术债务）：
 
-- 明确当前真实现状
-- 定义目标模型
-- 把差距拆成最小可执行任务
+- `draft/current*` 接口代码仍在（计划 L08/S801 清理）
+- `visible_in_task_center` 字段仍在（计划 L08/S802 清理）
+- `session_scope_id` 字段仍在（计划 L08/S802 清理）
+
+当前工作重心：
+
+- `L06` 迁移发布准备
+- `L07` E2E 全部正式化并记录证据
+- `L08` 旧代码清理与文档最终收口
 
 ## 阅读顺序
 
@@ -69,8 +75,9 @@
 6. `05_前端工作台与任务列表重构.md`
 7. `07_迁移、上线与E2E验收.md`
 8. `08_旧版本问题清单与退役边界.md`
-9. `task.json`
-10. `progress.md`
+9. `09_方案B完整收官计划.md`
+10. `task.json`
+11. `progress.md`
 
 ## 目录结构
 
@@ -82,6 +89,7 @@
 - `06_上线前备份与下线动作.md`
 - `07_迁移、上线与E2E验收.md`
 - `08_旧版本问题清单与退役边界.md`
+- `09_方案B完整收官计划.md`
 - `task.json`
 - `progress.md`
 - `progress.json`
@@ -94,6 +102,7 @@
 - `tasks/L05_frontend_workspace_and_task_cards/`
 - `tasks/L06_migration_and_release/`
 - `tasks/L07_e2e_and_evidence/`
+- `tasks/L08_legacy_cleanup/`
 
 ## 使用规则
 

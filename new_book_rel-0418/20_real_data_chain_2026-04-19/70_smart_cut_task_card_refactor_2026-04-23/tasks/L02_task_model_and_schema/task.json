@@ -1,15 +1,15 @@
 {
   "large_task_id": "L02",
   "title": "主任务模型与数据库设计",
-  "status": "pending",
+  "status": "completed",
   "dependencies": [
     "L01"
   ],
   "small_tasks": [
-    { "id": "S201", "title": "定义主任务表新语义与字段调整", "status": "pending" },
-    { "id": "S202", "title": "定义 smart_cut_task_runs 表结构", "status": "pending" },
-    { "id": "S203", "title": "定义 smart_cut_edits 与主任务/run 的关系", "status": "pending" },
-    { "id": "S204", "title": "定义 company_id 与任务可见性规则", "status": "pending" },
-    { "id": "S205", "title": "定义 abandoned 保留与清理规则", "status": "pending" }
+    { "id": "S201", "title": "定义主任务表新语义与字段调整", "status": "completed" },
+    { "id": "S202", "title": "定义 smart_cut_task_runs 表结构", "status": "completed" },
+    { "id": "S203", "title": "定义 smart_cut_edits 与主任务/run 的关系", "status": "completed" },
+    { "id": "S204", "title": "定义 company_id 与任务可见性规则", "status": "completed" },
+    { "id": "S205", "title": "定义 abandoned 保留与清理规则", "status": "completed" }
   ]
 }

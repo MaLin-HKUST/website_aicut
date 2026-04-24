@@ -1,0 +1,15 @@
+{
+  "large_task_id": "L08",
+  "title": "旧代码清理与文档全面收口",
+  "status": "pending",
+  "dependencies": [
+    "L06",
+    "L07"
+  ],
+  "small_tasks": [
+    { "id": "S801", "title": "退役 draft/current 系列接口", "status": "pending" },
+    { "id": "S802", "title": "退役 visible_in_task_center 和 session_scope_id 语义", "status": "pending" },
+    { "id": "S803", "title": "清理 quarantine 和废弃测试文件", "status": "pending" },
+    { "id": "S804", "title": "统一更新所有 task.json 和 progress", "status": "in_progress" }
+  ]
+}
