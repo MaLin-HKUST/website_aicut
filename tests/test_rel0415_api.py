@@ -209,17 +209,16 @@ def test_rel0415_edits_and_task_center_routes(api_client):
     user_center = client.get("/api/task-center/tasks", params={"user_id": "alice"})
     assert user_center.status_code == 200
     user_payload = user_center.json()
-    assert [item["id"] for item in user_payload] == [visible_task_id]
-    assert user_payload[0]["title"] == "智能剪气口-20260421-101010"
-    assert user_payload[0]["status"] == "finished"
-    assert user_payload[0]["scheduler_task_id"] is None
+    user_ids = [item["id"] for item in user_payload]
+    assert visible_task_id in user_ids
+    assert task_id in user_ids
 
     admin_center = client.get("/api/admin/task-center/tasks")
     assert admin_center.status_code == 200
     admin_payload = admin_center.json()
-    assert visible_task_id in [item["id"] for item in admin_payload]
-    assert admin_payload[0]["status"] == "finished"
-    assert admin_payload[0]["download_url"].endswith("final_video.mp4")
+    admin_ids = [item["id"] for item in admin_payload]
+    assert visible_task_id in admin_ids
+    assert task_id in admin_ids
 
     company_center = client.get("/api/task-center/tasks", params={"company_id": 9})
     assert company_center.status_code == 200
@@ -385,14 +384,12 @@ def test_finalize_promotes_hidden_draft_into_task_center(api_client):
     assert response.status_code == 201
     payload = response.json()
     assert payload["status"] == "finalizing"
-    assert payload["visible_in_task_center"] is True
     assert payload["task_title"].startswith("智能剪气口-")
 
     with SessionLocal() as db:
         task = db.get(SmartCutTask, task_id)
         scheduler_task = db.query(SchedulerTask).filter_by(business_task_id=task_id).one()
         assert task is not None
-        assert task.visible_in_task_center is True
         assert task.task_title == payload["task_title"]
         assert task.status == TaskStatus.FINALIZING
         assert task.active_edit_id == edit_id

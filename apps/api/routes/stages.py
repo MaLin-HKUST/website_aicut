@@ -447,7 +447,6 @@ async def start_finalize(
     
     # 推进任务状态
     task.task_title = task_title
-    task.visible_in_task_center = True
     task.status = TaskStatus.FINALIZING
     task.current_stage = CurrentStage.FINALIZE
     task.active_edit_id = edit.id
@@ -461,6 +460,5 @@ async def start_finalize(
     return FinalizeResponse(
         scheduler_task_id=scheduler_task.id,
         status=task.status.value,
-        visible_in_task_center=task.visible_in_task_center,
         task_title=task.task_title or task_title,
     )

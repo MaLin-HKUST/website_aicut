@@ -49,7 +49,6 @@ from apps.api.models.schemas import (
 )
 from apps.services.tos_service import TOSService
 from apps.services.cleanup_service import create_cleanup_service
-from apps.services.smart_cut_contract import resolve_session_scope_id
 
 
 router = APIRouter(
@@ -142,8 +141,6 @@ def _build_task_detail(
         status=task.status.value,
         current_stage=task.current_stage.value,
         task_title=task.task_title,
-        visible_in_task_center=task.visible_in_task_center,
-        session_scope_id=task.session_scope_id,
         current_run_id=task.current_run_id,
         latest_successful_run_id=task.latest_successful_run_id,
         failed_stage=task.failed_stage,
@@ -171,8 +168,6 @@ def _build_task_summary(task: SmartCutTask) -> SmartCutTaskSummaryRead:
         status=task.status.value,
         current_stage=task.current_stage.value if task.current_stage else None,
         active_edit_id=task.active_edit_id,
-        visible_in_task_center=task.visible_in_task_center,
-        session_scope_id=task.session_scope_id,
         created_at=task.created_at,
         updated_at=task.updated_at,
     )
@@ -339,7 +334,6 @@ async def start_task(
         status=TaskStatus.WAITING_UPLOAD,
         current_stage=CurrentStage.UPLOAD,
         task_title=title,
-        visible_in_task_center=True,
         revision_count=0,
     )
     db.add(task)
@@ -406,19 +400,11 @@ async def create_task(
         HTTPException: 当数据库操作失败时抛出 500 错误
     """
     try:
-        session_scope_id = resolve_session_scope_id(
-            request=http_request,
-            explicit_scope_id=request.session_scope_id,
-            required=False,
-        )
-
         # 创建新任务
         task = SmartCutTask(
             user_id=request.user_id,
             status=TaskStatus.WAITING_UPLOAD,
             current_stage=CurrentStage.UPLOAD,
-            visible_in_task_center=False,
-            session_scope_id=session_scope_id,
         )
         
         # 保存到数据库

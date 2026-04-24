@@ -238,8 +238,8 @@ class TaskDetailResponse(BaseModel):
     status: str = Field(..., description="任务状态")
     current_stage: str = Field(..., description="当前阶段")
     task_title: Optional[str] = Field(None, description="任务中心标题")
-    visible_in_task_center: bool = Field(False, description="是否在任务中心可见")
-    session_scope_id: Optional[str] = Field(None, description="当前登录会话作用域 ID")
+    visible_in_task_center: bool = Field(True, description="DEPRECATED: 是否在任务中心可见")
+    session_scope_id: Optional[str] = Field(None, description="DEPRECATED: 当前登录会话作用域 ID")
     current_run_id: Optional[str] = Field(None, description="当前活跃 run ID")
     latest_successful_run_id: Optional[str] = Field(None, description="最近成功 run ID")
     failed_stage: Optional[str] = Field(None, description="最近失败阶段")
@@ -294,7 +294,7 @@ class FinalizeResponse(BaseModel):
     """触发最终生成响应"""
     scheduler_task_id: str = Field(..., description="调度任务ID")
     status: str = Field(..., description="任务状态")
-    visible_in_task_center: bool = Field(..., description="任务是否已进入任务中心")
+    visible_in_task_center: bool = Field(True, description="DEPRECATED: 任务是否已进入任务中心")
     task_title: str = Field(..., description="最终写入的任务标题")
 
 
@@ -334,8 +334,8 @@ class SmartCutTaskSummaryRead(BaseModel):
     status: str = Field(..., description="任务状态")
     current_stage: Optional[str] = Field(None, description="当前阶段")
     active_edit_id: Optional[str] = Field(None, description="当前 edit ID")
-    visible_in_task_center: bool = Field(False, description="是否在任务中心可见")
-    session_scope_id: Optional[str] = Field(None, description="当前登录会话作用域 ID")
+    visible_in_task_center: bool = Field(True, description="DEPRECATED: 是否在任务中心可见")
+    session_scope_id: Optional[str] = Field(None, description="DEPRECATED: 当前登录会话作用域 ID")
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
 

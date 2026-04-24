@@ -58,7 +58,6 @@ async def list_user_task_center(
 ) -> list[TaskCenterTaskRead]:
     stmt = (
         select(SmartCutTask)
-        .where(SmartCutTask.visible_in_task_center.is_(True))
         .order_by(desc(SmartCutTask.updated_at))
         .limit(limit)
     )
@@ -92,7 +91,6 @@ async def list_admin_task_center(
     tasks = list(
         db.execute(
             select(SmartCutTask)
-            .where(SmartCutTask.visible_in_task_center.is_(True))
             .order_by(desc(SmartCutTask.updated_at))
             .limit(limit)
         ).scalars().all()

@@ -113,16 +113,16 @@ class SmartCutTask(Base):
         comment="任务中心展示标题"
     )
 
-    visible_in_task_center: Mapped[bool] = mapped_column(
-        default=False,
-        nullable=False,
-        comment="是否在任务中心可见"
+    visible_in_task_center: Mapped[Optional[bool]] = mapped_column(
+        default=True,
+        nullable=True,
+        comment="DEPRECATED: 新模型中主任务从创建开始就可见，不再用此字段控制"
     )
 
     session_scope_id: Mapped[Optional[str]] = mapped_column(
         String(128),
         nullable=True,
-        comment="当前登录会话的服务端作用域 ID"
+        comment="DEPRECATED: 草稿模型已退役，此字段不再用于会话作用域查找"
     )
     current_run_id: Mapped[Optional[str]] = mapped_column(
         String(36),
@@ -242,8 +242,6 @@ class SmartCutTask(Base):
             "status": self.status.value,
             "current_stage": self.current_stage.value,
             "task_title": self.task_title,
-            "visible_in_task_center": self.visible_in_task_center,
-            "session_scope_id": self.session_scope_id,
             "current_run_id": self.current_run_id,
             "latest_successful_run_id": self.latest_successful_run_id,
             "failed_stage": self.failed_stage,
