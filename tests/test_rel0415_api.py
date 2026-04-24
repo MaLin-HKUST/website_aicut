@@ -231,55 +231,26 @@ def test_rel0415_edits_and_task_center_routes(api_client):
 def test_current_draft_endpoints_are_scoped_to_login_session(api_client):
     client, SessionLocal = api_client
 
+    # draft/current 系列接口已退役，应返回 410
     ensure_response = client.post(
         "/api/smart-cut/tasks/draft/current/ensure",
         json={"user_id": "alice"},
         cookies={"session_token": "session-a"},
     )
-    assert ensure_response.status_code == 200
-    ensure_payload = ensure_response.json()
-    task_id = ensure_payload["task"]["id"]
-    assert ensure_payload["created"] is True
-    assert ensure_payload["task"]["visible_in_task_center"] is False
-    assert ensure_payload["task"]["session_scope_id"].startswith("scs_")
-
-    second_ensure = client.post(
-        "/api/smart-cut/tasks/draft/current/ensure",
-        json={"user_id": "alice"},
-        cookies={"session_token": "session-a"},
-    )
-    assert second_ensure.status_code == 200
-    second_payload = second_ensure.json()
-    assert second_payload["created"] is False
-    assert second_payload["task"]["id"] == task_id
+    assert ensure_response.status_code == 410
+    assert "retired" in ensure_response.json()["detail"].lower()
 
     current_response = client.get(
         "/api/smart-cut/tasks/draft/current",
         params={"user_id": "alice"},
         cookies={"session_token": "session-a"},
     )
-    assert current_response.status_code == 200
-    current_payload = current_response.json()
-    assert current_payload["task"]["id"] == task_id
-
-    missing_session = client.get(
-        "/api/smart-cut/tasks/draft/current",
-        params={"user_id": "alice"},
-    )
-    assert missing_session.status_code == 400
-
-    other_session = client.get(
-        "/api/smart-cut/tasks/draft/current",
-        params={"user_id": "alice"},
-        cookies={"session_token": "session-b"},
-    )
-    assert other_session.status_code == 200
-    assert other_session.json()["task"] is None
+    assert current_response.status_code == 410
+    assert "retired" in current_response.json()["detail"].lower()
 
     with SessionLocal() as db:
         rows = db.query(SmartCutTask).all()
-        assert len(rows) == 1
-        assert rows[0].id == task_id
+        assert len(rows) == 0
 
 
 def test_finalize_allows_analyze_only_without_pause_cuts(api_client):

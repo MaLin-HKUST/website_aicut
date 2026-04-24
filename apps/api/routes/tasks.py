@@ -303,25 +303,6 @@ def build_task_center_item(
     )
 
 
-def _find_current_hidden_draft(
-    db: Session,
-    *,
-    user_id: str,
-    session_scope_id: str,
-) -> SmartCutTask | None:
-    return db.execute(
-        select(SmartCutTask)
-        .where(
-            SmartCutTask.user_id == user_id,
-            SmartCutTask.session_scope_id == session_scope_id,
-            SmartCutTask.visible_in_task_center.is_(False),
-            SmartCutTask.status != TaskStatus.ABANDONED,
-        )
-        .order_by(desc(SmartCutTask.updated_at), desc(SmartCutTask.created_at))
-        .limit(1)
-    ).scalar_one_or_none()
-
-
 def _next_run_sequence(db: Session, task_id: str) -> int:
     latest = db.execute(
         select(SmartCutTaskRun)
@@ -467,65 +448,36 @@ async def create_task(
 @router.get(
     "/draft/current",
     response_model=DraftCurrentResponse,
-    summary="查询当前登录会话草稿",
-    description="返回当前用户在当前登录会话内的隐藏草稿；若不存在则返回空。",
+    summary="[已废弃] 查询当前登录会话草稿",
+    description="此接口已退役。请使用 POST /api/smart-cut/tasks/start 替代。",
+    deprecated=True,
 )
 async def get_current_draft(
     http_request: Request,
     db: Annotated[Session, Depends(get_db)],
     user_id: str = Query(..., description="用户 ID"),
 ) -> DraftCurrentResponse:
-    session_scope_id = resolve_session_scope_id(http_request, required=True)
-    task = _find_current_hidden_draft(
-        db,
-        user_id=user_id,
-        session_scope_id=session_scope_id,
-    )
-    return DraftCurrentResponse(
-        session_scope_id=session_scope_id,
-        task=_build_task_detail(db, task) if task else None,
+    raise HTTPException(
+        status_code=410,
+        detail="This endpoint is retired. Use POST /api/smart-cut/tasks/start instead.",
     )
 
 
 @router.post(
     "/draft/current/ensure",
     response_model=DraftEnsureResponse,
-    summary="确保当前登录会话草稿存在",
-    description="若当前用户当前登录会话已有隐藏草稿则复用，否则创建一条新的隐藏草稿。",
+    summary="[已废弃] 确保当前登录会话草稿存在",
+    description="此接口已退役。请使用 POST /api/smart-cut/tasks/start 替代。",
+    deprecated=True,
 )
 async def ensure_current_draft(
     payload: DraftEnsureRequest,
     http_request: Request,
     db: Annotated[Session, Depends(get_db)],
 ) -> DraftEnsureResponse:
-    session_scope_id = resolve_session_scope_id(
-        request=http_request,
-        explicit_scope_id=payload.session_scope_id,
-        required=True,
-    )
-    task = _find_current_hidden_draft(
-        db,
-        user_id=payload.user_id,
-        session_scope_id=session_scope_id,
-    )
-    created = False
-    if task is None:
-        task = SmartCutTask(
-            user_id=payload.user_id,
-            status=TaskStatus.WAITING_UPLOAD,
-            current_stage=CurrentStage.UPLOAD,
-            visible_in_task_center=False,
-            session_scope_id=session_scope_id,
-        )
-        db.add(task)
-        db.commit()
-        db.refresh(task)
-        created = True
-
-    return DraftEnsureResponse(
-        session_scope_id=session_scope_id,
-        created=created,
-        task=_build_task_detail(db, task),
+    raise HTTPException(
+        status_code=410,
+        detail="This endpoint is retired. Use POST /api/smart-cut/tasks/start instead.",
     )
 
 
