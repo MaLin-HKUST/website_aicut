@@ -11,11 +11,31 @@
       "status": "completed",
       "artifact_dir": "tasks/L00_backup_and_offline",
       "small_tasks": [
-        { "id": "S001", "title": "定位 A 机 live runtime 与 Smart Cut 前端实现", "status": "completed" },
-        { "id": "S002", "title": "备份 A 机 live web runtime 到 TOS", "status": "completed" },
-        { "id": "S003", "title": "备份 A 机 Smart Cut 前端源码快照到 TOS", "status": "completed" },
-        { "id": "S004", "title": "将旧 Smart Cut 前端移到 quarantine", "status": "completed" },
-        { "id": "S005", "title": "切换线上 3301 到 Smart Cut 维护页 runtime", "status": "completed" }
+        {
+          "id": "S001",
+          "title": "定位 A 机 live runtime 与 Smart Cut 前端实现",
+          "status": "completed"
+        },
+        {
+          "id": "S002",
+          "title": "备份 A 机 live web runtime 到 TOS",
+          "status": "completed"
+        },
+        {
+          "id": "S003",
+          "title": "备份 A 机 Smart Cut 前端源码快照到 TOS",
+          "status": "completed"
+        },
+        {
+          "id": "S004",
+          "title": "将旧 Smart Cut 前端移到 quarantine",
+          "status": "completed"
+        },
+        {
+          "id": "S005",
+          "title": "切换线上 3301 到 Smart Cut 维护页 runtime",
+          "status": "completed"
+        }
       ]
     },
     {
@@ -24,12 +44,36 @@
       "status": "completed",
       "artifact_dir": "tasks/L01_current_state_audit",
       "small_tasks": [
-        { "id": "S101", "title": "审计当前 SmartCutTask 字段与状态机", "status": "completed" },
-        { "id": "S102", "title": "审计 draft/current 系列接口与草稿恢复逻辑", "status": "completed" },
-        { "id": "S103", "title": "审计 task center 当前过滤条件与可见性", "status": "completed" },
-        { "id": "S104", "title": "补录仍然活跃的前端影响面文件", "status": "completed" },
-        { "id": "S105", "title": "明确 50_* 与 70_* 的主次关系", "status": "completed" },
-        { "id": "S106", "title": "把审计结果写成可执行设计前提", "status": "completed" }
+        {
+          "id": "S101",
+          "title": "审计当前 SmartCutTask 字段与状态机",
+          "status": "completed"
+        },
+        {
+          "id": "S102",
+          "title": "审计 draft/current 系列接口与草稿恢复逻辑",
+          "status": "completed"
+        },
+        {
+          "id": "S103",
+          "title": "审计 task center 当前过滤条件与可见性",
+          "status": "completed"
+        },
+        {
+          "id": "S104",
+          "title": "补录仍然活跃的前端影响面文件",
+          "status": "completed"
+        },
+        {
+          "id": "S105",
+          "title": "明确 50_* 与 70_* 的主次关系",
+          "status": "completed"
+        },
+        {
+          "id": "S106",
+          "title": "把审计结果写成可执行设计前提",
+          "status": "completed"
+        }
       ]
     },
     {
@@ -38,11 +82,31 @@
       "status": "completed",
       "artifact_dir": "tasks/L02_task_model_and_schema",
       "small_tasks": [
-        { "id": "S201", "title": "定义主任务表新语义与字段调整", "status": "completed" },
-        { "id": "S202", "title": "定义 smart_cut_task_runs 表结构", "status": "completed" },
-        { "id": "S203", "title": "定义 smart_cut_edits 与主任务/run 的关系", "status": "completed" },
-        { "id": "S204", "title": "定义 company_id 与任务可见性规则", "status": "completed" },
-        { "id": "S205", "title": "定义 abandoned 保留与清理规则", "status": "completed" }
+        {
+          "id": "S201",
+          "title": "定义主任务表新语义与字段调整",
+          "status": "completed"
+        },
+        {
+          "id": "S202",
+          "title": "定义 smart_cut_task_runs 表结构",
+          "status": "completed"
+        },
+        {
+          "id": "S203",
+          "title": "定义 smart_cut_edits 与主任务/run 的关系",
+          "status": "completed"
+        },
+        {
+          "id": "S204",
+          "title": "定义 company_id 与任务可见性规则",
+          "status": "completed"
+        },
+        {
+          "id": "S205",
+          "title": "定义 abandoned 保留与清理规则",
+          "status": "completed"
+        }
       ]
     },
     {
@@ -51,13 +115,41 @@
       "status": "completed",
       "artifact_dir": "tasks/L03_backend_contracts",
       "small_tasks": [
-        { "id": "S301", "title": "定义 start task API", "status": "completed" },
-        { "id": "S302", "title": "定义 upload-complete 自动 analyze", "status": "completed" },
-        { "id": "S303", "title": "定义 preview retry 与 run 级失败语义", "status": "completed" },
-        { "id": "S304", "title": "定义 analyze-only finalize", "status": "completed" },
-        { "id": "S305", "title": "定义 abandon task API", "status": "completed" },
-        { "id": "S306", "title": "定义 runs timeline API", "status": "completed" },
-        { "id": "S307", "title": "定义 draft/current 退役路径", "status": "completed" }
+        {
+          "id": "S301",
+          "title": "定义 start task API",
+          "status": "completed"
+        },
+        {
+          "id": "S302",
+          "title": "定义 upload-complete 自动 analyze",
+          "status": "completed"
+        },
+        {
+          "id": "S303",
+          "title": "定义 preview retry 与 run 级失败语义",
+          "status": "completed"
+        },
+        {
+          "id": "S304",
+          "title": "定义 analyze-only finalize",
+          "status": "completed"
+        },
+        {
+          "id": "S305",
+          "title": "定义 abandon task API",
+          "status": "completed"
+        },
+        {
+          "id": "S306",
+          "title": "定义 runs timeline API",
+          "status": "completed"
+        },
+        {
+          "id": "S307",
+          "title": "定义 draft/current 退役路径",
+          "status": "completed"
+        }
       ]
     },
     {
@@ -66,10 +158,26 @@
       "status": "completed",
       "artifact_dir": "tasks/L04_scheduler_and_truth_unification",
       "small_tasks": [
-        { "id": "S401", "title": "定义主任务与 scheduler_task 的映射关系", "status": "completed" },
-        { "id": "S402", "title": "定义 run 与 scheduler_task 的关联契约", "status": "completed" },
-        { "id": "S403", "title": "定义 ghost task 检测与一致性修复策略", "status": "completed" },
-        { "id": "S404", "title": "定义 task center 仅消费主任务卡", "status": "completed" }
+        {
+          "id": "S401",
+          "title": "定义主任务与 scheduler_task 的映射关系",
+          "status": "completed"
+        },
+        {
+          "id": "S402",
+          "title": "定义 run 与 scheduler_task 的关联契约",
+          "status": "completed"
+        },
+        {
+          "id": "S403",
+          "title": "定义 ghost task 检测与一致性修复策略",
+          "status": "completed"
+        },
+        {
+          "id": "S404",
+          "title": "定义 task center 仅消费主任务卡",
+          "status": "completed"
+        }
       ]
     },
     {
@@ -78,12 +186,36 @@
       "status": "completed",
       "artifact_dir": "tasks/L05_frontend_workspace_and_task_cards",
       "small_tasks": [
-        { "id": "S501", "title": "定义 /smart-cut 空态与开启任务交互", "status": "completed" },
-        { "id": "S502", "title": "定义 upload 后自动 analyze 的前端行为", "status": "completed" },
-        { "id": "S503", "title": "定义 preview 循环与 analyze-only finalize 交互", "status": "completed" },
-        { "id": "S504", "title": "定义任务列表主卡和 timeline 详情", "status": "completed" },
-        { "id": "S505", "title": "定义 编辑任务/继续处理/放弃任务 入口", "status": "completed" },
-        { "id": "S506", "title": "退役本地草稿缓存和 session 恢复逻辑", "status": "completed" }
+        {
+          "id": "S501",
+          "title": "定义 /smart-cut 空态与开启任务交互",
+          "status": "completed"
+        },
+        {
+          "id": "S502",
+          "title": "定义 upload 后自动 analyze 的前端行为",
+          "status": "completed"
+        },
+        {
+          "id": "S503",
+          "title": "定义 preview 循环与 analyze-only finalize 交互",
+          "status": "completed"
+        },
+        {
+          "id": "S504",
+          "title": "定义任务列表主卡和 timeline 详情",
+          "status": "completed"
+        },
+        {
+          "id": "S505",
+          "title": "定义 编辑任务/继续处理/放弃任务 入口",
+          "status": "completed"
+        },
+        {
+          "id": "S506",
+          "title": "退役本地草稿缓存和 session 恢复逻辑",
+          "status": "completed"
+        }
       ]
     },
     {
@@ -92,10 +224,26 @@
       "status": "pending",
       "artifact_dir": "tasks/L06_migration_and_release",
       "small_tasks": [
-        { "id": "S601", "title": "定义旧 Smart Cut PG 数据清理策略", "status": "pending" },
-        { "id": "S602", "title": "定义后端 API/worker/scheduler 发布顺序", "status": "pending" },
-        { "id": "S603", "title": "定义前端重新开放入口条件", "status": "pending" },
-        { "id": "S604", "title": "定义失败回滚与恢复流程", "status": "pending" }
+        {
+          "id": "S601",
+          "title": "定义旧 Smart Cut PG 数据清理策略",
+          "status": "pending"
+        },
+        {
+          "id": "S602",
+          "title": "定义后端 API/worker/scheduler 发布顺序",
+          "status": "pending"
+        },
+        {
+          "id": "S603",
+          "title": "定义前端重新开放入口条件",
+          "status": "pending"
+        },
+        {
+          "id": "S604",
+          "title": "定义失败回滚与恢复流程",
+          "status": "pending"
+        }
       ]
     },
     {
@@ -104,12 +252,36 @@
       "status": "in_progress",
       "artifact_dir": "tasks/L07_e2e_and_evidence",
       "small_tasks": [
-        { "id": "S701", "title": "E2E: start -> upload -> auto-analyze", "status": "in_progress" },
-        { "id": "S702", "title": "E2E: analyze-only finalize", "status": "in_progress" },
-        { "id": "S703", "title": "E2E: preview loop -> finalize", "status": "in_progress" },
-        { "id": "S704", "title": "E2E: 编辑已完成任务形成新版本", "status": "in_progress" },
-        { "id": "S705", "title": "E2E: 放弃任务", "status": "in_progress" },
-        { "id": "S706", "title": "E2E: 同公司共享、跨公司隔离", "status": "in_progress" }
+        {
+          "id": "S701",
+          "title": "E2E: start -> upload -> auto-analyze",
+          "status": "in_progress"
+        },
+        {
+          "id": "S702",
+          "title": "E2E: analyze-only finalize",
+          "status": "in_progress"
+        },
+        {
+          "id": "S703",
+          "title": "E2E: preview loop -> finalize",
+          "status": "in_progress"
+        },
+        {
+          "id": "S704",
+          "title": "E2E: 编辑已完成任务形成新版本",
+          "status": "in_progress"
+        },
+        {
+          "id": "S705",
+          "title": "E2E: 放弃任务",
+          "status": "in_progress"
+        },
+        {
+          "id": "S706",
+          "title": "E2E: 同公司共享、跨公司隔离",
+          "status": "in_progress"
+        }
       ]
     },
     {
@@ -118,10 +290,26 @@
       "status": "pending",
       "artifact_dir": "tasks/L08_legacy_cleanup",
       "small_tasks": [
-        { "id": "S801", "title": "退役 draft/current 系列接口", "status": "pending" },
-        { "id": "S802", "title": "退役 visible_in_task_center 和 session_scope_id 语义", "status": "pending" },
-        { "id": "S803", "title": "清理 quarantine 和废弃测试文件", "status": "pending" },
-        { "id": "S804", "title": "统一更新所有 task.json 和 progress", "status": "in_progress" }
+        {
+          "id": "S801",
+          "title": "退役 draft/current 系列接口",
+          "status": "completed"
+        },
+        {
+          "id": "S802",
+          "title": "退役 visible_in_task_center 和 session_scope_id 语义",
+          "status": "pending"
+        },
+        {
+          "id": "S803",
+          "title": "清理 quarantine 和废弃测试文件",
+          "status": "pending"
+        },
+        {
+          "id": "S804",
+          "title": "统一更新所有 task.json 和 progress",
+          "status": "in_progress"
+        }
       ]
     }
   ]
