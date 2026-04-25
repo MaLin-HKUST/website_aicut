@@ -49,9 +49,10 @@ class FinalizeProcessor(BaseProcessor):
     # TOS bucket 名称
     BUCKET = "smart-cut"
     
-    # 算法模块路径
-    ONLINE_VERSION_PATH = "/app/aicut2602/online_version"
-    RAW_CUT_PATH = "/app/aicut2602/libs/cut_breakpoints/src"
+    AICUT_ROOT = os.environ.get("AICUT_ROOT", "/app/aicut2602")
+    AICUT_PYTHON = os.environ.get("AICUT_PYTHON", sys.executable)
+    ONLINE_VERSION_PATH = f"{AICUT_ROOT}/libs/cut_breakpoints/online_version"
+    RAW_CUT_PATH = f"{AICUT_ROOT}/libs/cut_breakpoints/src"
     
     # 最大输出码率 (12Mbps)
     MAX_BITRATE = 12_000_000
@@ -321,8 +322,9 @@ class FinalizeProcessor(BaseProcessor):
         
         # 尝试使用 run_raw_cut.py --normalize-input-video
         cmd = [
-            "python",
-            f"{self.RAW_CUT_PATH}/run_raw_cut.py",
+            self.AICUT_PYTHON,
+            "-m",
+            "libs.cut_breakpoints.src.run_raw_cut",
             "--normalize-input-video",
             "-i", str(original_video),
             "-o", str(output_dir),

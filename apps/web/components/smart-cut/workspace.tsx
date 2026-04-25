@@ -11,9 +11,15 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   abandonTask,
+  canAccessSmartCutTask,
   getSmartCutEdits,
   getSmartCutRuns,
   getSmartCutTask,
+  isSmartCutAutoResumeStatus,
+  isSmartCutDeletable,
+  isSmartCutFinalizeAvailable,
+  isSmartCutPreviewAvailable,
+  listSmartCutTasks,
   SmartCutEdit,
   SmartCutTask,
   SmartCutTaskRun,
@@ -28,10 +34,13 @@ function labelStatus(status?: string | null) {
   if (!status) return "待同步";
   const mapping: Record<string, string> = {
     waiting_upload: "待上传素材",
+    ready_analyze: "待启动分析",
     analyzing: "分析中",
     waiting_user: "待人工确认",
     previewing: "试听生成中",
+    preview_failed: "试听失败",
     finalizing: "生成视频中",
+    finalize_failed: "生成失败",
     success: "已完成",
     abandoned: "已放弃",
     analyze_failed: "分析失败",
@@ -75,6 +84,41 @@ function latestSuccessfulEdit(edits: SmartCutEdit[]) {
   return edits.find((edit) => edit.status === "success") ?? null;
 }
 
+function buildWorkspaceHint(task: SmartCutTask | null, user: AuthResponse["user"] | null) {
+  if (!task) return null;
+
+  const sharedPrefix =
+    user && task.user_id !== user.username && task.company_id !== null && task.company_id === user.company_id
+      ? `当前打开的是 ${task.user_id} 的同公司共享任务。`
+      : "";
+
+  const tone =
+    task.status === "analyze_failed" || task.status === "preview_failed" || task.status === "finalize_failed"
+      ? "bg-amber-50 text-amber-800"
+      : "bg-sky-50 text-sky-800";
+
+  const messages: Record<string, string> = {
+    waiting_upload: "这是待上传任务，上传素材后系统会自动开始分析。",
+    ready_analyze: "素材已就绪，系统下一步会进入分析。",
+    analyzing: "系统正在分析素材，页面会自动刷新最新状态。",
+    waiting_user: "分析已完成，可以调整删除线、生成试听，或者直接生成视频。",
+    previewing: "系统正在生成试听，页面会自动刷新最新音频。",
+    preview_failed: "上一次试听失败。你可以继续调整删除线后重新生成。",
+    finalizing: "系统正在生成视频，完成后任务会回到任务列表。",
+    finalize_failed: "上一次生成视频失败。你可以继续调整删除线，再次生成视频。",
+    success: "这是已完成任务，你可以继续编辑删除线、重新试听，或再次生成新版本视频。",
+    analyze_failed: "分析阶段失败。你可以删除任务，或在恢复 analyze retry 后重新处理这条素材。",
+  };
+
+  const message = messages[task.status];
+  if (!message && !sharedPrefix) return null;
+
+  return {
+    className: tone,
+    text: `${sharedPrefix}${message ?? ""}`.trim(),
+  };
+}
+
 export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
   const router = useRouter();
   const [user, setUser] = useState<AuthResponse["user"] | null>(null);
@@ -101,23 +145,55 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
   });
 
   const currentEdit = useMemo(() => latestSuccessfulEdit(edits), [edits]);
+  const workspaceHint = useMemo(() => buildWorkspaceHint(task, user), [task, user]);
   const canUpload = Boolean(task && task.status === "waiting_upload" && videoFile && referenceFile && busy === null);
-  const canPreview = Boolean(task && ["waiting_user", "success"].includes(task.status) && scriptDraft.trim().length > 0 && busy === null);
-  const canFinalize = Boolean(task && ["waiting_user", "success"].includes(task.status) && currentEdit?.edited_delay_cuts_tos_key && busy === null);
+  const canPreview = Boolean(task && isSmartCutPreviewAvailable(task.status) && scriptDraft.trim().length > 0 && busy === null);
+  const canFinalize = Boolean(task && isSmartCutFinalizeAvailable(task.status) && currentEdit?.edited_delay_cuts_tos_key && busy === null);
+  const canDeleteTask = Boolean(task && user && task.user_id === user.username && isSmartCutDeletable(task.status) && busy === null);
+  const canAbandon = Boolean(
+    task &&
+      user &&
+      task.user_id === user.username &&
+      !["success", "abandoned", "analyze_failed", "preview_failed", "finalize_failed"].includes(task.status) &&
+      busy === null,
+  );
   const audioUrl = currentEdit?.audio_b_url ?? currentEdit?.audio_a_url ?? null;
   const audioLabel = currentEdit?.audio_b_url ? "试听音频 audio_b" : currentEdit?.audio_a_url ? "分析音频 audio_a" : null;
+  const previewButtonLabel =
+    task?.status === "success"
+      ? "重新生成试听"
+      : task?.status === "preview_failed"
+        ? "重试生成试听"
+        : "开始生成试听";
+  const finalizeButtonLabel = task?.status === "success" ? "再次生成视频" : "开始生成视频";
 
-  async function loadTask(nextTaskId: string) {
+  async function fetchTaskBundle(nextTaskId: string) {
     const [taskPayload, editsPayload, runsPayload] = await Promise.all([
       getSmartCutTask(nextTaskId),
       getSmartCutEdits(nextTaskId).catch(() => []),
       getSmartCutRuns(nextTaskId).catch(() => []),
     ]);
+    return { taskPayload, editsPayload, runsPayload };
+  }
+
+  function applyTaskBundle(bundle: {
+    taskPayload: SmartCutTask;
+    editsPayload: SmartCutEdit[];
+    runsPayload: SmartCutTaskRun[];
+  }) {
+    const { taskPayload, editsPayload, runsPayload } = bundle;
     setTask(taskPayload);
     setEdits(editsPayload);
     setRuns(runsPayload);
-    setScriptDraft(latestSuccessfulEdit(editsPayload)?.edited_script ?? editsPayload[0]?.edited_script ?? taskPayload.analyze_script ?? "");
-    return taskPayload;
+    setScriptDraft(
+      latestSuccessfulEdit(editsPayload)?.edited_script ?? editsPayload[0]?.edited_script ?? taskPayload.analyze_script ?? "",
+    );
+  }
+
+  async function loadTask(nextTaskId: string) {
+    const bundle = await fetchTaskBundle(nextTaskId);
+    applyTaskBundle(bundle);
+    return bundle.taskPayload;
   }
 
   async function bootstrap() {
@@ -127,20 +203,35 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
       router.replace("/login");
       return;
     }
+
     const payload = (await response.json()) as AuthResponse;
     if (payload.user.role === "admin") {
       router.replace("/admin");
       return;
     }
+
     setUser(payload.user);
+
     if (taskId) {
-      await loadTask(taskId);
+      const bundle = await fetchTaskBundle(taskId);
+      if (!canAccessSmartCutTask(bundle.taskPayload, payload.user)) {
+        router.replace("/tasks");
+        return;
+      }
+      applyTaskBundle(bundle);
     } else {
+      const tasks = await listSmartCutTasks({ userId: payload.user.username, limit: 50 });
+      const latestOpenTask = tasks.find((item) => isSmartCutAutoResumeStatus(item.status));
+      if (latestOpenTask) {
+        router.replace(`/smart-cut/${latestOpenTask.id}`);
+        return;
+      }
       setTask(null);
       setEdits([]);
       setRuns([]);
       setScriptDraft("");
     }
+
     setLoading(false);
   }
 
@@ -236,12 +327,29 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
     if (!task) return;
     setBusy("abandon");
     setError(null);
+    setNotice(null);
     try {
       await abandonTask(task.id);
       setNotice("当前任务已放弃。");
       router.push("/smart-cut");
     } catch (err) {
       setError(err instanceof Error ? err.message : "放弃任务失败");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleDeleteTask() {
+    if (!task) return;
+    setBusy("abandon");
+    setError(null);
+    setNotice(null);
+    try {
+      await abandonTask(task.id);
+      setNotice("当前失败任务已删除。");
+      router.push("/smart-cut");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "删除任务失败");
     } finally {
       setBusy(null);
     }
@@ -267,7 +375,7 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
               <p className="mt-2 max-w-3xl text-sm leading-7 text-[#5f6f84]">
                 {task
                   ? "当前页只围绕一个显式主任务工作。上传完成后系统会自动分析；试听是可选循环，生成视频可以直接基于 analyze 结果。"
-                  : "进入页面不会自动建隐藏草稿。点击“开启任务”后，所有上传、分析、试听和生成视频都会绑定到同一张主任务卡。"}
+                  : "如果你自己有未完成任务，进入页面会自动恢复最近的一条；只有没有可恢复任务时，才会显示空工作台。"}
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -285,6 +393,7 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
 
         {notice ? <p className="mb-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{notice}</p> : null}
         {error ? <p className="mb-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
+        {workspaceHint ? <p className={`mb-4 rounded-2xl px-4 py-3 text-sm ${workspaceHint.className}`}>{workspaceHint.text}</p> : null}
 
         {!task ? (
           <Card className="rounded-[30px] border-[#dbe4f4] bg-white p-8 shadow-sm">
@@ -304,11 +413,21 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
               <Card className="rounded-[30px] border-[#dbe4f4] bg-white p-5 shadow-sm">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-semibold text-[#243444]">请上传你要处理的视频和标准文案</p>
-                  <div className="flex gap-2">
+                  {canDeleteTask ? (
+                    <Button
+                      className="text-red-600 ring-red-200 hover:bg-red-50"
+                      disabled={busy !== null}
+                      onClick={handleDeleteTask}
+                      type="button"
+                      variant="secondary"
+                    >
+                      删除任务
+                    </Button>
+                  ) : canAbandon ? (
                     <Button disabled={busy !== null} onClick={handleAbandon} type="button" variant="secondary">
                       放弃任务
                     </Button>
-                  </div>
+                  ) : null}
                 </div>
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
                   <label className="flex min-h-[84px] cursor-pointer items-center justify-center rounded-full border border-[#ddcfbe] bg-[#fffdf8] px-4 py-3 text-center text-[17px] font-semibold text-[#302520]">
@@ -352,10 +471,10 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
                     清空删除标记
                   </Button>
                   <Button disabled={!canPreview} onClick={handlePreview} type="button">
-                    {busy === "preview" ? "生成试听中..." : "开始生成试听"}
+                    {busy === "preview" ? "生成试听中..." : previewButtonLabel}
                   </Button>
                   <Button disabled={!canFinalize} onClick={handleFinalize} type="button">
-                    {busy === "finalize" ? "开始生成视频..." : "开始生成视频"}
+                    {busy === "finalize" ? "开始生成视频..." : finalizeButtonLabel}
                   </Button>
                 </div>
 

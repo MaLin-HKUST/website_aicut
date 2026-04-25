@@ -13,6 +13,7 @@ import json
 import logging
 import os
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -38,8 +39,9 @@ class AnalyzeProcessor(BaseStageProcessor):
     - {prefix}_audio_a.mp3 -> audio_a
     """
     
-    # 算法脚本路径
-    ALGORITHM_SCRIPT = "/app/aicut2602/libs/cut_breakpoints/src/run_raw_cut.py"
+    AICUT_ROOT = os.environ.get("AICUT_ROOT", "/app/aicut2602")
+    AICUT_PYTHON = os.environ.get("AICUT_PYTHON", sys.executable)
+    ALGORITHM_MODULE = "libs.cut_breakpoints.src.run_raw_cut"
     
     def __init__(self, tos_service: Any, workspace: str):
         """初始化 AnalyzeProcessor
@@ -171,8 +173,9 @@ class AnalyzeProcessor(BaseStageProcessor):
         
         # 构建命令
         cmd = [
-            "python",
-            self.ALGORITHM_SCRIPT,
+            self.AICUT_PYTHON,
+            "-m",
+            self.ALGORITHM_MODULE,
             "-i", str(self._input_paths["video"]),
             "-r", str(self._input_paths["text"]),
             "-o", str(self._output_dir),
@@ -190,7 +193,7 @@ class AnalyzeProcessor(BaseStageProcessor):
                 text=True,
                 check=True,
                 timeout=3600,  # 1小时超时
-                cwd="/app/aicut2602"
+                cwd=self.AICUT_ROOT,
             )
             logger.info(f"Algorithm stdout: {result.stdout}")
         except subprocess.CalledProcessError as e:

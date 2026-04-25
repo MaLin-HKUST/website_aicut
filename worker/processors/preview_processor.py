@@ -39,8 +39,8 @@ class PreviewProcessor(BaseProcessor):
     # TOS bucket 名称
     BUCKET = "smart-cut"
     
-    # 算法模块路径
-    ONLINE_VERSION_PATH = "/app/aicut2602/online_version"
+    AICUT_ROOT = os.environ.get("AICUT_ROOT", "/app/aicut2602")
+    ONLINE_VERSION_PATH = f"{AICUT_ROOT}/libs/cut_breakpoints/online_version"
     
     def __init__(self, tos_service: Any, workspace: str):
         """初始化处理器

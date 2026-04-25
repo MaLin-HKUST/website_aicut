@@ -56,6 +56,45 @@ export type SmartCutTaskRun = {
   updated_at: string;
 };
 
+export type SmartCutTaskSummary = {
+  id: string;
+  company_id: number | null;
+  status: string;
+  current_stage: string | null;
+  active_edit_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export const SMART_CUT_AUTO_RESUME_STATUSES = new Set([
+  "waiting_upload",
+  "ready_analyze",
+  "analyzing",
+  "waiting_user",
+  "previewing",
+  "finalizing",
+  "analyze_failed",
+  "preview_failed",
+  "finalize_failed",
+]);
+
+const SMART_CUT_PREVIEW_AVAILABLE_STATUSES = new Set([
+  "waiting_user",
+  "preview_failed",
+  "success",
+]);
+
+const SMART_CUT_FINALIZE_AVAILABLE_STATUSES = new Set([
+  "waiting_user",
+  "success",
+]);
+
+const SMART_CUT_DELETABLE_STATUSES = new Set([
+  "analyze_failed",
+  "preview_failed",
+  "finalize_failed",
+]);
+
 export type DeleteRange = { start: number; end: number };
 
 const DEFAULT_TOS_PUBLIC_BASE_URL = "https://autocut-malin.tos-cn-shanghai.volces.com";
@@ -244,6 +283,58 @@ function normalizeRun(payload: any): SmartCutTaskRun {
     completed_at: payload.completed_at ?? null,
     updated_at: payload.updated_at,
   };
+}
+
+function normalizeTaskSummary(payload: any): SmartCutTaskSummary {
+  return {
+    id: payload.id,
+    company_id: payload.company_id ?? null,
+    status: payload.status,
+    current_stage: payload.current_stage ?? null,
+    active_edit_id: payload.active_edit_id ?? null,
+    created_at: payload.created_at,
+    updated_at: payload.updated_at,
+  };
+}
+
+export function isSmartCutAutoResumeStatus(status?: string | null): boolean {
+  return Boolean(status && SMART_CUT_AUTO_RESUME_STATUSES.has(status));
+}
+
+export function isSmartCutPreviewAvailable(status?: string | null): boolean {
+  return Boolean(status && SMART_CUT_PREVIEW_AVAILABLE_STATUSES.has(status));
+}
+
+export function isSmartCutFinalizeAvailable(status?: string | null): boolean {
+  return Boolean(status && SMART_CUT_FINALIZE_AVAILABLE_STATUSES.has(status));
+}
+
+export function isSmartCutDeletable(status?: string | null): boolean {
+  return Boolean(status && SMART_CUT_DELETABLE_STATUSES.has(status));
+}
+
+export function getSmartCutContinueLabel(status?: string | null): "继续处理" | "继续编辑" | null {
+  if (!status || status === "abandoned") return null;
+  if (status === "success") return "继续编辑";
+  return "继续处理";
+}
+
+export function canAccessSmartCutTask(
+  task: Pick<SmartCutTask, "user_id" | "company_id">,
+  user: { username: string; company_id: number | null },
+): boolean {
+  if (task.user_id === user.username) return true;
+  if (task.company_id === null || user.company_id === null) return false;
+  return task.company_id === user.company_id;
+}
+
+export async function listSmartCutTasks(opts: { userId?: string; limit?: number } = {}): Promise<SmartCutTaskSummary[]> {
+  const params = new URLSearchParams();
+  if (opts.userId) params.set("user_id", opts.userId);
+  if (opts.limit) params.set("limit", String(opts.limit));
+  const query = params.size > 0 ? `?${params.toString()}` : "";
+  const payload = await fetchJson<any[]>(`/api/proxy/api/smart-cut/tasks${query}`);
+  return payload.map(normalizeTaskSummary);
 }
 
 export async function getSmartCutTask(taskId: string): Promise<SmartCutTask> {

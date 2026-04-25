@@ -1,12 +1,22 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { UserWorkspaceShell } from "@/components/navigation/user-workspace-shell";
 import { useUserWorkspaceData } from "@/components/navigation/use-user-workspace-data";
 import { AuthResponse } from "@/lib/auth";
+import {
+  abandonTask,
+  getSmartCutContinueLabel,
+  getSmartCutTask,
+  isSmartCutDeletable,
+  listSmartCutTasks,
+  SmartCutTask,
+  SmartCutTaskSummary,
+} from "@/lib/smart-cut";
 import { listTaskCenterItems, TaskCenterItem } from "@/lib/task-center";
 
 const FILTERS = [
@@ -18,8 +28,25 @@ const FILTERS = [
 ] as const;
 
 type FilterKey = (typeof FILTERS)[number]["key"];
+type QueueStatus = TaskCenterItem["status"];
 
-function statusLabel(status: TaskCenterItem["status"]) {
+type UserTaskListItem = {
+  id: string;
+  title: string;
+  taskType: "smart_cut";
+  status: QueueStatus;
+  rawStatus: string | null;
+  progress: number;
+  currentStage: string;
+  updatedAt: string;
+  createdAt: string;
+  downloadUrl?: string | null;
+  errorMessage?: string | null;
+  inputSummary: string[];
+  outputSummary?: string[];
+};
+
+function statusLabel(status: QueueStatus) {
   if (status === "queued") return "排队中";
   if (status === "running") return "执行中";
   if (status === "waiting") return "等待中";
@@ -27,11 +54,29 @@ function statusLabel(status: TaskCenterItem["status"]) {
   return "失败";
 }
 
-function statusTone(status: TaskCenterItem["status"]) {
+function statusTone(status: QueueStatus) {
   if (status === "finished") return "bg-emerald-100 text-emerald-700";
   if (status === "queued") return "bg-blue-100 text-blue-700";
   if (status === "failed") return "bg-rose-100 text-rose-700";
   return "bg-amber-100 text-amber-700";
+}
+
+function smartCutStatusLabel(status?: string | null) {
+  const mapping: Record<string, string> = {
+    waiting_upload: "待上传素材",
+    ready_analyze: "待启动分析",
+    analyzing: "分析中",
+    analyze_failed: "分析失败",
+    waiting_user: "待人工确认",
+    previewing: "试听生成中",
+    preview_failed: "试听失败",
+    finalizing: "生成视频中",
+    finalize_failed: "生成失败",
+    success: "已完成",
+    abandoned: "已放弃",
+  };
+  if (!status) return "待同步";
+  return mapping[status] ?? status;
 }
 
 function formatTime(value: string) {
@@ -47,38 +92,161 @@ function formatTime(value: string) {
   }
 }
 
+function summarizeName(value: string | null | undefined) {
+  if (!value) return null;
+  return value.split("?")[0]?.split("/").filter(Boolean).pop() ?? value;
+}
+
+function formatSmartCutStage(value: string | null | undefined) {
+  const mapping: Record<string, string> = {
+    upload: "上传",
+    analyze: "分析",
+    user_select: "人工确认 / 试听",
+    preview: "试听",
+    finalize: "视频生成",
+    complete: "完成",
+  };
+  if (!value) return "等待推进";
+  return mapping[value] ?? smartCutStatusLabel(value);
+}
+
+function rawStatusToQueueStatus(status: string): QueueStatus {
+  if (status === "success") return "finished";
+  if (["analyze_failed", "preview_failed", "finalize_failed", "abandoned"].includes(status)) return "failed";
+  if (["waiting_upload", "ready_analyze"].includes(status)) return "queued";
+  if (status === "waiting_user") return "waiting";
+  return "running";
+}
+
+function rawStatusToProgress(status: string) {
+  const mapping: Record<string, number> = {
+    waiting_upload: 5,
+    ready_analyze: 15,
+    analyzing: 35,
+    analyze_failed: 35,
+    waiting_user: 65,
+    previewing: 75,
+    preview_failed: 75,
+    finalizing: 90,
+    finalize_failed: 90,
+    success: 100,
+    abandoned: 0,
+  };
+  return mapping[status] ?? 0;
+}
+
+function buildSharedQueueItem(item: TaskCenterItem): UserTaskListItem {
+  return {
+    id: item.id,
+    title: item.title,
+    taskType: "smart_cut",
+    status: item.status,
+    rawStatus: null,
+    progress: item.progress,
+    currentStage: item.currentStage,
+    updatedAt: item.updatedAt,
+    createdAt: item.createdAt,
+    downloadUrl: item.downloadUrl ?? null,
+    errorMessage: item.errorMessage ?? null,
+    inputSummary: item.inputSummary,
+    outputSummary: item.outputSummary,
+  };
+}
+
+function buildSelfQueueItem(summary: SmartCutTaskSummary, existing?: UserTaskListItem): UserTaskListItem {
+  return {
+    id: summary.id,
+    title: existing?.title ?? `智能剪气口-${summary.id.slice(0, 8)}`,
+    taskType: "smart_cut",
+    status: rawStatusToQueueStatus(summary.status),
+    rawStatus: summary.status,
+    progress: rawStatusToProgress(summary.status),
+    currentStage: formatSmartCutStage(summary.current_stage ?? summary.status),
+    updatedAt: summary.updated_at,
+    createdAt: summary.created_at,
+    downloadUrl: existing?.downloadUrl ?? null,
+    errorMessage: existing?.errorMessage ?? null,
+    inputSummary: existing?.inputSummary ?? [],
+    outputSummary: existing?.outputSummary ?? [],
+  };
+}
+
+function buildDetailInputSummary(task: SmartCutTask, fallback: string[]) {
+  const entries = [summarizeName(task.original_video_url), summarizeName(task.reference_text_url)].filter(Boolean) as string[];
+  return entries.length > 0 ? entries : fallback;
+}
+
+function buildDetailOutputSummary(task: SmartCutTask, fallback: string[]) {
+  const entries = [
+    summarizeName(task.asr_result_tos_key),
+    summarizeName(task.audio_b_url),
+    summarizeName(task.final_video_url),
+    summarizeName(task.groundtruth_url),
+  ].filter(Boolean) as string[];
+  return entries.length > 0 ? entries : fallback;
+}
+
+function filteredOutSelected(items: UserTaskListItem[], filter: FilterKey, selectedId: string) {
+  if (!selectedId) return false;
+  return !items.some((item) => item.id === selectedId && (filter === "all" || item.status === filter));
+}
+
 export function UserTasksShell() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [user, setUser] = useState<AuthResponse["user"] | null>(null);
-  const [items, setItems] = useState<TaskCenterItem[]>([]);
+  const [items, setItems] = useState<UserTaskListItem[]>([]);
   const [filter, setFilter] = useState<FilterKey>("all");
   const [selectedId, setSelectedId] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [selectedTaskDetail, setSelectedTaskDetail] = useState<SmartCutTask | null>(null);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [detailNotice, setDetailNotice] = useState<string | null>(null);
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const workspace = useUserWorkspaceData(user?.username, user?.company_id);
 
   useEffect(() => {
     async function bootstrap() {
       const response = await fetch("/api/proxy/auth/me");
       if (!response.ok) {
-        window.location.href = "/login";
+        router.replace("/login");
         return;
       }
 
       const payload = (await response.json()) as AuthResponse;
       if (payload.user.role === "admin") {
-        window.location.href = "/admin/tasks";
+        router.replace("/admin/tasks");
         return;
       }
 
       setUser(payload.user);
 
       try {
-        const nextItems = await listTaskCenterItems({
-          mode: "user",
-          userId: payload.user.username,
-          companyId: payload.user.company_id,
-        });
+        const [sharedItems, ownTasks] = await Promise.all([
+          listTaskCenterItems({
+            mode: "user",
+            userId: payload.user.username,
+            companyId: payload.user.company_id,
+          }),
+          listSmartCutTasks({
+            userId: payload.user.username,
+            limit: 50,
+          }),
+        ]);
+
+        const merged = new Map<string, UserTaskListItem>();
+        for (const item of sharedItems) {
+          merged.set(item.id, buildSharedQueueItem(item));
+        }
+        for (const item of ownTasks.filter((task) => task.status !== "abandoned")) {
+          merged.set(item.id, buildSelfQueueItem(item, merged.get(item.id)));
+        }
+
+        const nextItems = Array.from(merged.values()).sort(
+          (left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime(),
+        );
         setItems(nextItems);
+
         const requestedId = searchParams.get("taskId");
         setSelectedId(requestedId || nextItems[0]?.id || "");
       } catch (err) {
@@ -87,11 +255,50 @@ export function UserTasksShell() {
     }
 
     void bootstrap();
-  }, [searchParams]);
+  }, [router, searchParams]);
+
+  useEffect(() => {
+    if (!selectedId) {
+      setSelectedTaskDetail(null);
+      setDetailError(null);
+      setDetailNotice(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadDetail() {
+      try {
+        setDetailError(null);
+        setDetailNotice(null);
+        setSelectedTaskDetail(null);
+        const task = await getSmartCutTask(selectedId);
+        if (cancelled) return;
+        setSelectedTaskDetail(task);
+      } catch (err) {
+        if (cancelled) return;
+        setSelectedTaskDetail(null);
+        setDetailError(err instanceof Error ? err.message : "读取任务详情失败");
+      }
+    }
+
+    void loadDetail();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (filteredOutSelected(items, filter, selectedId)) {
+      const nextSelectedId = items.find((item) => filter === "all" || item.status === filter)?.id ?? "";
+      setSelectedId(nextSelectedId);
+    }
+  }, [filter, items, selectedId]);
 
   async function logout() {
     await fetch("/api/proxy/auth/logout", { method: "POST" });
-    window.location.href = "/login";
+    router.replace("/login");
   }
 
   const filteredItems = useMemo(
@@ -100,6 +307,58 @@ export function UserTasksShell() {
   );
 
   const selectedTask = filteredItems.find((item) => item.id === selectedId) ?? filteredItems[0] ?? null;
+  const activeTaskDetail = selectedTaskDetail && selectedTaskDetail.id === selectedTask?.id ? selectedTaskDetail : null;
+  const continueLabel = getSmartCutContinueLabel(activeTaskDetail?.status ?? selectedTask?.rawStatus);
+  const detailTitle =
+    activeTaskDetail?.task_title || selectedTask?.title || (activeTaskDetail ? `智能剪气口-${activeTaskDetail.id.slice(0, 8)}` : "");
+  const inputSummary = activeTaskDetail
+    ? buildDetailInputSummary(activeTaskDetail, selectedTask?.inputSummary ?? [])
+    : selectedTask?.inputSummary ?? [];
+  const outputSummary = activeTaskDetail
+    ? buildDetailOutputSummary(activeTaskDetail, selectedTask?.outputSummary ?? [])
+    : selectedTask?.outputSummary ?? [];
+  const detailStatusText = smartCutStatusLabel(activeTaskDetail?.status ?? selectedTask?.rawStatus);
+  const detailStageText = activeTaskDetail
+    ? formatSmartCutStage(activeTaskDetail.current_stage)
+    : selectedTask?.currentStage ?? "等待推进";
+  const sharedTaskNotice =
+    activeTaskDetail &&
+    user &&
+    activeTaskDetail.user_id !== user.username &&
+    activeTaskDetail.company_id !== null &&
+    activeTaskDetail.company_id === user.company_id
+      ? `当前打开的是 ${activeTaskDetail.user_id} 的同公司共享任务。`
+      : null;
+  const canDeleteTask = Boolean(
+    activeTaskDetail &&
+      user &&
+      activeTaskDetail.user_id === user.username &&
+      isSmartCutDeletable(activeTaskDetail.status) &&
+      deletingTaskId === null,
+  );
+
+  async function handleDeleteTask() {
+    if (!activeTaskDetail) return;
+    let nextSelectedId = "";
+    setDeletingTaskId(activeTaskDetail.id);
+    setDetailError(null);
+    setDetailNotice(null);
+    try {
+      await abandonTask(activeTaskDetail.id);
+      setItems((current) => {
+        const remaining = current.filter((item) => item.id !== activeTaskDetail.id);
+        nextSelectedId = remaining[0]?.id ?? "";
+        return remaining;
+      });
+      setSelectedTaskDetail(null);
+      setSelectedId((current) => (current === activeTaskDetail.id ? nextSelectedId : current));
+      setDetailNotice("当前失败任务已删除。");
+    } catch (err) {
+      setDetailError(err instanceof Error ? err.message : "删除任务失败");
+    } finally {
+      setDeletingTaskId(null);
+    }
+  }
 
   return (
     <UserWorkspaceShell
@@ -183,15 +442,29 @@ export function UserTasksShell() {
             <div className="space-y-5">
               <div className="rounded-[28px] border border-[#e4dacb] bg-white p-5">
                 <p className="text-xs uppercase tracking-[0.28em] text-stone-500">任务详情</p>
-                <h3 className="mt-3 text-4xl font-semibold text-[#241714]">{selectedTask.title}</h3>
+                <h3 className="mt-3 text-4xl font-semibold text-[#241714]">{detailTitle}</h3>
                 <div className="mt-4 flex flex-wrap gap-3">
                   <span className={`rounded-full px-4 py-2 text-sm font-semibold ${statusTone(selectedTask.status)}`}>
-                    {statusLabel(selectedTask.status)}
+                    {detailStatusText}
                   </span>
                   <span className="rounded-full border border-[#dfd5c5] bg-[#faf7f2] px-4 py-2 text-sm text-stone-600">
-                    {selectedTask.currentStage}
+                    {detailStageText}
                   </span>
                 </div>
+                {sharedTaskNotice ? (
+                  <p className="mt-4 rounded-2xl bg-sky-50 px-4 py-3 text-sm text-sky-800">{sharedTaskNotice}</p>
+                ) : null}
+                {detailNotice ? (
+                  <p className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{detailNotice}</p>
+                ) : null}
+                {detailError ? (
+                  <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{detailError}</p>
+                ) : null}
+                {activeTaskDetail?.error_message ? (
+                  <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{activeTaskDetail.error_message}</p>
+                ) : selectedTask.errorMessage ? (
+                  <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{selectedTask.errorMessage}</p>
+                ) : null}
               </div>
 
               <div className="grid gap-4 lg:grid-cols-3">
@@ -212,10 +485,10 @@ export function UserTasksShell() {
               <div className="rounded-[28px] border border-[#e4dacb] bg-white p-5">
                 <p className="text-xs uppercase tracking-[0.24em] text-stone-500">输入摘要</p>
                 <div className="mt-4 space-y-3">
-                  {selectedTask.inputSummary.length === 0 ? (
+                  {inputSummary.length === 0 ? (
                     <p className="text-sm text-stone-500">暂无输入摘要</p>
                   ) : (
-                    selectedTask.inputSummary.map((entry) => (
+                    inputSummary.map((entry) => (
                       <div key={entry} className="rounded-[18px] bg-[#faf7f2] px-4 py-3 text-sm text-stone-600">
                         {entry}
                       </div>
@@ -227,22 +500,38 @@ export function UserTasksShell() {
               <div className="rounded-[28px] border border-[#e4dacb] bg-white p-5">
                 <p className="text-xs uppercase tracking-[0.24em] text-stone-500">结果摘要</p>
                 <div className="mt-4 space-y-3">
-                  {selectedTask.outputSummary && selectedTask.outputSummary.length > 0 ? (
-                    selectedTask.outputSummary.map((entry) => (
+                  {outputSummary.length > 0 ? (
+                    outputSummary.map((entry) => (
                       <div key={entry} className="rounded-[18px] bg-[#faf7f2] px-4 py-3 text-sm text-stone-600">
                         {entry}
                       </div>
                     ))
                   ) : (
-                    <p className="text-sm text-stone-500">任务完成后，这里会显示输出文件和下载信息。</p>
+                    <p className="text-sm text-stone-500">任务推进后，这里会显示分析、试听或最终视频产物。</p>
                   )}
-                  {selectedTask.downloadUrl ? (
-                    <a
-                      className="inline-flex rounded-full bg-[#2b201d] px-5 py-3 text-sm font-semibold text-white"
-                      href={selectedTask.downloadUrl}
-                      target="_blank"
+                </div>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  {continueLabel ? (
+                    <Button onClick={() => router.push(`/smart-cut/${encodeURIComponent(selectedTask.id)}`)} type="button">
+                      {continueLabel}
+                    </Button>
+                  ) : null}
+                  {canDeleteTask ? (
+                    <Button
+                      className="text-red-600 ring-red-200 hover:bg-red-50"
+                      disabled={deletingTaskId !== null}
+                      onClick={handleDeleteTask}
+                      type="button"
+                      variant="secondary"
                     >
-                      下载结果
+                      删除任务
+                    </Button>
+                  ) : null}
+                  {activeTaskDetail?.final_video_url || selectedTask.downloadUrl ? (
+                    <a className="inline-flex" href={activeTaskDetail?.final_video_url ?? selectedTask.downloadUrl ?? undefined} target="_blank">
+                      <Button type="button" variant="secondary">
+                        下载结果
+                      </Button>
                     </a>
                   ) : null}
                 </div>
