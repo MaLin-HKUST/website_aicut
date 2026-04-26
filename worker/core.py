@@ -7,16 +7,21 @@ import asyncio
 import logging
 import signal
 import socket
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
 from sqlalchemy import create_engine
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import sessionmaker, Session
 
 from configs.database import check_database_connection, get_missing_tables
 from apps.models.device import SmartCutDevice, DeviceStatus
 from apps.models.scheduler_task import SchedulerTask, SchedulerTaskStatus, SchedulerTaskType
+from apps.models.task import CurrentStage, SmartCutTask, TaskStatus
+from apps.models.task_run import SmartCutTaskRun, TaskRunStatus
 from apps.services.device_service import DeviceService
+from apps.services.smart_cut_contract import default_status_detail
 from worker.base_processor import BaseProcessor
 
 
@@ -57,6 +62,7 @@ class SmartCutWorker:
         workspace: str,
         worker_name: Optional[str] = None,
         supported_task_types: Optional[list[str]] = None,
+        company_id: Optional[int] = None,
         db_url: Optional[str] = None,
         heartbeat_interval: float = 10.0,
         poll_interval: float = 5.0,
@@ -90,6 +96,7 @@ class SmartCutWorker:
         self.worker_name = worker_name or f"SmartCut Worker {worker_id}"
         self.worker_version = WORKER_VERSION
         self.hostname = socket.gethostname()
+        self.company_id = company_id
         
         # 数据库配置
         self._init_database(db_url)
@@ -138,7 +145,8 @@ class SmartCutWorker:
                 + ", ".join(missing_tables)
             )
 
-        logger.info("Worker gateway database verified: %s", db_url)
+        safe_db_url = make_url(db_url).render_as_string(hide_password=True)
+        logger.info("Worker gateway database verified: %s", safe_db_url)
     
     def _get_db(self) -> Session:
         """获取数据库会话"""
@@ -177,6 +185,7 @@ class SmartCutWorker:
                 worker_id=self.worker_id,
                 worker_name=self.worker_name,
                 supported_task_types=self.supported_task_types,
+                company_id=self.company_id,
                 worker_version=self.worker_version,
                 ip_address=self._get_ip_address(),
                 hostname=self.hostname,
@@ -415,12 +424,14 @@ class SmartCutWorker:
         task: SchedulerTask,
         result: dict[str, Any]
     ) -> None:
-        """Persist execution outputs while keeping scheduler closure on the A side."""
+        """Persist execution outputs and hand closure back to the A-side scheduler."""
         db = self._get_db()
         try:
             task_db = db.query(SchedulerTask).filter_by(id=task.id).first()
             if task_db:
                 task_db.result = self._json_safe(result)
+                task_db.status = SchedulerTaskStatus.POST
+                task_db.updated_at = datetime.utcnow()
                 db.commit()
         finally:
             db.close()
@@ -444,9 +455,51 @@ class SmartCutWorker:
             task_db = db.query(SchedulerTask).filter_by(id=task.id).first()
             if task_db:
                 task_db.mark_failed(error_message)
+                self._mark_business_task_failed(db, task_db, error_message)
                 db.commit()
         finally:
             db.close()
+
+    def _mark_business_task_failed(
+        self,
+        db: Session,
+        task: SchedulerTask,
+        error_message: str,
+    ) -> None:
+        """Keep the user-facing Smart Cut task aligned with worker failures."""
+        business_task = db.query(SmartCutTask).filter_by(id=task.business_task_id).first()
+        if not business_task:
+            return
+
+        if task.task_type == SchedulerTaskType.SMART_CUT_ANALYZE:
+            business_task.status = TaskStatus.ANALYZE_FAILED
+            business_task.current_stage = CurrentStage.ANALYZE
+            business_task.failed_stage = "analyze"
+        elif task.task_type == SchedulerTaskType.SMART_CUT_PREVIEW:
+            business_task.status = TaskStatus.PREVIEW_FAILED
+            business_task.current_stage = CurrentStage.PREVIEW
+            business_task.failed_stage = "preview"
+        elif task.task_type == SchedulerTaskType.SMART_CUT_FINALIZE:
+            business_task.status = TaskStatus.FINALIZE_FAILED
+            business_task.current_stage = CurrentStage.FINALIZE
+            business_task.failed_stage = "finalize"
+        else:
+            return
+
+        business_task.status_detail = default_status_detail(business_task.status.value)
+        business_task.current_run_id = None
+
+        run = (
+            db.query(SmartCutTaskRun)
+            .filter(SmartCutTaskRun.scheduler_task_id == task.id)
+            .order_by(SmartCutTaskRun.sequence_number.desc())
+            .first()
+        )
+        if run:
+            run.status = TaskRunStatus.FAILED
+            run.error_message = error_message
+            run.completed_at = datetime.utcnow()
+            run.updated_at = datetime.utcnow()
     
     def _on_progress_update(self, task: SchedulerTask, progress: float) -> None:
         """进度更新回调

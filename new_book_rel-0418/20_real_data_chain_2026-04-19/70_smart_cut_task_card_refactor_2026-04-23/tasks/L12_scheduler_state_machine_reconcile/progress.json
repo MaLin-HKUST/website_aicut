@@ -1,0 +1,70 @@
+{
+  "task_id": "L12_scheduler_state_machine_reconcile",
+  "status": "completed",
+  "branch": "smart-cut-state-machine-reconcile-20260426",
+  "started_at": "2026-04-26T19:20:00+08:00",
+  "events": [
+    {
+      "ts": "2026-04-26T19:20:00+08:00",
+      "type": "task_intake",
+      "summary": "用户要求在 codebook 增加任务目录，把任务整体、拆解、task.json、progress.json、开发问题、输出上下文、分支与提交原因全部纳入 git 管理。",
+      "evidence": [
+        "当前分支从 feature/smart-cut-taskcard-refactor 切到 smart-cut-state-machine-reconcile-20260426",
+        "不启动 Playwright"
+      ]
+    },
+    {
+      "ts": "2026-04-26T19:24:00+08:00",
+      "type": "root_cause",
+      "summary": "线上坏状态是 worker 已完成 analyze 并写入 scheduler_tasks.result，但 scheduler_task 仍是 RUNNING，device 变成 IDLE 且 current_task_id 仍指向该 scheduler task；scheduler 只看 device POST + scheduler RUNNING，因此错过闭环。",
+      "evidence": [
+        "worker 日志显示 18:33:15 Task completed successfully",
+        "scheduler_task 56d91440-7985-4292-8fe2-dc1a83ab07a5 状态 RUNNING 且 result 非空",
+        "business task e8a889cf-904d-48a8-989c-d8bb906e45b1 仍为 ANALYZING"
+      ]
+    },
+    {
+      "ts": "2026-04-26T19:40:00+08:00",
+      "type": "implementation",
+      "summary": "完成 worker/scheduler 最小闭环修复和状态组合仿真测试。",
+      "evidence": [
+        "worker 成功后写 scheduler_tasks.status=post",
+        "scheduler 对 post/result 和 running/result 自愈闭环",
+        "auto-finalize 已有活跃 finalize 时复用，不重复创建",
+        "新增状态机仿真矩阵文档"
+      ]
+    },
+    {
+      "ts": "2026-04-26T19:45:00+08:00",
+      "type": "closure",
+      "summary": "本地实现、文档矩阵、JSON 校验和针对性 pytest 均完成，准备按 Lore Commit Protocol 提交。",
+      "evidence": [
+        "python3 -m json.tool task.json 通过",
+        "python3 -m json.tool progress.json 通过",
+        "python3 -m pytest tests/test_task_truth_reconcile.py -q 通过"
+      ]
+    }
+  ],
+  "changed_files": [
+    "new_book_rel-0418/20_real_data_chain_2026-04-19/70_smart_cut_task_card_refactor_2026-04-23/tasks/L12_scheduler_state_machine_reconcile/task.json",
+    "new_book_rel-0418/20_real_data_chain_2026-04-19/70_smart_cut_task_card_refactor_2026-04-23/tasks/L12_scheduler_state_machine_reconcile/progress.json",
+    "new_book_rel-0418/20_real_data_chain_2026-04-19/70_smart_cut_task_card_refactor_2026-04-23/tasks/L12_scheduler_state_machine_reconcile/progress.md",
+    "new_book_rel-0418/20_real_data_chain_2026-04-19/70_smart_cut_task_card_refactor_2026-04-23/tasks/L12_scheduler_state_machine_reconcile/状态机仿真矩阵.md",
+    "apps/scheduler/scheduler_service.py",
+    "worker/core.py",
+    "tests/test_task_truth_reconcile.py"
+  ],
+  "verification": [
+    {
+      "ts": "2026-04-26T19:39:00+08:00",
+      "command": "python3 -m pytest tests/test_task_truth_reconcile.py -q",
+      "result": "8 passed, 6 warnings in 6.49s",
+      "notes": "warnings 为现有 Pydantic v2 deprecation。"
+    }
+  ],
+  "issues": [],
+  "remaining_risks": [
+    "生产库中已卡住的任务需要部署后由 scheduler 自愈，或执行一次 scheduler cycle 才会闭环。",
+    "本地仿真不覆盖真实 TOS 上传耗时和网络超时。"
+  ]
+}

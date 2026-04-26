@@ -1,0 +1,140 @@
+{
+  "task_id": "L12_scheduler_state_machine_reconcile",
+  "title": "Smart Cut 调度状态机闭环与仿真矩阵",
+  "status": "completed",
+  "created_at": "2026-04-26T19:20:00+08:00",
+  "branch": "smart-cut-state-machine-reconcile-20260426",
+  "why": "线上出现 analyze 已经在 worker 侧完成、scheduler_task.result 已写入，但 scheduler_task 仍停在 RUNNING，device 又回到 IDLE 并保留 current_task_id 的不一致状态，导致业务任务不自动进入 finalize。需要把 A 机 scheduler、worker gateway 和业务任务状态机重新收口到可恢复的 PostgreSQL 单一真相。",
+  "goal": "不重写系统，在当前交付窗口内修复 worker->scheduler POST 闭环；让遗留 RUNNING+result、POST+result、IDLE+current_task_id 等组合能被 scheduler 自动判定和自愈；补齐用户正向流、错误流和异常状态组合的仿真测试与文档。",
+  "non_goals": [
+    "不启动 Playwright",
+    "不运行真实 worker/docker/算法/browser 仿真",
+    "不做线上数据清理或重排任务",
+    "不重写整套调度系统"
+  ],
+  "subtasks": [
+    {
+      "id": "S1201",
+      "title": "记录线上事故与目标状态机",
+      "status": "completed",
+      "steps": [
+        {
+          "id": "S1201.1",
+          "title": "记录 task e8a889cf 的坏状态证据",
+          "status": "completed"
+        },
+        {
+          "id": "S1201.2",
+          "title": "把本次任务拆解写入 task.json",
+          "status": "completed"
+        },
+        {
+          "id": "S1201.3",
+          "title": "持续把开发过程、问题和验证结果写入 progress.json/progress.md",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "id": "S1202",
+      "title": "修复 worker 成功上报契约",
+      "status": "completed",
+      "steps": [
+        {
+          "id": "S1202.1",
+          "title": "worker 成功后写 scheduler_tasks.status=post 和 result",
+          "status": "completed"
+        },
+        {
+          "id": "S1202.2",
+          "title": "保留 device POST/current_task_id 给 A 机 scheduler 做闭环",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "id": "S1203",
+      "title": "修复 scheduler 自愈闭环",
+      "status": "completed",
+      "steps": [
+        {
+          "id": "S1203.1",
+          "title": "scheduler 对 POST+result 直接闭环",
+          "status": "completed"
+        },
+        {
+          "id": "S1203.2",
+          "title": "scheduler 对遗留 RUNNING+result 直接闭环",
+          "status": "completed"
+        },
+        {
+          "id": "S1203.3",
+          "title": "释放 IDLE/POST/current_task_id 中已闭环或可闭环的 worker",
+          "status": "completed"
+        },
+        {
+          "id": "S1203.4",
+          "title": "auto-finalize 队列增加幂等保护，避免重复 finalize",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "id": "S1204",
+      "title": "建立状态组合仿真矩阵",
+      "status": "completed",
+      "steps": [
+        {
+          "id": "S1204.1",
+          "title": "覆盖一键生成 analyze->finalize 正向流",
+          "status": "completed"
+        },
+        {
+          "id": "S1204.2",
+          "title": "覆盖用户关闭浏览器后重新打开时的页面状态",
+          "status": "completed"
+        },
+        {
+          "id": "S1204.3",
+          "title": "覆盖 analyze/finalize 失败、timeout、worker offline",
+          "status": "completed"
+        },
+        {
+          "id": "S1204.4",
+          "title": "覆盖线上已出现的坏状态组合",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "id": "S1205",
+      "title": "验证与提交",
+      "status": "completed",
+      "steps": [
+        {
+          "id": "S1205.1",
+          "title": "运行 pytest 针对性调度状态机测试",
+          "status": "completed"
+        },
+        {
+          "id": "S1205.2",
+          "title": "记录验证输出和剩余风险",
+          "status": "completed"
+        },
+        {
+          "id": "S1205.3",
+          "title": "按 Lore Commit Protocol 提交本次改动",
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "acceptance": [
+    "RUNNING+result 的 analyze scheduler task 会被自动闭环并触发 finalize",
+    "POST+result 的 scheduler task 不依赖 worker 心跳下一拍也能被闭环",
+    "同一业务任务不会重复创建 finalize scheduler task",
+    "worker 成功后显式写入 scheduler_task.status=post",
+    "测试只构造数据库状态并调用本地 scheduler/task-center 逻辑，不启动 Playwright/真实 worker/docker/算法",
+    "codebook 记录为什么改、改了什么、怎么验证、剩余风险"
+  ]
+}

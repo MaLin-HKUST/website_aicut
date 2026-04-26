@@ -23,6 +23,7 @@ from apps.models.device import SmartCutDevice, DeviceStatus
 from apps.models.edit import SmartCutEdit, EditStatus
 from apps.models.task_run import SmartCutTaskRun, TaskRunStatus, TaskRunType
 from apps.services.device_service import DeviceService
+from apps.services.smart_cut_contract import default_status_detail
 
 logger = logging.getLogger(__name__)
 
@@ -69,13 +70,15 @@ class SchedulerService:
         Returns:
             各步骤处理结果统计
         """
+        completed_count = self.reconcile_completed_scheduler_tasks()
         reconciled_count = self.reconcile_orphaned_business_tasks()
-        assigned_count = self.schedule_pending_tasks()
         advanced_count = self.check_device_status_and_advance()
         timeout_count = self.handle_timeouts()
         offline_count = self.check_worker_heartbeats(timeout_seconds=self.worker_timeout_seconds)
+        assigned_count = self.schedule_pending_tasks()
 
         cycle_stats = {
+            "completed": completed_count,
             "reconciled": reconciled_count,
             "assigned": assigned_count,
             "advanced": advanced_count,
@@ -84,6 +87,35 @@ class SchedulerService:
         }
         logger.debug("Scheduler cycle stats: %s", cycle_stats)
         return cycle_stats
+
+    def reconcile_completed_scheduler_tasks(self) -> int:
+        """Close scheduler tasks whose worker output has already reached Postgres.
+
+        This is the safety net for the production bad state:
+        scheduler_task.status=running, scheduler_task.result!=NULL, while the
+        worker/device row no longer remains in POST long enough for the normal
+        device-state transition path to observe it.
+        """
+        count = 0
+        stmt = select(SchedulerTask).where(
+            and_(
+                SchedulerTask.status.in_(
+                    [SchedulerTaskStatus.POST, SchedulerTaskStatus.RUNNING]
+                ),
+                SchedulerTask.result.isnot(None),
+            )
+        )
+        scheduler_tasks = list(self.db.execute(stmt).scalars().all())
+
+        for scheduler_task in scheduler_tasks:
+            worker = self._find_worker_for_scheduler_task(scheduler_task)
+            self._advance_business_task_on_post(scheduler_task, worker)
+            count += 1
+
+        if count:
+            logger.warning("Reconciled %s completed scheduler tasks from persisted results", count)
+
+        return count
     
     async def run_scheduler_loop(self) -> None:
         """运行调度主循环（异步，可停止）
@@ -100,8 +132,10 @@ class SchedulerService:
         while self._running:
             try:
                 self.run_cycle()
-                
+                if self.db.in_transaction():
+                    self.db.commit()
             except Exception as e:
+                self.db.rollback()
                 logger.exception(f"Error in scheduler loop: {e}")
             
             # 等待下一次检查
@@ -147,16 +181,25 @@ class SchedulerService:
                     task.status = TaskStatus.WAITING_USER
                     task.current_stage = CurrentStage.USER_SELECT
                 else:
-                    task.status = TaskStatus.WAITING_UPLOAD
-                    task.current_stage = CurrentStage.UPLOAD
+                    task.status = TaskStatus.ANALYZE_FAILED
+                    task.current_stage = CurrentStage.ANALYZE
                 task.failed_stage = "analyze"
             elif task.status in {TaskStatus.PREVIEWING, TaskStatus.FINALIZING}:
                 failed_stage = "preview" if task.status == TaskStatus.PREVIEWING else "finalize"
-                task.status = TaskStatus.WAITING_USER
-                task.current_stage = CurrentStage.USER_SELECT
+                task.status = (
+                    TaskStatus.PREVIEW_FAILED
+                    if task.status == TaskStatus.PREVIEWING
+                    else TaskStatus.FINALIZE_FAILED
+                )
+                task.current_stage = (
+                    CurrentStage.PREVIEW
+                    if failed_stage == "preview"
+                    else CurrentStage.FINALIZE
+                )
                 task.failed_stage = failed_stage
 
             task.current_run_id = None
+            task.status_detail = default_status_detail(task.status.value)
             task.updated_at = datetime.utcnow()
             count += 1
 
@@ -202,6 +245,7 @@ class SchedulerService:
             .where(
                 and_(
                     SmartCutDevice.status == DeviceStatus.IDLE,
+                    SmartCutDevice.current_task_id.is_(None),
                     SmartCutDevice.heartbeat_at.isnot(None)
                 )
             )
@@ -215,11 +259,15 @@ class SchedulerService:
         # 为每个待处理任务尝试分配 Worker
         for scheduler_task in pending_tasks:
             task_type = scheduler_task.task_type.value
+            business_task = scheduler_task.business_task
+            if business_task is None:
+                logger.warning("Pending scheduler task %s has no business task", scheduler_task.id)
+                continue
             
             # 查找支持该任务类型的 Worker
             compatible_workers = [
                 w for w in idle_workers
-                if w.can_handle(task_type)
+                if w.can_handle(task_type) and w.can_handle_company(business_task.company_id)
             ]
             
             if not compatible_workers:
@@ -297,19 +345,27 @@ class SchedulerService:
             task_type: 调度任务类型
         """
         if task_type == SchedulerTaskType.SMART_CUT_ANALYZE:
-            if business_task.status == TaskStatus.READY_ANALYZE:
+            if business_task.status in {TaskStatus.READY_ANALYZE, TaskStatus.ANALYZING}:
                 business_task.status = TaskStatus.ANALYZING
                 business_task.current_stage = CurrentStage.ANALYZE
+                business_task.status_detail = default_status_detail(TaskStatus.ANALYZING.value)
         
         elif task_type == SchedulerTaskType.SMART_CUT_PREVIEW:
-            if business_task.status == TaskStatus.WAITING_USER:
+            if business_task.status in {TaskStatus.WAITING_USER, TaskStatus.PREVIEW_FAILED, TaskStatus.PREVIEWING}:
                 business_task.status = TaskStatus.PREVIEWING
                 business_task.current_stage = CurrentStage.PREVIEW
+                business_task.status_detail = default_status_detail(TaskStatus.PREVIEWING.value)
         
         elif task_type == SchedulerTaskType.SMART_CUT_FINALIZE:
-            if business_task.status in (TaskStatus.WAITING_USER, TaskStatus.PREVIEWING):
+            if business_task.status in (
+                TaskStatus.WAITING_USER,
+                TaskStatus.PREVIEWING,
+                TaskStatus.FINALIZE_FAILED,
+                TaskStatus.FINALIZING,
+            ):
                 business_task.status = TaskStatus.FINALIZING
                 business_task.current_stage = CurrentStage.FINALIZE
+                business_task.status_detail = default_status_detail(TaskStatus.FINALIZING.value)
         
         business_task.updated_at = datetime.utcnow()
     
@@ -358,17 +414,43 @@ class SchedulerService:
                     select(SchedulerTask).where(SchedulerTask.id == worker.current_task_id)
                 ).scalar_one_or_none()
                 
-                if scheduler_task and scheduler_task.status == SchedulerTaskStatus.RUNNING:
+                if (
+                    scheduler_task
+                    and scheduler_task.status in {
+                        SchedulerTaskStatus.RUNNING,
+                        SchedulerTaskStatus.POST,
+                    }
+                    and scheduler_task.result is not None
+                ):
                     # Worker 执行完成，推进业务任务状态机
                     self._advance_business_task_on_post(scheduler_task, worker)
                     advanced_count += 1
         
         return advanced_count
+
+    def _find_worker_for_scheduler_task(
+        self,
+        scheduler_task: SchedulerTask,
+    ) -> SmartCutDevice | None:
+        if scheduler_task.assigned_worker_id:
+            worker = self.db.execute(
+                select(SmartCutDevice).where(
+                    SmartCutDevice.worker_id == scheduler_task.assigned_worker_id
+                )
+            ).scalar_one_or_none()
+            if worker:
+                return worker
+
+        return self.db.execute(
+            select(SmartCutDevice).where(
+                SmartCutDevice.current_task_id == scheduler_task.id
+            )
+        ).scalar_one_or_none()
     
     def _advance_business_task_on_post(
         self,
         scheduler_task: SchedulerTask,
-        worker: SmartCutDevice
+        worker: SmartCutDevice | None
     ) -> None:
         """Worker 进入 post 状态时推进业务任务状态机
         
@@ -387,9 +469,9 @@ class SchedulerService:
         task_type = scheduler_task.task_type
         
         if task_type == SchedulerTaskType.SMART_CUT_ANALYZE:
-            # analyze 完成 -> waiting_user
             business_task.status = TaskStatus.WAITING_USER
             business_task.current_stage = CurrentStage.USER_SELECT
+            business_task.status_detail = default_status_detail(TaskStatus.WAITING_USER.value)
             
             # 如果有 analyze 结果，更新到业务任务
             if scheduler_task.result:
@@ -402,6 +484,7 @@ class SchedulerService:
             # preview 完成 -> waiting_user，更新 active_edit_id
             business_task.status = TaskStatus.WAITING_USER
             business_task.current_stage = CurrentStage.USER_SELECT
+            business_task.status_detail = default_status_detail(TaskStatus.WAITING_USER.value)
             
             # 从 payload 中获取 edit_id 更新到业务任务
             if scheduler_task.payload and "edit_id" in scheduler_task.payload:
@@ -429,11 +512,14 @@ class SchedulerService:
             # finalize 完成 -> success
             business_task.status = TaskStatus.SUCCESS
             business_task.current_stage = CurrentStage.COMPLETE
+            business_task.status_detail = default_status_detail(TaskStatus.SUCCESS.value)
             
             # 如果有 finalize 结果，更新到业务任务
             if scheduler_task.result:
                 if "final_video_url" in scheduler_task.result:
                     business_task.final_video_url = scheduler_task.result["final_video_url"]
+                if "subtitle_srt_url" in scheduler_task.result:
+                    business_task.subtitle_srt_url = scheduler_task.result["subtitle_srt_url"]
                 if "groundtruth_url" in scheduler_task.result:
                     business_task.groundtruth_url = scheduler_task.result["groundtruth_url"]
                     business_task.groundtruth_upload_status = "completed"
@@ -456,20 +542,126 @@ class SchedulerService:
             )
             if latest_edit:
                 business_task.active_edit_id = latest_edit.id
-        
+            finalize_run = self._queue_finalize_after_analyze(business_task, scheduler_task.payload or {})
+            if finalize_run:
+                business_task.status = TaskStatus.FINALIZING
+                business_task.current_stage = CurrentStage.FINALIZE
+                business_task.current_run_id = finalize_run.id
+                business_task.status_detail = default_status_detail(TaskStatus.FINALIZING.value)
+
         # 更新调度任务状态为 success
         scheduler_task.mark_completed(scheduler_task.result)
         
-        # 释放 Worker
-        worker.status = DeviceStatus.IDLE
-        worker.current_task_id = None
-        worker.updated_at = datetime.utcnow()
+        # 释放 Worker。自愈路径可能只有 scheduler_task.result，没有可用设备行。
+        if worker:
+            worker.status = DeviceStatus.IDLE
+            worker.current_task_id = None
+            worker.updated_at = datetime.utcnow()
         
         self.db.commit()
         logger.info(
             f"Task {scheduler_task.id} completed, business task {business_task.id} "
             f"advanced to {business_task.status.value}"
         )
+
+    def _queue_finalize_after_analyze(
+        self,
+        business_task: SmartCutTask,
+        analyze_payload: dict[str, Any],
+    ) -> SmartCutTaskRun | None:
+        if not analyze_payload.get("auto_finalize_after_analyze"):
+            return None
+
+        existing_finalize_scheduler = (
+            self.db.query(SchedulerTask)
+            .filter(
+                SchedulerTask.business_task_id == business_task.id,
+                SchedulerTask.task_type == SchedulerTaskType.SMART_CUT_FINALIZE,
+                SchedulerTask.status.in_(
+                    [
+                        SchedulerTaskStatus.PENDING,
+                        SchedulerTaskStatus.ASSIGNED,
+                        SchedulerTaskStatus.RUNNING,
+                        SchedulerTaskStatus.POST,
+                    ]
+                ),
+            )
+            .order_by(SchedulerTask.created_at.desc())
+            .first()
+        )
+        if existing_finalize_scheduler:
+            logger.info(
+                "Auto-finalize already exists for task %s with scheduler task %s",
+                business_task.id,
+                existing_finalize_scheduler.id,
+            )
+            return self._get_or_create_run_for_scheduler_task(
+                business_task.id,
+                existing_finalize_scheduler,
+            )
+
+        latest_edit = (
+            self.db.query(SmartCutEdit)
+            .filter(
+                SmartCutEdit.task_id == business_task.id,
+                SmartCutEdit.status == EditStatus.SUCCESS,
+            )
+            .order_by(SmartCutEdit.version_number.desc())
+            .first()
+        )
+        if not latest_edit or not latest_edit.delay_cuts_tos_key:
+            logger.warning(
+                "Auto-finalize requested for task %s but no successful edit with delay cuts is available",
+                business_task.id,
+            )
+            return None
+
+        output_mode = analyze_payload.get("auto_finalize_output_mode") or "original"
+        feed_to_ai = analyze_payload.get("auto_finalize_feed_to_ai")
+        if not isinstance(feed_to_ai, bool):
+            feed_to_ai = True
+
+        finalize_scheduler_task = SchedulerTask(
+            task_type=SchedulerTaskType.SMART_CUT_FINALIZE,
+            status=SchedulerTaskStatus.PENDING,
+            business_task_id=business_task.id,
+            payload={
+                "smart_cut_task_id": business_task.id,
+                "edit_id": latest_edit.id,
+                "original_video_tos_key": business_task.original_video_url or "",
+                "edited_delay_cuts_tos_key": latest_edit.delay_cuts_tos_key,
+                "pause_cuts_on_original_tos_key": latest_edit.pause_cuts_tos_key,
+                "output_mode": output_mode,
+                "feed_to_ai": feed_to_ai,
+            },
+        )
+        self.db.add(finalize_scheduler_task)
+        self.db.flush()
+
+        latest_run = (
+            self.db.query(SmartCutTaskRun)
+            .filter(SmartCutTaskRun.task_id == business_task.id)
+            .order_by(SmartCutTaskRun.sequence_number.desc())
+            .first()
+        )
+        next_sequence = 1 if latest_run is None else latest_run.sequence_number + 1
+        finalize_run = SmartCutTaskRun(
+            task_id=business_task.id,
+            run_type=TaskRunType.FINALIZE,
+            status=TaskRunStatus.QUEUED,
+            sequence_number=next_sequence,
+            scheduler_task_id=finalize_scheduler_task.id,
+            source_edit_id=latest_edit.id,
+            payload_snapshot=dict(finalize_scheduler_task.payload),
+        )
+        self.db.add(finalize_run)
+        self.db.flush()
+        logger.info(
+            "Auto-finalize queued for task %s with scheduler task %s",
+            business_task.id,
+            finalize_scheduler_task.id,
+        )
+        return finalize_run
     
     def handle_timeouts(self, timeout_hours: int = 72) -> int:
         """超时处理 - 标记运行超过指定时间的任务为超时
@@ -505,7 +697,7 @@ class SchedulerService:
             ).scalar_one_or_none()
             if business_task:
                 self._mark_business_task_failed_by_timeout(
-                    business_task, scheduler_task.task_type
+                    business_task, scheduler_task
                 )
             
             # 释放 Worker
@@ -532,7 +724,7 @@ class SchedulerService:
     def _mark_business_task_failed_by_timeout(
         self,
         business_task: SmartCutTask,
-        task_type: SchedulerTaskType
+        scheduler_task: SchedulerTask,
     ) -> None:
         """根据任务类型标记业务任务为失败
         
@@ -540,15 +732,19 @@ class SchedulerService:
             business_task: 业务任务对象
             task_type: 调度任务类型
         """
+        task_type = scheduler_task.task_type
         if task_type == SchedulerTaskType.SMART_CUT_ANALYZE:
             business_task.status = TaskStatus.ANALYZE_FAILED
             business_task.current_stage = CurrentStage.ANALYZE
+            business_task.status_detail = default_status_detail(TaskStatus.ANALYZE_FAILED.value)
         elif task_type == SchedulerTaskType.SMART_CUT_PREVIEW:
-            business_task.status = TaskStatus.WAITING_USER
-            business_task.current_stage = CurrentStage.USER_SELECT
+            business_task.status = TaskStatus.PREVIEW_FAILED
+            business_task.current_stage = CurrentStage.PREVIEW
+            business_task.status_detail = default_status_detail(TaskStatus.PREVIEW_FAILED.value)
         elif task_type == SchedulerTaskType.SMART_CUT_FINALIZE:
-            business_task.status = TaskStatus.WAITING_USER
-            business_task.current_stage = CurrentStage.USER_SELECT
+            business_task.status = TaskStatus.FINALIZE_FAILED
+            business_task.current_stage = CurrentStage.FINALIZE
+            business_task.status_detail = default_status_detail(TaskStatus.FINALIZE_FAILED.value)
         
         business_task.failed_stage = _task_type_to_run_type(task_type).value
         run = (
