@@ -54,6 +54,18 @@
         "scheduler_tasks 中 smart_cut_* active rows=0",
         "新增测试覆盖 missing scheduler task 会释放 idle worker，assigned scheduler task 不释放"
       ]
+    },
+    {
+      "ts": "2026-04-27T00:32:00+08:00",
+      "type": "release",
+      "summary": "按 website-aicut-release SOP 发布 scheduler/worker 修复到 A 机生产源树，重启 API、scheduler、worker，并修正生产 TOS 分片大小配置。",
+      "evidence": [
+        "smart-cut-api.service active",
+        "smart-cut-scheduler.service active",
+        "worker1-phase6 running from /home/malin/release_0425/website_aicut/.venv310/bin/python -m worker.main",
+        "TOS_MULTIPART_PART_SIZE_BYTES 从 1048576 修正为 8388608，env 备份在 /home/malin/release_0425/backups/smart_cut_backend.env.pre_tos_part_size_20260427_003028",
+        "post-release DB: active_scheduler=0, busy_devices=0, worker1-phase6 status=IDLE current_task_id=null"
+      ]
     }
   ],
   "changed_files": [
@@ -77,6 +89,18 @@
       "command": "python3 -m py_compile worker/core.py apps/scheduler/scheduler_service.py && python3 -m pytest tests/test_task_truth_reconcile.py -q",
       "result": "10 passed, 6 warnings in 1.79s",
       "notes": "发布前补充 stale device 自愈测试后重新验证。"
+    },
+    {
+      "ts": "2026-04-27T00:24:00+08:00",
+      "command": "python3 -m py_compile worker/core.py apps/scheduler/scheduler_service.py && python3 -m pytest tests/test_task_truth_reconcile.py -q",
+      "result": "11 passed, 6 warnings in 1.83s",
+      "notes": "收窄 stale device 规则：ASSIGNED/RUNNING/POST 均视为 active ownership。"
+    },
+    {
+      "ts": "2026-04-27T00:32:00+08:00",
+      "command": "production post-release DB and service checks",
+      "result": "api active, scheduler active, active_scheduler=0, busy_devices=0, worker idle",
+      "notes": "未启动 Playwright；旧任务 finalize 因 TOS part size 配置失败后已释放 worker，配置已修正供新任务验证。"
     }
   ],
   "issues": [],

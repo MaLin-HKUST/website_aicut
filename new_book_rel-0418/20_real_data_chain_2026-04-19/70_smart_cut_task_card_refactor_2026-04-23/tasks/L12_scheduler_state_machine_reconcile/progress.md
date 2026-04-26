@@ -73,3 +73,43 @@ python3 -m pytest tests/test_task_truth_reconcile.py -q
 ```
 
 结果：`10 passed, 6 warnings in 1.79s`。
+
+## 2026-04-27 00:32 BJT
+
+### 正常发布记录
+
+按 `website-aicut-release` SOP 执行了生产发布：
+
+- 同步 `apps/scheduler/scheduler_service.py`、`worker/core.py`、`tests/test_task_truth_reconcile.py` 和 L12 codebook 目录到 `/home/malin/release_0425/website_aicut`。
+- 远端 `py_compile` 通过；远端缺少 pytest，因此远端未跑 pytest，本地同源测试通过。
+- 重启 `smart-cut-api.service`、`smart-cut-scheduler.service` 和 `worker1-phase6`。
+- 本机 3301 `/login`、`/smart-cut`、`/tasks` 均返回 200。
+
+### 发布中发现并处理的环境问题
+
+旧任务恢复到 finalize 后失败于 TOS 上传：
+
+`invalid part size, the size must be [5242880, 5368709120], size=1048576`
+
+原因是生产 env 覆盖了：
+
+`TOS_MULTIPART_PART_SIZE_BYTES=1048576`
+
+已按 SOP 备份并修正：
+
+- 备份：`/home/malin/release_0425/backups/smart_cut_backend.env.pre_tos_part_size_20260427_003028`
+- 新值：`TOS_MULTIPART_PART_SIZE_BYTES=8388608`
+- 重启 API 和 worker 让配置生效。
+
+### 发布后状态
+
+- `smart-cut-api.service`: active
+- `smart-cut-scheduler.service`: active
+- `worker1-phase6`: running, `company_id=9`
+- DB: `active_scheduler=0`
+- DB: `busy_devices=0`
+- `worker1-phase6`: `IDLE`, `current_task_id=null`
+
+### 测试窗口
+
+可以开始新的网页手测。旧任务已经失败收口，不占用 worker；新任务会走新的 scheduler/worker 闭环和新的 TOS 分片配置。
