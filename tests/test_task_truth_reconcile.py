@@ -477,6 +477,49 @@ def test_idle_worker_assigned_scheduler_task_is_not_released(tmp_path: Path) -> 
         assert worker.current_task_id == scheduler_task.id
 
 
+def test_idle_worker_running_scheduler_task_is_not_released(tmp_path: Path) -> None:
+    db_path = tmp_path / "stale_device_running_scheduler.db"
+    engine = build_engine(f"sqlite:///{db_path}")
+    Base.metadata.create_all(bind=engine)
+    session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+    with session_local() as db:
+        task = SmartCutTask(
+            user_id="alice",
+            company_id=9,
+            status=TaskStatus.FINALIZING,
+            current_stage=CurrentStage.FINALIZE,
+        )
+        db.add(task)
+        db.flush()
+        scheduler_task = SchedulerTask(
+            task_type=SchedulerTaskType.SMART_CUT_FINALIZE,
+            status=SchedulerTaskStatus.RUNNING,
+            business_task_id=task.id,
+            assigned_worker_id="worker1-phase6",
+            payload={},
+        )
+        db.add(scheduler_task)
+        db.flush()
+        worker = SmartCutDevice(
+            worker_id="worker1-phase6",
+            worker_name="Worker 1 Phase 6",
+            company_id=9,
+            status=DeviceStatus.IDLE,
+            current_task_id=scheduler_task.id,
+            supported_task_types=["smart_cut_analyze", "smart_cut_finalize"],
+            heartbeat_at=datetime.utcnow(),
+        )
+        db.add(worker)
+        db.commit()
+
+        scheduler = SchedulerService(db, DeviceService(db))
+        assert scheduler.reconcile_stale_device_assignments() == 0
+
+        db.refresh(worker)
+        assert worker.current_task_id == scheduler_task.id
+
+
 def test_scheduler_respects_worker_company_affinity_and_keeps_extra_tasks_queued(tmp_path: Path) -> None:
     db_path = tmp_path / "affinity.db"
     engine = build_engine(f"sqlite:///{db_path}")

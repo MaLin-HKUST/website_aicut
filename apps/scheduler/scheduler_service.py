@@ -134,7 +134,11 @@ class SchedulerService:
             scheduler_task = self.db.execute(
                 select(SchedulerTask).where(SchedulerTask.id == device.current_task_id)
             ).scalar_one_or_none()
-            if scheduler_task and scheduler_task.status == SchedulerTaskStatus.ASSIGNED:
+            if scheduler_task and scheduler_task.status in {
+                SchedulerTaskStatus.ASSIGNED,
+                SchedulerTaskStatus.RUNNING,
+                SchedulerTaskStatus.POST,
+            }:
                 continue
 
             logger.warning(
