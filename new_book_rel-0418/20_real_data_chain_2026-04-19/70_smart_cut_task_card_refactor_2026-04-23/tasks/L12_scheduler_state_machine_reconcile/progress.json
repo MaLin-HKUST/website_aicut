@@ -43,6 +43,17 @@
         "python3 -m json.tool progress.json 通过",
         "python3 -m pytest tests/test_task_truth_reconcile.py -q 通过"
       ]
+    },
+    {
+      "ts": "2026-04-27T00:20:00+08:00",
+      "type": "pre_release_fix",
+      "summary": "发布前只读检查发现生产 worker1-phase6 为 IDLE 但 current_task_id 指向已不存在的 scheduler task，补充 stale device 自愈逻辑。",
+      "evidence": [
+        "production busy_devices=1",
+        "worker1-phase6 status=IDLE current_task_id=56d91440-7985-4292-8fe2-dc1a83ab07a5",
+        "scheduler_tasks 中 smart_cut_* active rows=0",
+        "新增测试覆盖 missing scheduler task 会释放 idle worker，assigned scheduler task 不释放"
+      ]
     }
   ],
   "changed_files": [
@@ -60,6 +71,12 @@
       "command": "python3 -m pytest tests/test_task_truth_reconcile.py -q",
       "result": "8 passed, 6 warnings in 6.49s",
       "notes": "warnings 为现有 Pydantic v2 deprecation。"
+    },
+    {
+      "ts": "2026-04-27T00:22:00+08:00",
+      "command": "python3 -m py_compile worker/core.py apps/scheduler/scheduler_service.py && python3 -m pytest tests/test_task_truth_reconcile.py -q",
+      "result": "10 passed, 6 warnings in 1.79s",
+      "notes": "发布前补充 stale device 自愈测试后重新验证。"
     }
   ],
   "issues": [],

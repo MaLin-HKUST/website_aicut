@@ -52,3 +52,24 @@ python3 -m pytest tests/test_task_truth_reconcile.py -q
 - `task.json` 已把 L12/S1201-S1205 标记为完成。
 - `progress.json` 已记录实现、验证和剩余风险。
 - 本次不做线上部署、不清理线上任务、不启动 Playwright。
+
+## 2026-04-27 00:20 BJT
+
+### 发布前补丁
+
+SOP preflight 发现生产 `worker1-phase6` 为 `IDLE`，但 `current_task_id` 指向已不存在的 scheduler task，导致 `busy_devices=1`。这会阻止新任务被分配。
+
+已补充：
+
+- `reconcile_stale_device_assignments()`：释放 `IDLE + current_task_id` 且 scheduler task 不存在或非 `assigned` 的 worker。
+- 保留合法的 `IDLE + current_task_id + scheduler=assigned`，这是“已分配待领取”状态。
+- 新增 2 个回归测试覆盖上述两个分支。
+
+验证：
+
+```bash
+python3 -m py_compile worker/core.py apps/scheduler/scheduler_service.py
+python3 -m pytest tests/test_task_truth_reconcile.py -q
+```
+
+结果：`10 passed, 6 warnings in 1.79s`。

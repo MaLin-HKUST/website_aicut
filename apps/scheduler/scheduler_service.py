@@ -71,6 +71,7 @@ class SchedulerService:
             各步骤处理结果统计
         """
         completed_count = self.reconcile_completed_scheduler_tasks()
+        stale_devices_count = self.reconcile_stale_device_assignments()
         reconciled_count = self.reconcile_orphaned_business_tasks()
         advanced_count = self.check_device_status_and_advance()
         timeout_count = self.handle_timeouts()
@@ -79,6 +80,7 @@ class SchedulerService:
 
         cycle_stats = {
             "completed": completed_count,
+            "stale_devices": stale_devices_count,
             "reconciled": reconciled_count,
             "assigned": assigned_count,
             "advanced": advanced_count,
@@ -114,6 +116,38 @@ class SchedulerService:
 
         if count:
             logger.warning("Reconciled %s completed scheduler tasks from persisted results", count)
+
+        return count
+
+    def reconcile_stale_device_assignments(self) -> int:
+        """Release idle workers that still point at non-active scheduler tasks."""
+        count = 0
+        stmt = select(SmartCutDevice).where(
+            and_(
+                SmartCutDevice.status == DeviceStatus.IDLE,
+                SmartCutDevice.current_task_id.isnot(None),
+            )
+        )
+        devices = list(self.db.execute(stmt).scalars().all())
+
+        for device in devices:
+            scheduler_task = self.db.execute(
+                select(SchedulerTask).where(SchedulerTask.id == device.current_task_id)
+            ).scalar_one_or_none()
+            if scheduler_task and scheduler_task.status == SchedulerTaskStatus.ASSIGNED:
+                continue
+
+            logger.warning(
+                "Clearing stale current_task_id %s from idle worker %s",
+                device.current_task_id,
+                device.worker_id,
+            )
+            device.current_task_id = None
+            device.updated_at = datetime.utcnow()
+            count += 1
+
+        if count:
+            self.db.commit()
 
         return count
     
