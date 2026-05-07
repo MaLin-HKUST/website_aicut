@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
-export type UserWorkspaceNavKey = "tts" | "smart-cut" | "tasks";
+export type UserWorkspaceNavKey = "tts" | "smart-cut" | "marketing-video" | "tasks";
 
 export type UserWorkspaceMetric = {
   label: string;
@@ -28,6 +28,7 @@ const PRIMARY_ITEMS: Array<{
 }> = [
   { key: "tts", label: "文案生成语音", href: "/tts", icon: "M" },
   { key: "smart-cut", label: "智能剪气口", href: "/smart-cut", icon: "V" },
+  { key: "marketing-video", label: "生成营销视频", href: "/marketing-video", icon: "G" },
   { key: "tasks", label: "任务列表", href: "/tasks", icon: "T" },
 ];
 
@@ -70,8 +71,8 @@ export function UserWorkspaceShell({
 
   return (
     <main className="min-h-screen bg-[#f1f2f0] p-4 lg:p-5">
-      <div className="mx-auto flex max-w-[1480px] gap-4">
-        <aside className="flex w-[276px] shrink-0 flex-col gap-4 pt-1">
+      <div className="mx-auto flex max-w-[1480px] flex-col gap-4 lg:flex-row">
+        <aside className="flex w-full shrink-0 flex-col gap-4 pt-1 lg:w-[276px]">
           <div className="px-3">
             <p className="text-[10px] font-medium tracking-[0.28em] text-stone-400">小马 AI 剪辑</p>
           </div>
@@ -158,9 +159,9 @@ export function UserWorkspaceShell({
           </Button>
         </aside>
 
-        <div className="flex-1 space-y-4">
+        <div className="min-w-0 flex-1 space-y-4">
           <section className="rounded-[30px] border border-[#e3e3df] bg-[#fffefb] px-7 py-5 shadow-[0_8px_22px_rgba(60,66,74,0.04)]">
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_repeat(4,84px)] xl:items-center">
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_repeat(4,minmax(92px,112px))] xl:items-center">
               <div>
                 <h1 className="text-[30px] font-semibold leading-tight text-[#241714]">{headerText}</h1>
               </div>
@@ -170,7 +171,7 @@ export function UserWorkspaceShell({
                   className="rounded-[18px] border border-[#ddddd7] bg-[#fafafa] px-2.5 py-2.5 text-center"
                 >
                   <p className="text-[10px] tracking-[0.14em] text-stone-500">{metric.label}</p>
-                  <p className="mt-1.5 text-[17px] font-semibold text-[#241714]">{metric.value}</p>
+                  <p className="mt-1.5 break-all text-[15px] font-semibold text-[#241714]">{metric.value}</p>
                 </div>
               ))}
             </div>

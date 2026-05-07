@@ -9,6 +9,7 @@ function prettifyTitle(item: TaskCenterItem): string {
   if (/\.[a-z0-9]{2,5}$/i.test(item.title)) {
     if (item.taskType === "tts") return "品牌口播任务";
     if (item.taskType === "smart_cut") return "视频剪辑任务";
+    if (item.taskType === "std_marketing_video") return "营销视频任务";
     return "待处理任务";
   }
   return item.title;

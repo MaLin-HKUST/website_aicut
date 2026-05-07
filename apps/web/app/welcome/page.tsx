@@ -40,17 +40,50 @@ export default function WelcomePage() {
 
   return (
     <UserWorkspaceShell
-      activeItem="tts"
+      activeItem="marketing-video"
       currentUser={user?.username ?? "..."}
       headline={user?.company_name ? `你好，${user.company_name}，小马AI准备就绪~` : undefined}
       metrics={workspace.metrics}
       onLogout={logout}
       previewTasks={workspace.previewTasks}
     >
-      <Card className="flex min-h-[640px] items-center justify-center rounded-[32px] border-[#e5dacd] bg-[#f8f5ef] shadow-panel">
-        <div className="space-y-4 text-center">
-          <p className="text-lg font-medium text-stone-400">请点击左侧「文案生成语音」开始使用</p>
-          <p className="text-sm text-stone-400">你可以从左侧进入智能剪气口，按显式主任务卡模型开始新的剪辑任务。</p>
+      <Card className="min-h-[640px] rounded-[32px] border-[#e5dacd] bg-[#f8f5ef] p-5 shadow-panel sm:p-7">
+        <div className="mx-auto flex h-full max-w-5xl flex-col justify-center gap-5">
+          <div className="text-center">
+            <p className="text-xs tracking-[0.24em] text-stone-500">工作台入口</p>
+            <h2 className="mt-3 text-[28px] font-semibold text-[#241714]">选择你要开始的任务</h2>
+            <p className="mt-3 text-sm leading-7 text-stone-500">营销视频先开放 TONGAN 标准模式；Smart Cut 和文案生成语音保持原入口。</p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <button
+              className="rounded-[28px] border border-[#e4dacb] bg-white p-5 text-left shadow-sm transition hover:bg-[#fffaf5]"
+              onClick={() => router.push("/marketing-video")}
+              type="button"
+            >
+              <p className="text-sm tracking-[0.2em] text-stone-500">TONGAN</p>
+              <p className="mt-3 text-xl font-semibold text-[#241714]">生成营销视频</p>
+              <p className="mt-3 text-sm leading-7 text-stone-500">上传 TXT 文案，创建标准营销视频任务。</p>
+            </button>
+            <button
+              className="rounded-[28px] border border-[#e4dacb] bg-white p-5 text-left shadow-sm transition hover:bg-[#fffaf5]"
+              onClick={() => router.push("/smart-cut")}
+              type="button"
+            >
+              <p className="text-sm tracking-[0.2em] text-stone-500">SMART CUT</p>
+              <p className="mt-3 text-xl font-semibold text-[#241714]">智能剪气口</p>
+              <p className="mt-3 text-sm leading-7 text-stone-500">围绕显式主任务卡继续剪辑流程。</p>
+            </button>
+            <button
+              className="rounded-[28px] border border-[#e4dacb] bg-white p-5 text-left shadow-sm transition hover:bg-[#fffaf5]"
+              onClick={() => router.push("/tts")}
+              type="button"
+            >
+              <p className="text-sm tracking-[0.2em] text-stone-500">TTS</p>
+              <p className="mt-3 text-xl font-semibold text-[#241714]">文案生成语音</p>
+              <p className="mt-3 text-sm leading-7 text-stone-500">输入文案并生成语音素材。</p>
+            </button>
+          </div>
         </div>
       </Card>
     </UserWorkspaceShell>

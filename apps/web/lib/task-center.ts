@@ -1,5 +1,5 @@
 export type TaskCenterStatus = "queued" | "running" | "waiting" | "finished" | "failed";
-export type TaskCenterType = "smart_cut" | "tts" | "batch";
+export type TaskCenterType = "smart_cut" | "std_marketing_video" | "tts" | "batch";
 
 export type TaskCenterItem = {
   id: string;
@@ -125,8 +125,16 @@ export function getTaskSubtitle(task: TaskCenterItem): string {
   return task.currentStage;
 }
 
+export function getTaskTypeLabel(taskType: TaskCenterType): string {
+  if (taskType === "smart_cut") return "智能剪气口";
+  if (taskType === "std_marketing_video") return "标准营销视频剪辑";
+  if (taskType === "tts") return "文案生成语音";
+  return "批量任务";
+}
+
 export function getTimelineItems(task: TaskCenterItem): string[] {
   if (task.taskType === "smart_cut") return ["Upload", "Analyze", "Preview", "Finalize"];
+  if (task.taskType === "std_marketing_video") return ["Upload", "Create", "Generate", "Download"];
   if (task.taskType === "tts") return ["Submit", "Generate", "Review", "Export"];
   return ["Queued", "Running", "Review", "Done"];
 }

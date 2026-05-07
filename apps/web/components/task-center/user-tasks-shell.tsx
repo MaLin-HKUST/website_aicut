@@ -17,7 +17,7 @@ import {
   SmartCutTask,
   SmartCutTaskSummary,
 } from "@/lib/smart-cut";
-import { listTaskCenterItems, TaskCenterItem } from "@/lib/task-center";
+import { getTaskTypeLabel, listTaskCenterItems, TaskCenterItem } from "@/lib/task-center";
 
 const FILTERS = [
   { key: "all", label: "全部" },
@@ -33,7 +33,7 @@ type QueueStatus = TaskCenterItem["status"];
 type UserTaskListItem = {
   id: string;
   title: string;
-  taskType: "smart_cut";
+  taskType: TaskCenterItem["taskType"];
   status: QueueStatus;
   rawStatus: string | null;
   progress: number;
@@ -139,7 +139,7 @@ function buildSharedQueueItem(item: TaskCenterItem): UserTaskListItem {
   return {
     id: item.id,
     title: item.title,
-    taskType: "smart_cut",
+    taskType: item.taskType,
     status: item.status,
     rawStatus: null,
     progress: item.progress,
@@ -265,6 +265,14 @@ export function UserTasksShell() {
       return;
     }
 
+    const selectedSummary = items.find((item) => item.id === selectedId);
+    if (selectedSummary && selectedSummary.taskType !== "smart_cut") {
+      setSelectedTaskDetail(null);
+      setDetailError(null);
+      setDetailNotice(null);
+      return;
+    }
+
     let cancelled = false;
 
     async function loadDetail() {
@@ -287,7 +295,7 @@ export function UserTasksShell() {
     return () => {
       cancelled = true;
     };
-  }, [selectedId]);
+  }, [items, selectedId]);
 
   useEffect(() => {
     if (filteredOutSelected(items, filter, selectedId)) {
@@ -308,7 +316,10 @@ export function UserTasksShell() {
 
   const selectedTask = filteredItems.find((item) => item.id === selectedId) ?? filteredItems[0] ?? null;
   const activeTaskDetail = selectedTaskDetail && selectedTaskDetail.id === selectedTask?.id ? selectedTaskDetail : null;
-  const continueLabel = getSmartCutContinueLabel(activeTaskDetail?.status ?? selectedTask?.rawStatus);
+  const continueLabel =
+    selectedTask?.taskType === "smart_cut"
+      ? getSmartCutContinueLabel(activeTaskDetail?.status ?? selectedTask?.rawStatus)
+      : null;
   const detailTitle =
     activeTaskDetail?.task_title || selectedTask?.title || (activeTaskDetail ? `智能剪气口-${activeTaskDetail.id.slice(0, 8)}` : "");
   const inputSummary = activeTaskDetail
@@ -317,7 +328,12 @@ export function UserTasksShell() {
   const outputSummary = activeTaskDetail
     ? buildDetailOutputSummary(activeTaskDetail, selectedTask?.outputSummary ?? [])
     : selectedTask?.outputSummary ?? [];
-  const detailStatusText = smartCutStatusLabel(activeTaskDetail?.status ?? selectedTask?.rawStatus);
+  const detailStatusText =
+    selectedTask?.taskType === "smart_cut"
+      ? smartCutStatusLabel(activeTaskDetail?.status ?? selectedTask?.rawStatus)
+      : selectedTask
+        ? statusLabel(selectedTask.status)
+        : "待同步";
   const detailStageText = activeTaskDetail
     ? formatSmartCutStage(activeTaskDetail.current_stage)
     : selectedTask?.currentStage ?? "等待推进";
@@ -470,7 +486,7 @@ export function UserTasksShell() {
               <div className="grid gap-4 lg:grid-cols-3">
                 <div className="rounded-[24px] border border-[#e4dacb] bg-white p-4">
                   <p className="text-xs uppercase tracking-[0.24em] text-stone-500">任务类型</p>
-                  <p className="mt-3 text-lg font-semibold text-[#241714]">{selectedTask.taskType}</p>
+                  <p className="mt-3 text-lg font-semibold text-[#241714]">{getTaskTypeLabel(selectedTask.taskType)}</p>
                 </div>
                 <div className="rounded-[24px] border border-[#e4dacb] bg-white p-4">
                   <p className="text-xs uppercase tracking-[0.24em] text-stone-500">进度</p>
@@ -514,6 +530,11 @@ export function UserTasksShell() {
                   {continueLabel ? (
                     <Button onClick={() => router.push(`/smart-cut/${encodeURIComponent(selectedTask.id)}`)} type="button">
                       {continueLabel}
+                    </Button>
+                  ) : null}
+                  {selectedTask.taskType === "std_marketing_video" ? (
+                    <Button onClick={() => router.push("/marketing-video")} type="button">
+                      查看营销视频
                     </Button>
                   ) : null}
                   {canDeleteTask ? (
