@@ -1,21 +1,11 @@
 import { NextRequest } from "next/server";
 
-const LEGACY_API_BASE_URL = process.env.LEGACY_API_BASE_URL ?? process.env.INTERNAL_API_BASE_URL ?? "http://localhost:8000";
-const SMART_CUT_API_BASE_URL =
-  process.env.SMART_CUT_API_BASE_URL ?? process.env.INTERNAL_API_BASE_URL ?? "http://localhost:8000";
-const MARKETING_VIDEO_API_BASE_URL =
-  process.env.MARKETING_VIDEO_API_BASE_URL ?? process.env.INTERNAL_API_BASE_URL ?? "http://localhost:8000";
-
-function getTargetBaseUrl(path: string[]): string {
-  if (path[0] !== "api") return LEGACY_API_BASE_URL;
-  if (path[1] === "marketing-video") return MARKETING_VIDEO_API_BASE_URL;
-  return SMART_CUT_API_BASE_URL;
-}
+import { getProxyTargetBaseUrl } from "@/lib/proxy-target";
 
 async function handler(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   const { path } = await context.params;
   const targetPath = path.join("/");
-  const targetBaseUrl = getTargetBaseUrl(path);
+  const targetBaseUrl = getProxyTargetBaseUrl(path);
   const url = `${targetBaseUrl}/${targetPath}${request.nextUrl.search}`;
 
   const headers = new Headers(request.headers);

@@ -35,6 +35,9 @@ const STATUS_LABELS: Record<MarketingVideoWorkflowStatus, string> = {
 
 const SUBTASK_STATUS_LABELS: Record<string, string> = {
   queued: "排队中",
+  ready: "待执行",
+  dispatching: "调度中",
+  accepted: "已接收",
   running: "执行中",
   succeeded: "已完成",
   failed: "失败",
@@ -396,7 +399,7 @@ export function MarketingVideoWorkspace() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="text-lg font-semibold text-[#241714]">节点进度</h3>
-                <p className="mt-2 text-sm text-stone-500">使用 Stage 5A 聚合字段展示，不在前端计算 DAG 权重。</p>
+                <p className="mt-2 text-sm text-stone-500">显示 TONGAN 三段进度，不在前端计算 DAG 权重。</p>
               </div>
               <span className="w-fit rounded-full border border-[#dfd5c5] bg-[#faf7f2] px-4 py-2 text-sm text-stone-600">
                 TONGAN
@@ -411,7 +414,7 @@ export function MarketingVideoWorkspace() {
                       <div>
                         <p className="text-sm font-semibold text-[#241714]">{subtask.node_name}</p>
                         <p className="mt-1 text-xs text-stone-500">
-                          {subtask.node_code} · {subtask.worker_kind} · attempt {subtask.attempt}
+                          {subtask.node_code} · attempt {subtask.attempt}
                         </p>
                       </div>
                       <span className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${subtaskTone(subtask.status)}`}>
@@ -429,7 +432,7 @@ export function MarketingVideoWorkspace() {
                 ))
               ) : (
                 <div className="rounded-[24px] border border-dashed border-[#dccab6] bg-[#fffaf5] p-8 text-center text-sm text-stone-500">
-                  创建任务后会显示文案校验、语音生成、字幕识别、视频合成和归档节点。
+                  创建任务后会显示准备素材与基础视频、智能匹配素材和渲染成片。
                 </div>
               )}
             </div>
@@ -439,4 +442,3 @@ export function MarketingVideoWorkspace() {
     </UserWorkspaceShell>
   );
 }
-

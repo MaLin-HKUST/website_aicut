@@ -90,6 +90,14 @@ const MOCK_NODE_NAMES = [
   ["tongan_finalize", "结果归档", "general"],
 ] as const;
 
+const TONGAN_STAGE5C_NODE_ORDER = ["tongan_pre_pipeline", "tongan_pipeline_exec", "tongan_post_pipeline"] as const;
+
+const TONGAN_STAGE5C_NODE_LABELS: Record<(typeof TONGAN_STAGE5C_NODE_ORDER)[number], string> = {
+  tongan_pre_pipeline: "准备素材与基础视频",
+  tongan_pipeline_exec: "智能匹配素材",
+  tongan_post_pipeline: "渲染成片",
+};
+
 function getApiMode(): "mock" | "real" {
   const mode = process.env.NEXT_PUBLIC_MARKETING_VIDEO_API_MODE;
   return mode === "real" ? "real" : "mock";
@@ -101,6 +109,60 @@ export function isMarketingVideoMockMode(): boolean {
 
 function sleep(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+export function getMarketingVideoNodeLabel(nodeCode: string, nodeName?: string | null): string {
+  return TONGAN_STAGE5C_NODE_LABELS[nodeCode as keyof typeof TONGAN_STAGE5C_NODE_LABELS] ?? nodeName ?? nodeCode;
+}
+
+function getCanonicalNodeIndex(nodeCode: string): number {
+  const index = TONGAN_STAGE5C_NODE_ORDER.indexOf(nodeCode as (typeof TONGAN_STAGE5C_NODE_ORDER)[number]);
+  return index === -1 ? Number.MAX_SAFE_INTEGER : index;
+}
+
+function getFailedSubtask(subtasks: MarketingVideoSubtask[]): MarketingVideoSubtask | undefined {
+  return subtasks.find((subtask) => subtask.status === "failed" || subtask.status === "manual_required");
+}
+
+function buildNodeFailureMessage(subtask: MarketingVideoSubtask | undefined, workflowMessage: string | null): string | null {
+  if (!subtask) return workflowMessage;
+  const label = getMarketingVideoNodeLabel(subtask.node_code, subtask.node_name);
+  const message = subtask.error_message ?? workflowMessage ?? "节点执行失败，请查看任务日志。";
+  return message.includes(label) ? message : `${label}：${message}`;
+}
+
+export function normalizeMarketingVideoWorkflow(workflow: MarketingVideoWorkflow): MarketingVideoWorkflow {
+  const subtasks = workflow.subtasks
+    .map((subtask) => ({
+      ...subtask,
+      node_name: getMarketingVideoNodeLabel(subtask.node_code, subtask.node_name),
+    }))
+    .sort((left, right) => {
+      const leftIndex = getCanonicalNodeIndex(left.node_code);
+      const rightIndex = getCanonicalNodeIndex(right.node_code);
+      if (leftIndex !== rightIndex) return leftIndex - rightIndex;
+      return 0;
+    });
+  const failedSubtask = getFailedSubtask(subtasks);
+  const currentNodeLabel = workflow.current_node
+    ? getMarketingVideoNodeLabel(workflow.current_node, workflow.current_node_label)
+    : failedSubtask
+      ? getMarketingVideoNodeLabel(failedSubtask.node_code, failedSubtask.node_name)
+      : workflow.current_node_label;
+
+  return {
+    ...workflow,
+    current_node_label: currentNodeLabel,
+    error_message:
+      workflow.status === "failed" || workflow.status === "manual_required"
+        ? buildNodeFailureMessage(failedSubtask, workflow.error_message)
+        : workflow.error_message,
+    download: {
+      ...workflow.download,
+      available: workflow.download.available || Boolean(workflow.download.final_video_url),
+    },
+    subtasks,
+  };
 }
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -392,10 +454,11 @@ export async function createMarketingVideoWorkflow(
     return workflow;
   }
 
-  return fetchJson<MarketingVideoWorkflow>("/api/proxy/api/marketing-video/workflows", {
+  const workflow = await fetchJson<MarketingVideoWorkflow>("/api/proxy/api/marketing-video/workflows", {
     method: "POST",
     body: JSON.stringify(request),
   });
+  return normalizeMarketingVideoWorkflow(workflow);
 }
 
 export async function getMarketingVideoWorkflow(workflowId: string): Promise<MarketingVideoWorkflow> {
@@ -407,7 +470,10 @@ export async function getMarketingVideoWorkflow(workflowId: string): Promise<Mar
     return nextWorkflow;
   }
 
-  return fetchJson<MarketingVideoWorkflow>(`/api/proxy/api/marketing-video/workflows/${encodeURIComponent(workflowId)}`);
+  const workflow = await fetchJson<MarketingVideoWorkflow>(
+    `/api/proxy/api/marketing-video/workflows/${encodeURIComponent(workflowId)}`,
+  );
+  return normalizeMarketingVideoWorkflow(workflow);
 }
 
 export async function getMarketingVideoDownload(workflowId: string): Promise<string> {
