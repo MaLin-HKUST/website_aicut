@@ -14,7 +14,7 @@ final video. Mock mode remains the default unless
 
 - Branch: `feature/stage6c-marketing-video-three-node-contract`
 - Base commit before Stage 6C work: `731db95`
-- Stage 6C commit: `9dc3829`
+- Stage 6C implementation commit: `46e1ff0`
 
 ## Changed Files
 
