@@ -69,6 +69,13 @@ type MarketingVideoPresignResponse = {
   url?: string;
   tos_key?: string;
   object_key?: string;
+  objects?: Array<{
+    input_name?: string;
+    upload_key?: string;
+    upload_url?: string;
+    content_type?: string;
+    method?: string;
+  }>;
 };
 
 type MockOutcome = "auto" | "succeeded" | "failed";
@@ -106,8 +113,10 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as { detail?: string; message?: string } | null;
-    throw new Error(payload?.detail ?? payload?.message ?? `Request failed: ${response.status}`);
+    const payload = (await response.json().catch(() => null)) as
+      | { error?: { message?: string }; detail?: string; message?: string }
+      | null;
+    throw new Error(payload?.error?.message ?? payload?.detail ?? payload?.message ?? `Request failed: ${response.status}`);
   }
 
   if (response.status === 204) return undefined as T;
@@ -301,23 +310,37 @@ export async function uploadMarketingVideoScript(
   const presign = await fetchJson<MarketingVideoPresignResponse>("/api/proxy/api/marketing-video/uploads/presign", {
     method: "POST",
     body: JSON.stringify({
+      customer_id: "tongan",
+      company_id: "tongan",
       filename: file.name,
       content_type: file.type || "text/plain",
-      size: file.size,
       task_type: "std_marketing_video",
       workflow_name: "TONGAN",
+      mode: "standard",
     }),
   });
 
-  const uploadUrl = presign.upload_url ?? presign.url;
+  const scriptObject = presign.objects?.find((object) => object.input_name === "script_txt") ?? presign.objects?.[0];
+  const uploadUrl = scriptObject?.upload_url ?? presign.upload_url ?? presign.url;
+  const uploadMethod = scriptObject?.method ?? "PUT";
+  const uploadKey = scriptObject?.upload_key ?? presign.tos_key ?? presign.object_key;
   if (!uploadUrl) {
     throw new Error("上传地址缺失，请稍后重试。");
+  }
+  if (!presign.upload_session_id) {
+    throw new Error("上传会话缺失，请稍后重试。");
+  }
+  if (uploadMethod.toUpperCase() !== "PUT") {
+    throw new Error(`不支持的上传方法：${uploadMethod}`);
+  }
+  if (!uploadKey) {
+    throw new Error("上传对象路径缺失，请稍后重试。");
   }
 
   await new Promise<void>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("PUT", uploadUrl);
-    xhr.setRequestHeader("Content-Type", file.type || "text/plain");
+    xhr.open(uploadMethod, uploadUrl);
+    xhr.setRequestHeader("Content-Type", scriptObject?.content_type || file.type || "text/plain");
     xhr.upload.onprogress = (event) => {
       if (!event.lengthComputable) return;
       options?.onProgress?.(Math.round((event.loaded / event.total) * 100));
@@ -335,9 +358,9 @@ export async function uploadMarketingVideoScript(
 
   options?.onProgress?.(100);
   return {
-    upload_session_id: presign.upload_session_id ?? "",
+    upload_session_id: presign.upload_session_id,
     filename: file.name,
-    tos_key: presign.tos_key ?? presign.object_key,
+    tos_key: uploadKey,
   };
 }
 
@@ -427,4 +450,3 @@ export async function cancelMarketingVideoWorkflow(workflowId: string): Promise<
   });
   return getMarketingVideoWorkflow(workflowId);
 }
-
