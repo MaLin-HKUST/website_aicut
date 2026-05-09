@@ -1,0 +1,9 @@
+{
+  "result": "BLOCKED",
+  "blocked_gate": "Gate 7A.1 Browser TOS PUT micro test",
+  "summary": "Stage 7A could not obtain a fresh Stage 5C presigned PUT URL because B staging SSH/tunnel access was unavailable. No browser TOS PUT, workflow creation, or final video validation was attempted.",
+  "bridge_used": false,
+  "route_interception_used": false,
+  "backend_upload_fallback_used": false,
+  "next_action": "Restore B staging SSH/API tunnel or expose a reachable staging frontend/API path, then rerun RUN_STAGE7A_RC=1 with the no-bridge Playwright harness."
+}

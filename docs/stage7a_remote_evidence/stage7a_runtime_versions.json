@@ -1,0 +1,25 @@
+{
+  "captured_at_utc": "2026-05-09T02:41:11Z",
+  "website0430_commit": "4d7c58d1e50377b578170c843442ff6fcc4cd52f",
+  "website0430_worktree_state": "dirty Stage 5C source tree; local HEAD remains the Stage 5B report commit, while Stage 5C.7 evidence was produced from uncommitted/source-mounted runtime changes",
+  "aicut2602_commit": "7f9446c020200d43869cccb0082347c2a52676c6",
+  "aicut2602_worktree_state": "dirty feature/stage5c-tongan-pipeline-bundle worktree",
+  "frontend_commit": "66617bf5219ae27c7f5961ce9e65133fec66d29a",
+  "frontend_branch": "rc/stage7a-marketing-video-staging-validation",
+  "b_api_url": "http://127.0.0.1:28080 via SSH tunnel to B staging 127.0.0.1:18080; tunnel unavailable during Gate 7A.1 attempt",
+  "frontend_origin": "http://14.103.87.112:3007 planned through Chromium host-resolver to local temporary Next.js server",
+  "gworker_endpoint": "http://14.103.212.96:8080 public timed out from local; ssh probe to http://127.0.0.1:8080 passed before B SSH outage",
+  "sworker_endpoint": "ssh malin@49.51.193.177; http://127.0.0.1:8081 passed before B SSH outage",
+  "tos_endpoint_type": {
+    "browser_presigned_urls": "public bucket domain autocut-malin.tos-cn-shanghai.volces.com",
+    "server_side_policy_from_stage5c": "B/A/gworker use internal ivolces endpoint; sworker uses public volces endpoint"
+  },
+  "bridge_used": "no",
+  "playwright_route_interception_used": "no",
+  "backend_upload_fallback_used": "no",
+  "runtime_conditions_limiting_result": [
+    "Stage 5C still uses staging sworker tunnel/proxy for B -> sworker HTTP path",
+    "sworker Codex version reported codex_sandbox_mode=danger-full-access",
+    "Stage 5C report says B API ran updated source mounted read-only because clean image rebuild was blocked"
+  ]
+}

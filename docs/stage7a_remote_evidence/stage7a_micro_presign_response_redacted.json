@@ -1,0 +1,7 @@
+{
+  "status": "not_run",
+  "reason": "Gate 7A.1 was blocked before presign because B staging SSH timed out during banner exchange and the local 127.0.0.1:28080 -> B 127.0.0.1:18080 tunnel was unavailable.",
+  "bridge_used": false,
+  "route_interception_used": false,
+  "backend_upload_fallback_used": false
+}

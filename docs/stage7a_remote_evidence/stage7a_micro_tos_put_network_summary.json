@@ -1,0 +1,23 @@
+{
+  "status": "not_run",
+  "frontend_origin": "http://14.103.87.112:3007",
+  "tos_host": null,
+  "method": null,
+  "request_content_type": null,
+  "options_seen": false,
+  "put_status": null,
+  "network_events": [],
+  "bridge_used": false,
+  "route_interception_used": false,
+  "backend_upload_fallback_used": false,
+  "blocker": {
+    "summary": "Could not obtain a fresh Stage 5C presigned PUT URL.",
+    "observations": [
+      "B staging ping succeeded.",
+      "TCP connect to 14.103.87.112:22 succeeded, but ssh timed out during banner exchange.",
+      "Public 14.103.87.112:18080 timed out from local.",
+      "Existing local tunnel 127.0.0.1:28080 timed out when calling /health.",
+      "A delayed retry after closing stale tunnels still timed out during SSH banner exchange."
+    ]
+  }
+}

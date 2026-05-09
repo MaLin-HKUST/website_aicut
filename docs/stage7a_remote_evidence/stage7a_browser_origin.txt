@@ -1,0 +1,5 @@
+Planned frontend origin for the browser validation:
+http://14.103.87.112:3007
+
+Gate 7A.1 did not reach the browser PUT step because the B staging API tunnel
+could not be restored. No TOS PUT was attempted and no workflow was created.

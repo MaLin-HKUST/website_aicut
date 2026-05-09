@@ -1,0 +1,4 @@
+{
+  "status": "not_run",
+  "reason": "Golden comparison requires a Stage 7A final mp4; full workflow was not run because Gate 7A.1 was blocked."
+}
