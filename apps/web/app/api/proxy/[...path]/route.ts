@@ -31,10 +31,16 @@ async function handler(request: NextRequest, context: { params: Promise<{ path: 
   }
 
   const response = await fetch(url, init);
+  const responseHeaders = new Headers(response.headers);
+  responseHeaders.delete("content-length");
+  responseHeaders.delete("content-encoding");
+  responseHeaders.delete("transfer-encoding");
+  responseHeaders.delete("connection");
+
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
-    headers: response.headers,
+    headers: responseHeaders,
   });
 }
 
