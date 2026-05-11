@@ -138,6 +138,15 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
+test("real mode does not expose mock example controls or stage6a final URL", async ({ page }) => {
+  await page.goto("/marketing-video");
+
+  await expect(page.getByText("Real", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "查看成功示例" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "查看失败示例" })).toHaveCount(0);
+  await expect(page.locator("body")).not.toContainText("example.com/stage6a");
+});
+
 test("real mode parses nested presign, uploads, creates, shows Stage 5C nodes, polls, and downloads", async ({ page }) => {
   let tosPutSeen = false;
   let createPayload: Record<string, any> | null = null;
