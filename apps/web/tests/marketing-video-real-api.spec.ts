@@ -12,8 +12,8 @@ import {
 const USER = {
   username: "marketing_video_real_user",
   role: "user",
-  company_id: 1,
-  company_name: "通安样例公司",
+  company_id: 10,
+  company_name: "同安影视城",
 } as const;
 
 const WORKFLOW_ID = STAGE5C_WORKFLOW_ID;

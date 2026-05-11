@@ -23,6 +23,8 @@ import { Input } from "@/components/ui/input";
 
 type BusyState = "upload" | "create" | "cancel" | null;
 
+const MARKETING_VIDEO_FULL_ACCESS_COMPANY_IDS = new Set([2, 10]);
+
 const STATUS_LABELS: Record<MarketingVideoWorkflowStatus, string> = {
   queued: "排队中",
   running: "生成中",
@@ -79,6 +81,10 @@ function buildDefaultTitle(file: File | null) {
   return file.name.replace(/\.txt$/i, "") || "TONGAN 07 staging sample";
 }
 
+function hasMarketingVideoFullAccess(companyId: number | null | undefined) {
+  return companyId !== null && companyId !== undefined && MARKETING_VIDEO_FULL_ACCESS_COMPANY_IDS.has(companyId);
+}
+
 export function MarketingVideoWorkspace() {
   const router = useRouter();
   const [user, setUser] = useState<AuthResponse["user"] | null>(null);
@@ -93,8 +99,9 @@ export function MarketingVideoWorkspace() {
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const mockMode = isMarketingVideoMockMode();
+  const pageLocked = Boolean(user && !hasMarketingVideoFullAccess(user.company_id));
 
-  const canCreate = Boolean(user && scriptFile && busy === null);
+  const canCreate = Boolean(user && !pageLocked && scriptFile && busy === null);
   const workflowDone = workflow && ["succeeded", "failed", "cancelled", "manual_required"].includes(workflow.status);
 
   const selectedFileMeta = useMemo(() => {
@@ -160,7 +167,7 @@ export function MarketingVideoWorkspace() {
   }
 
   async function handleCreateTask() {
-    if (!user || !scriptFile) return;
+    if (!user || !scriptFile || pageLocked) return;
     setBusy("create");
     setError(null);
     setNotice(null);
@@ -194,7 +201,7 @@ export function MarketingVideoWorkspace() {
   }
 
   async function handleCancel() {
-    if (!workflow) return;
+    if (!workflow || pageLocked) return;
     setBusy("cancel");
     setError(null);
     setNotice(null);
@@ -210,7 +217,7 @@ export function MarketingVideoWorkspace() {
   }
 
   async function handleDownload() {
-    if (!workflow) return;
+    if (!workflow || pageLocked) return;
     setError(null);
     try {
       const url = await getMarketingVideoDownload(workflow.workflow_id);
@@ -222,6 +229,7 @@ export function MarketingVideoWorkspace() {
   }
 
   function showMockExample(outcome: "succeeded" | "failed") {
+    if (pageLocked) return;
     const nextWorkflow = buildMarketingVideoMockWorkflow(outcome);
     setWorkflow(nextWorkflow);
     setDownloadUrl(nextWorkflow.download.final_video_url);
@@ -238,8 +246,19 @@ export function MarketingVideoWorkspace() {
       onLogout={logout}
       previewTasks={workspace.previewTasks}
     >
-      <section className="rounded-[32px] border border-[#e5dacd] bg-[#f8f5ef] p-4 shadow-panel sm:p-6">
-        <Card className="rounded-[28px] border-[#e4dacb] bg-white p-5 shadow-sm">
+      <section className="relative rounded-[32px] border border-[#e5dacd] bg-[#f8f5ef] p-4 shadow-panel sm:p-6">
+        {pageLocked ? (
+          <div
+            className="mb-5 rounded-[28px] border border-[#d7c6b0] bg-[#f0ece5] px-5 py-6 text-center shadow-sm"
+            data-testid="marketing-video-development-lock"
+          >
+            <p className="text-[30px] font-semibold text-[#241714]">页面正在开发中</p>
+            <p className="mt-2 text-sm text-stone-600">当前账号可以查看入口，完整操作暂未开放。</p>
+          </div>
+        ) : null}
+
+        <div className={pageLocked ? "pointer-events-none select-none opacity-45 grayscale" : undefined} aria-disabled={pageLocked}>
+          <Card className="rounded-[28px] border-[#e4dacb] bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
             <div>
               <p className="text-xs tracking-[0.24em] text-stone-500">MARKETING VIDEO</p>
@@ -259,12 +278,12 @@ export function MarketingVideoWorkspace() {
               </div>
             </div>
           </div>
-        </Card>
+          </Card>
 
-        {notice ? <p className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{notice}</p> : null}
-        {error ? <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
+          {notice ? <p className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{notice}</p> : null}
+          {error ? <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
 
-        <div className="mt-5 grid gap-5 xl:grid-cols-[1.03fr_0.97fr]">
+          <div className="mt-5 grid gap-5 xl:grid-cols-[1.03fr_0.97fr]">
           <div className="space-y-5">
             <Card className="rounded-[28px] border-[#e4dacb] bg-white p-5 shadow-sm">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -281,7 +300,7 @@ export function MarketingVideoWorkspace() {
                 <label className="flex min-h-[92px] cursor-pointer flex-col items-center justify-center rounded-[24px] border border-dashed border-[#dccab6] bg-[#fffaf5] px-4 py-4 text-center transition hover:bg-[#fff5e9]">
                   <span className="text-[17px] font-semibold text-[#302520]">选择 TXT 文案</span>
                   <span className="mt-2 max-w-full break-all text-sm text-stone-500">{selectedFileMeta}</span>
-                  <Input accept=".txt,text/plain" className="hidden" disabled={busy !== null} onChange={handleFileChange} type="file" />
+                  <Input accept=".txt,text/plain" className="hidden" disabled={busy !== null || pageLocked} onChange={handleFileChange} type="file" />
                 </label>
 
                 <div className="rounded-[24px] border border-[#e4dacb] bg-[#fffdf9] p-4">
@@ -290,7 +309,7 @@ export function MarketingVideoWorkspace() {
                   </label>
                   <Input
                     className="mt-3"
-                    disabled={busy !== null}
+                    disabled={busy !== null || pageLocked}
                     id="marketing-video-title"
                     onChange={(event) => setTitle(event.target.value)}
                     value={title}
@@ -371,16 +390,16 @@ export function MarketingVideoWorkspace() {
 
                   <div className="flex flex-wrap gap-3">
                     {!workflowDone ? (
-                      <Button disabled={busy !== null} onClick={handleCancel} type="button" variant="secondary">
+                      <Button disabled={busy !== null || pageLocked} onClick={handleCancel} type="button" variant="secondary">
                         {busy === "cancel" ? "取消中..." : "取消任务"}
                       </Button>
                     ) : null}
                     {mockMode ? (
                       <>
-                        <Button onClick={() => showMockExample("succeeded")} type="button" variant="secondary">
+                        <Button disabled={pageLocked} onClick={() => showMockExample("succeeded")} type="button" variant="secondary">
                           查看成功示例
                         </Button>
-                        <Button onClick={() => showMockExample("failed")} type="button" variant="secondary">
+                        <Button disabled={pageLocked} onClick={() => showMockExample("failed")} type="button" variant="secondary">
                           查看失败示例
                         </Button>
                       </>
@@ -437,6 +456,7 @@ export function MarketingVideoWorkspace() {
               )}
             </div>
           </Card>
+        </div>
         </div>
       </section>
     </UserWorkspaceShell>
