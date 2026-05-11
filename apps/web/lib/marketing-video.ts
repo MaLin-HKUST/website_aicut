@@ -41,6 +41,8 @@ export type MarketingVideoWorkflow = {
   subtasks: MarketingVideoSubtask[];
 };
 
+export type MarketingVideoWorkflowSummary = Omit<MarketingVideoWorkflow, "subtasks">;
+
 export type CreateMarketingVideoWorkflowRequest = {
   customer_id: string;
   company_id: string;
@@ -82,12 +84,9 @@ type MockOutcome = "auto" | "succeeded" | "failed";
 
 const MOCK_STORAGE_KEY = "marketing-video-stage6a-workflows";
 const MOCK_NODE_NAMES = [
-  ["tongan_input_prepare", "文案校验", "general"],
-  ["tongan_tts", "语音生成", "general"],
-  ["tongan_asr", "字幕识别", "general"],
-  ["tongan_timeline", "时间线整理", "general"],
-  ["tongan_pipeline_exec", "视频合成", "special"],
-  ["tongan_finalize", "结果归档", "general"],
+  ["tongan_pre_pipeline", "准备素材与基础视频", "general"],
+  ["tongan_pipeline_exec", "智能匹配素材", "special"],
+  ["tongan_post_pipeline", "渲染成片", "general"],
 ] as const;
 
 const TONGAN_STAGE5C_NODE_ORDER = ["tongan_pre_pipeline", "tongan_pipeline_exec", "tongan_post_pipeline"] as const;
@@ -267,13 +266,13 @@ function withMockProgress(workflow: MarketingVideoWorkflow & { mock_outcome?: Mo
     return {
       ...workflow,
       status: "failed",
-      current_node: "tongan_timeline",
-      current_node_label: "时间线整理",
+      current_node: "tongan_pipeline_exec",
+      current_node_label: "智能匹配素材",
       progress_percent: 52,
       updated_at: now,
       error_message: "样例 07 文案解析失败，请检查 TXT 内容后重试。",
       download: { available: false, final_video_url: null, task_manifest_key: null },
-      subtasks: buildSubtasks(3, "failed"),
+      subtasks: buildSubtasks(1, "failed"),
     };
   }
 
@@ -307,7 +306,7 @@ function withMockProgress(workflow: MarketingVideoWorkflow & { mock_outcome?: Mo
     };
   }
 
-  const stageIndex = elapsedSeconds < 4 ? 1 : elapsedSeconds < 6 ? 2 : elapsedSeconds < 8 ? 4 : 5;
+  const stageIndex = elapsedSeconds < 4 ? 0 : elapsedSeconds < 7 ? 1 : 2;
   const [current_node, current_node_label] = MOCK_NODE_NAMES[stageIndex];
   return {
     ...workflow,
@@ -461,6 +460,24 @@ export async function createMarketingVideoWorkflow(
   return normalizeMarketingVideoWorkflow(workflow);
 }
 
+export async function listMarketingVideoWorkflows(): Promise<MarketingVideoWorkflowSummary[]> {
+  if (getApiMode() === "mock") {
+    const workflows = Object.values(readMockWorkflows())
+      .map((workflow) => {
+        const nextWorkflow = withMockProgress(workflow);
+        writeMockWorkflow({ ...nextWorkflow, mock_outcome: workflow.mock_outcome });
+        const { subtasks: _subtasks, ...summary } = normalizeMarketingVideoWorkflow(nextWorkflow);
+        return summary;
+      })
+      .filter((workflow) => !(workflow as MarketingVideoWorkflowSummary & { archived_at?: string | null }).archived_at)
+      .sort((left, right) => new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime());
+    return workflows;
+  }
+
+  const payload = await fetchJson<{ workflows: MarketingVideoWorkflowSummary[] }>("/api/proxy/api/marketing-video/workflows");
+  return payload.workflows.map((workflow) => normalizeMarketingVideoWorkflow({ ...workflow, subtasks: [] }));
+}
+
 export async function getMarketingVideoWorkflow(workflowId: string): Promise<MarketingVideoWorkflow> {
   if (getApiMode() === "mock") {
     const workflow = readMockWorkflows()[workflowId];
@@ -515,4 +532,40 @@ export async function cancelMarketingVideoWorkflow(workflowId: string): Promise<
     method: "POST",
   });
   return getMarketingVideoWorkflow(workflowId);
+}
+
+export async function updateMarketingVideoWorkflowTitle(workflowId: string, title: string): Promise<MarketingVideoWorkflow> {
+  if (getApiMode() === "mock") {
+    const workflow = readMockWorkflows()[workflowId];
+    if (!workflow) throw new Error("未找到营销视频任务。");
+    const updated: MarketingVideoWorkflow & { mock_outcome?: MockOutcome } = {
+      ...workflow,
+      title: title.trim(),
+      updated_at: new Date().toISOString(),
+    };
+    writeMockWorkflow(updated);
+    return normalizeMarketingVideoWorkflow(updated);
+  }
+
+  const workflow = await fetchJson<MarketingVideoWorkflow>(
+    `/api/proxy/api/marketing-video/workflows/${encodeURIComponent(workflowId)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ title }),
+    },
+  );
+  return normalizeMarketingVideoWorkflow(workflow);
+}
+
+export async function archiveMarketingVideoWorkflow(workflowId: string): Promise<void> {
+  if (getApiMode() === "mock") {
+    const workflows = readMockWorkflows();
+    delete workflows[workflowId];
+    window.localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(workflows));
+    return;
+  }
+
+  await fetchJson(`/api/proxy/api/marketing-video/workflows/${encodeURIComponent(workflowId)}`, {
+    method: "DELETE",
+  });
 }

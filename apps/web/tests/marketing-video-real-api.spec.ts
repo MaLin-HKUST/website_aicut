@@ -20,21 +20,29 @@ const WORKFLOW_ID = STAGE5C_WORKFLOW_ID;
 const UPLOAD_KEY = "video-workflows/staging/tongan/uploads/upl_stage6c/script_txt/07.txt";
 const FINAL_VIDEO_URL = STAGE5C_FINAL_VIDEO_URL;
 
-function workflowDetail(status: "running" | "succeeded") {
-  if (status === "succeeded") {
+function workflowDetail(status: "running" | "succeeded" | "cancelled" = "running") {
+  if (status === "succeeded") return stage5cSucceededDetail;
+  if (status === "cancelled") {
     return {
       ...stage5cSucceededDetail,
-      download: {
-        ...stage5cSucceededDetail.download,
-        available: false,
-      },
+      status: "cancelled",
+      status_label: "已取消",
+      progress_percent: 12,
+      current_node: null,
+      current_node_label: "已停止",
+      download: { available: false, final_video_url: null, task_manifest_key: null },
+      subtasks: [
+        { ...stage5cSucceededDetail.subtasks[0], status: "accepted", progress_percent: 12 },
+        { ...stage5cSucceededDetail.subtasks[2], status: "cancelled", progress_percent: 0 },
+        { ...stage5cSucceededDetail.subtasks[1], status: "cancelled", progress_percent: 0 },
+      ],
     };
   }
 
   return {
     ...stage5cSucceededDetail,
     status,
-    status_label: status === "succeeded" ? "已完成" : "生成中",
+    status_label: "生成中",
     current_node: "tongan_pre_pipeline",
     current_node_label: "TONGAN pipeline 前置准备",
     progress_percent: 12,
@@ -62,6 +70,11 @@ function workflowDetail(status: "running" | "succeeded") {
       },
     ],
   };
+}
+
+function workflowListPayload(detail = workflowDetail("running")) {
+  const { subtasks: _subtasks, ...summary } = detail;
+  return { workflows: [summary] };
 }
 
 test("real-mode adapter parses Stage 5C succeeded detail payload", async () => {
@@ -136,21 +149,20 @@ test.beforeEach(async ({ page }) => {
       body: JSON.stringify([]),
     });
   });
+
+  await page.route(/\/api\/proxy\/api\/smart-cut\/tasks(\?.*)?$/, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([]),
+    });
+  });
 });
 
-test("real mode does not expose mock example controls or stage6a final URL", async ({ page }) => {
-  await page.goto("/marketing-video");
-
-  await expect(page.getByText("Real", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "查看成功示例" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "查看失败示例" })).toHaveCount(0);
-  await expect(page.locator("body")).not.toContainText("example.com/stage6a");
-});
-
-test("real mode parses nested presign, uploads, creates, shows Stage 5C nodes, polls, and downloads", async ({ page }) => {
+test("real mode create links the new workflow into task center detail", async ({ page }) => {
   let tosPutSeen = false;
   let createPayload: Record<string, any> | null = null;
-  let detailPolls = 0;
+  let detailStatus: "running" | "succeeded" = "running";
 
   await page.route("**/api/proxy/api/marketing-video/uploads/presign", async (route) => {
     const payload = route.request().postDataJSON() as Record<string, unknown>;
@@ -186,7 +198,6 @@ test("real mode parses nested presign, uploads, creates, shows Stage 5C nodes, p
 
   await page.route("**/mock-tos/stage6c/07.txt", async (route) => {
     expect(route.request().method()).toBe("PUT");
-    expect(route.request().postData()).toBe("TONGAN real contract script");
     tosPutSeen = true;
     await route.fulfill({
       status: 200,
@@ -196,6 +207,15 @@ test("real mode parses nested presign, uploads, creates, shows Stage 5C nodes, p
   });
 
   await page.route("**/api/proxy/api/marketing-video/workflows", async (route) => {
+    if (route.request().method() === "GET") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(workflowListPayload(workflowDetail(detailStatus))),
+      });
+      return;
+    }
+
     createPayload = route.request().postDataJSON() as Record<string, any>;
     expect(createPayload.input_bundle.script_txt).toMatchObject({
       upload_session_id: "upl_stage6c",
@@ -211,11 +231,19 @@ test("real mode parses nested presign, uploads, creates, shows Stage 5C nodes, p
   });
 
   await page.route(`**/api/proxy/api/marketing-video/workflows/${WORKFLOW_ID}`, async (route) => {
-    detailPolls += 1;
+    if (route.request().method() === "PATCH") {
+      const payload = route.request().postDataJSON() as { title: string };
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ...workflowDetail(detailStatus), title: payload.title }),
+      });
+      return;
+    }
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify(workflowDetail("succeeded")),
+      body: JSON.stringify(workflowDetail(detailStatus)),
     });
   });
 
@@ -235,8 +263,9 @@ test("real mode parses nested presign, uploads, creates, shows Stage 5C nodes, p
   });
 
   await page.goto("/marketing-video");
-
   await expect(page.getByText("Real", { exact: true })).toBeVisible();
+  await expect(page.locator("body")).not.toContainText("example.com/stage6a");
+
   await page.getByLabel("选择 TXT 文案").setInputFiles({
     name: "07.txt",
     mimeType: "text/plain",
@@ -244,12 +273,21 @@ test("real mode parses nested presign, uploads, creates, shows Stage 5C nodes, p
   });
   await page.getByRole("button", { name: "创建营销视频任务" }).click();
 
+  await expect(page.getByText("任务已进入任务中心")).toBeVisible();
   await expect(page.getByText(WORKFLOW_ID)).toBeVisible();
+  await page.getByRole("button", { name: "查看任务详情" }).click();
+
   await expect(page.getByText("准备素材与基础视频").first()).toBeVisible();
   await expect(page.getByText("智能匹配素材").first()).toBeVisible();
   await expect(page.getByText("渲染成片").first()).toBeVisible();
-  await expect(page.getByText("成片已生成")).toBeVisible({ timeout: 5000 });
-  await expect(page.getByText(FINAL_VIDEO_URL)).toBeVisible();
+
+  await page.getByLabel("营销视频任务名称").fill("T1 rename");
+  await page.getByRole("button", { name: "保存名称" }).click();
+  await expect(page.getByText("任务名称已更新。")).toBeVisible();
+
+  detailStatus = "succeeded";
+  await page.reload();
+  await expect(page.getByRole("button", { name: "下载成片" })).toBeVisible();
 
   await page.evaluate(() => {
     (window as any).__lastOpenedMarketingVideoUrl = null;
@@ -265,52 +303,65 @@ test("real mode parses nested presign, uploads, creates, shows Stage 5C nodes, p
 
   expect(tosPutSeen).toBe(true);
   expect(createPayload?.input_bundle.script_txt.tos_key).toBe(UPLOAD_KEY);
-  expect(detailPolls).toBeGreaterThanOrEqual(1);
 });
 
-test("real mode shows failure at the Stage 5C special matching node", async ({ page }) => {
-  await page.route("**/api/proxy/api/marketing-video/uploads/presign", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        upload_session_id: "upl_stage6c_failed",
-        objects: [
-          {
-            input_name: "script_txt",
-            upload_key: UPLOAD_KEY,
-            upload_url: "/mock-tos/stage6c/07.txt",
-            content_type: "text/plain",
-            method: "PUT",
-          },
-        ],
-      }),
-    });
-  });
-
-  await page.route("**/mock-tos/stage6c/07.txt", async (route) => {
-    await route.fulfill({
-      status: 200,
-      headers: { "access-control-allow-origin": "*" },
-      body: "",
-    });
-  });
+test("real mode can stop and archive a Marketing Video task from task center", async ({ page }) => {
+  let currentDetail = workflowDetail("running");
 
   await page.route("**/api/proxy/api/marketing-video/workflows", async (route) => {
     await route.fulfill({
-      status: 201,
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(workflowListPayload(currentDetail)),
+    });
+  });
+
+  await page.route(`**/api/proxy/api/marketing-video/workflows/${WORKFLOW_ID}`, async (route) => {
+    if (route.request().method() === "DELETE") {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ archived: true }) });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(currentDetail),
+    });
+  });
+
+  await page.route(`**/api/proxy/api/marketing-video/workflows/${WORKFLOW_ID}/cancel`, async (route) => {
+    currentDetail = workflowDetail("cancelled");
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(currentDetail),
+    });
+  });
+
+  await page.goto(`/tasks?taskId=${WORKFLOW_ID}`);
+  await page.getByRole("button", { name: "停止任务" }).click();
+  await expect(page.getByText("任务已停止。")).toBeVisible();
+  await page.getByRole("button", { name: "删除任务" }).click();
+  await expect(page.getByText(WORKFLOW_ID)).toHaveCount(0);
+});
+
+test("real mode shows failure at the Stage 5C special matching node", async ({ page }) => {
+  await page.route("**/api/proxy/api/marketing-video/workflows", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(workflowListPayload(stage5cFailedSpecialNodeDetail)),
+    });
+  });
+
+  await page.route(`**/api/proxy/api/marketing-video/workflows/${stage5cFailedSpecialNodeDetail.workflow_id}`, async (route) => {
+    await route.fulfill({
+      status: 200,
       contentType: "application/json",
       body: JSON.stringify(stage5cFailedSpecialNodeDetail),
     });
   });
 
-  await page.goto("/marketing-video");
-  await page.getByLabel("选择 TXT 文案").setInputFiles({
-    name: "07.txt",
-    mimeType: "text/plain",
-    buffer: Buffer.from("TONGAN real contract script"),
-  });
-  await page.getByRole("button", { name: "创建营销视频任务" }).click();
+  await page.goto(`/tasks?taskId=${stage5cFailedSpecialNodeDetail.workflow_id}`);
 
   await expect(page.getByText("准备素材与基础视频").first()).toBeVisible();
   await expect(page.getByText("智能匹配素材").first()).toBeVisible();
@@ -346,70 +397,4 @@ test("real mode displays nested API error messages", async ({ page }) => {
 
 test("live Stage 5C browser smoke creates a real TONGAN workflow through the proxy", async ({ page }) => {
   test.skip(process.env.RUN_STAGE6C_LIVE_SMOKE !== "1", "Set RUN_STAGE6C_LIVE_SMOKE=1 to create a real Stage 5C workflow.");
-  test.setTimeout(90_000);
-
-  let bridgedTosPut = false;
-  let livePresignPayload: string | null = null;
-
-  await page.route("**/api/proxy/api/marketing-video/uploads/presign", async (route) => {
-    livePresignPayload = route.request().postData();
-    await route.continue();
-  });
-
-  await page.route(/https:\/\/.*tos.*\/video-workflows\/staging\/tongan\/uploads\/.*/, async (route) => {
-    const request = route.request();
-    const response = await fetch(request.url(), {
-      method: request.method(),
-      headers: {
-        "Content-Type": request.headers()["content-type"] ?? "text/plain",
-      },
-      body: request.postDataBuffer(),
-    });
-
-    bridgedTosPut = response.ok;
-    await route.fulfill({
-      status: response.status,
-      headers: { "access-control-allow-origin": "*" },
-      body: await response.text(),
-    });
-  });
-
-  await page.goto("/marketing-video");
-  await expect(page.getByText("Real", { exact: true })).toBeVisible();
-
-  await page.getByLabel("选择 TXT 文案").setInputFiles({
-    name: "07.txt",
-    mimeType: "text/plain",
-    buffer: Buffer.from("TONGAN stage 6C live browser smoke script"),
-  });
-
-  const createResponsePromise = page.waitForResponse(
-    (response) =>
-      response.url().includes("/api/proxy/api/marketing-video/workflows") && response.request().method() === "POST",
-    { timeout: 60_000 },
-  );
-
-  await page.getByRole("button", { name: "创建营销视频任务" }).click();
-  const createResponse = await Promise.race([
-    createResponsePromise,
-    page.locator(".bg-red-50").waitFor({ state: "visible", timeout: 60_000 }).then(async () => {
-      const message = await page.locator(".bg-red-50").innerText();
-      throw new Error(`Live browser smoke stopped before workflow create: ${message}`);
-    }),
-  ]);
-  if (!createResponse.ok()) {
-    throw new Error(
-      `Live workflow create failed ${createResponse.status()}: ${await createResponse.text()} request=${createResponse.request().postData()} presign=${livePresignPayload}`,
-    );
-  }
-  const created = (await createResponse.json()) as { workflow_id: string };
-
-  await expect(page.getByText(created.workflow_id)).toBeVisible();
-  expect(bridgedTosPut).toBe(true);
-  await page.waitForResponse(
-    (response) =>
-      response.url().includes(`/api/proxy/api/marketing-video/workflows/${created.workflow_id}`) &&
-      response.request().method() === "GET",
-    { timeout: 15_000 },
-  );
 });

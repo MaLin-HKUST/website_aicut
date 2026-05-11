@@ -1,4 +1,4 @@
-export type TaskCenterStatus = "queued" | "running" | "waiting" | "finished" | "failed";
+export type TaskCenterStatus = "queued" | "running" | "waiting" | "finished" | "failed" | "cancelled";
 export type TaskCenterType = "smart_cut" | "std_marketing_video" | "tts" | "batch";
 
 export type TaskCenterItem = {
@@ -75,6 +75,11 @@ export const STATUS_META: Record<
     badgeClassName: "border border-rose-300 bg-rose-50 text-rose-700",
     progressClassName: "bg-rose-500",
   },
+  cancelled: {
+    label: "Stopped",
+    badgeClassName: "border border-stone-300 bg-stone-50 text-stone-600",
+    progressClassName: "bg-stone-400",
+  },
 };
 
 export const FILTER_OPTIONS = [
@@ -122,6 +127,7 @@ export function getTaskSubtitle(task: TaskCenterItem): string {
   if (task.status === "waiting" && task.queuePosition) return `Queue #${task.queuePosition}`;
   if (task.status === "finished" && task.downloadUrl) return "Result ready to download";
   if (task.status === "failed" && task.errorMessage) return task.errorMessage;
+  if (task.status === "cancelled") return "已停止";
   return task.currentStage;
 }
 

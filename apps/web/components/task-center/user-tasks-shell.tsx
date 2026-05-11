@@ -5,9 +5,22 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { UserWorkspaceShell } from "@/components/navigation/user-workspace-shell";
 import { useUserWorkspaceData } from "@/components/navigation/use-user-workspace-data";
 import { AuthResponse } from "@/lib/auth";
+import {
+  archiveMarketingVideoWorkflow,
+  cancelMarketingVideoWorkflow,
+  getMarketingVideoDownload,
+  getMarketingVideoNodeLabel,
+  getMarketingVideoWorkflow,
+  listMarketingVideoWorkflows,
+  MarketingVideoWorkflow,
+  MarketingVideoWorkflowStatus,
+  MarketingVideoWorkflowSummary,
+  updateMarketingVideoWorkflowTitle,
+} from "@/lib/marketing-video";
 import {
   abandonTask,
   getSmartCutContinueLabel,
@@ -25,6 +38,7 @@ const FILTERS = [
   { key: "waiting", label: "等待中" },
   { key: "finished", label: "已完成" },
   { key: "failed", label: "失败" },
+  { key: "cancelled", label: "已停止" },
 ] as const;
 
 type FilterKey = (typeof FILTERS)[number]["key"];
@@ -51,6 +65,7 @@ function statusLabel(status: QueueStatus) {
   if (status === "running") return "执行中";
   if (status === "waiting") return "等待中";
   if (status === "finished") return "已完成";
+  if (status === "cancelled") return "已停止";
   return "失败";
 }
 
@@ -58,6 +73,7 @@ function statusTone(status: QueueStatus) {
   if (status === "finished") return "bg-emerald-100 text-emerald-700";
   if (status === "queued") return "bg-blue-100 text-blue-700";
   if (status === "failed") return "bg-rose-100 text-rose-700";
+  if (status === "cancelled") return "bg-stone-100 text-stone-600";
   return "bg-amber-100 text-amber-700";
 }
 
@@ -153,6 +169,34 @@ function buildSharedQueueItem(item: TaskCenterItem): UserTaskListItem {
   };
 }
 
+function marketingStatusToQueueStatus(status: MarketingVideoWorkflowStatus): QueueStatus {
+  if (status === "succeeded") return "finished";
+  if (status === "failed") return "failed";
+  if (status === "cancelled") return "cancelled";
+  if (status === "waiting_user" || status === "manual_required") return "waiting";
+  if (status === "queued") return "queued";
+  return "running";
+}
+
+function buildMarketingVideoQueueItem(workflow: MarketingVideoWorkflowSummary | MarketingVideoWorkflow): UserTaskListItem {
+  const downloadUrl = workflow.download.available ? workflow.download.final_video_url : null;
+  return {
+    id: workflow.workflow_id,
+    title: workflow.title || `TONGAN ${workflow.workflow_id.slice(3, 11)}`,
+    taskType: "std_marketing_video",
+    status: marketingStatusToQueueStatus(workflow.status),
+    rawStatus: workflow.status,
+    progress: workflow.progress_percent,
+    currentStage: workflow.current_node_label || statusLabel(marketingStatusToQueueStatus(workflow.status)),
+    updatedAt: workflow.updated_at,
+    createdAt: workflow.created_at,
+    downloadUrl,
+    errorMessage: workflow.error_message,
+    inputSummary: ["TXT 文案", workflow.workflow_id],
+    outputSummary: downloadUrl ? ["final video ready"] : [],
+  };
+}
+
 function buildSelfQueueItem(summary: SmartCutTaskSummary, existing?: UserTaskListItem): UserTaskListItem {
   return {
     id: summary.id,
@@ -200,9 +244,12 @@ export function UserTasksShell() {
   const [selectedId, setSelectedId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [selectedTaskDetail, setSelectedTaskDetail] = useState<SmartCutTask | null>(null);
+  const [selectedMarketingVideoDetail, setSelectedMarketingVideoDetail] = useState<MarketingVideoWorkflow | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [detailNotice, setDetailNotice] = useState<string | null>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
+  const [marketingAction, setMarketingAction] = useState<"rename" | "cancel" | "archive" | "download" | null>(null);
+  const [marketingTitleDraft, setMarketingTitleDraft] = useState("");
   const workspace = useUserWorkspaceData(user?.username, user?.company_id);
 
   useEffect(() => {
@@ -222,7 +269,7 @@ export function UserTasksShell() {
       setUser(payload.user);
 
       try {
-        const [sharedItems, ownTasks] = await Promise.all([
+        const [sharedItems, ownTasks, marketingWorkflows] = await Promise.all([
           listTaskCenterItems({
             mode: "user",
             userId: payload.user.username,
@@ -232,6 +279,7 @@ export function UserTasksShell() {
             userId: payload.user.username,
             limit: 50,
           }),
+          listMarketingVideoWorkflows(),
         ]);
 
         const merged = new Map<string, UserTaskListItem>();
@@ -240,6 +288,9 @@ export function UserTasksShell() {
         }
         for (const item of ownTasks.filter((task) => task.status !== "abandoned")) {
           merged.set(item.id, buildSelfQueueItem(item, merged.get(item.id)));
+        }
+        for (const workflow of marketingWorkflows) {
+          merged.set(workflow.workflow_id, buildMarketingVideoQueueItem(workflow));
         }
 
         const nextItems = Array.from(merged.values()).sort(
@@ -260,14 +311,49 @@ export function UserTasksShell() {
   useEffect(() => {
     if (!selectedId) {
       setSelectedTaskDetail(null);
+      setSelectedMarketingVideoDetail(null);
       setDetailError(null);
       setDetailNotice(null);
       return;
     }
 
     const selectedSummary = items.find((item) => item.id === selectedId);
+    if (selectedSummary?.taskType === "std_marketing_video") {
+      setSelectedTaskDetail(null);
+      let cancelled = false;
+
+      async function loadMarketingVideoDetail() {
+        try {
+          setDetailError(null);
+          setDetailNotice(null);
+          const workflow = await getMarketingVideoWorkflow(selectedId);
+          if (cancelled) return;
+          setSelectedMarketingVideoDetail(workflow);
+          setMarketingTitleDraft(workflow.title);
+          setItems((current) => {
+            const nextItem = buildMarketingVideoQueueItem(workflow);
+            const rest = current.filter((item) => item.id !== workflow.workflow_id);
+            return [nextItem, ...rest].sort(
+              (left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime(),
+            );
+          });
+        } catch (err) {
+          if (cancelled) return;
+          setSelectedMarketingVideoDetail(null);
+          setDetailError(err instanceof Error ? err.message : "读取营销视频任务详情失败");
+        }
+      }
+
+      void loadMarketingVideoDetail();
+
+      return () => {
+        cancelled = true;
+      };
+    }
+
     if (selectedSummary && selectedSummary.taskType !== "smart_cut") {
       setSelectedTaskDetail(null);
+      setSelectedMarketingVideoDetail(null);
       setDetailError(null);
       setDetailNotice(null);
       return;
@@ -280,6 +366,7 @@ export function UserTasksShell() {
         setDetailError(null);
         setDetailNotice(null);
         setSelectedTaskDetail(null);
+        setSelectedMarketingVideoDetail(null);
         const task = await getSmartCutTask(selectedId);
         if (cancelled) return;
         setSelectedTaskDetail(task);
@@ -295,7 +382,7 @@ export function UserTasksShell() {
     return () => {
       cancelled = true;
     };
-  }, [items, selectedId]);
+  }, [selectedId]);
 
   useEffect(() => {
     if (filteredOutSelected(items, filter, selectedId)) {
@@ -303,6 +390,28 @@ export function UserTasksShell() {
       setSelectedId(nextSelectedId);
     }
   }, [filter, items, selectedId]);
+
+  useEffect(() => {
+    if (!selectedMarketingVideoDetail) return;
+    if (!["queued", "running", "waiting_user", "manual_required"].includes(selectedMarketingVideoDetail.status)) return;
+
+    const timer = window.setInterval(() => {
+      void getMarketingVideoWorkflow(selectedMarketingVideoDetail.workflow_id)
+        .then((workflow) => {
+          setSelectedMarketingVideoDetail(workflow);
+          setItems((current) => {
+            const nextItem = buildMarketingVideoQueueItem(workflow);
+            const rest = current.filter((item) => item.id !== workflow.workflow_id);
+            return [nextItem, ...rest].sort(
+              (left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime(),
+            );
+          });
+        })
+        .catch((err) => setDetailError(err instanceof Error ? err.message : "刷新营销视频任务失败"));
+    }, 3000);
+
+    return () => window.clearInterval(timer);
+  }, [selectedMarketingVideoDetail]);
 
   async function logout() {
     await fetch("/api/proxy/auth/logout", { method: "POST" });
@@ -316,25 +425,40 @@ export function UserTasksShell() {
 
   const selectedTask = filteredItems.find((item) => item.id === selectedId) ?? filteredItems[0] ?? null;
   const activeTaskDetail = selectedTaskDetail && selectedTaskDetail.id === selectedTask?.id ? selectedTaskDetail : null;
+  const activeMarketingVideoDetail =
+    selectedMarketingVideoDetail && selectedMarketingVideoDetail.workflow_id === selectedTask?.id ? selectedMarketingVideoDetail : null;
   const continueLabel =
     selectedTask?.taskType === "smart_cut"
       ? getSmartCutContinueLabel(activeTaskDetail?.status ?? selectedTask?.rawStatus)
       : null;
   const detailTitle =
-    activeTaskDetail?.task_title || selectedTask?.title || (activeTaskDetail ? `智能剪气口-${activeTaskDetail.id.slice(0, 8)}` : "");
-  const inputSummary = activeTaskDetail
+    activeMarketingVideoDetail?.title ||
+    activeTaskDetail?.task_title ||
+    selectedTask?.title ||
+    (activeTaskDetail ? `智能剪气口-${activeTaskDetail.id.slice(0, 8)}` : "");
+  const inputSummary = activeMarketingVideoDetail
+    ? ["TXT 文案", activeMarketingVideoDetail.workflow_id]
+    : activeTaskDetail
     ? buildDetailInputSummary(activeTaskDetail, selectedTask?.inputSummary ?? [])
     : selectedTask?.inputSummary ?? [];
-  const outputSummary = activeTaskDetail
+  const outputSummary = activeMarketingVideoDetail
+    ? activeMarketingVideoDetail.download.available
+      ? ["成片已生成"]
+      : []
+    : activeTaskDetail
     ? buildDetailOutputSummary(activeTaskDetail, selectedTask?.outputSummary ?? [])
     : selectedTask?.outputSummary ?? [];
   const detailStatusText =
-    selectedTask?.taskType === "smart_cut"
+    activeMarketingVideoDetail
+      ? statusLabel(marketingStatusToQueueStatus(activeMarketingVideoDetail.status))
+      : selectedTask?.taskType === "smart_cut"
       ? smartCutStatusLabel(activeTaskDetail?.status ?? selectedTask?.rawStatus)
       : selectedTask
         ? statusLabel(selectedTask.status)
         : "待同步";
-  const detailStageText = activeTaskDetail
+  const detailStageText = activeMarketingVideoDetail
+    ? activeMarketingVideoDetail.current_node_label || "等待推进"
+    : activeTaskDetail
     ? formatSmartCutStage(activeTaskDetail.current_stage)
     : selectedTask?.currentStage ?? "等待推进";
   const sharedTaskNotice =
@@ -351,6 +475,12 @@ export function UserTasksShell() {
       activeTaskDetail.user_id === user.username &&
       isSmartCutDeletable(activeTaskDetail.status) &&
       deletingTaskId === null,
+  );
+  const canCancelMarketingVideo = Boolean(
+    activeMarketingVideoDetail && ["queued", "running"].includes(activeMarketingVideoDetail.status) && marketingAction === null,
+  );
+  const canArchiveMarketingVideo = Boolean(
+    activeMarketingVideoDetail && ["cancelled", "failed"].includes(activeMarketingVideoDetail.status) && marketingAction === null,
   );
 
   async function handleDeleteTask() {
@@ -373,6 +503,111 @@ export function UserTasksShell() {
       setDetailError(err instanceof Error ? err.message : "删除任务失败");
     } finally {
       setDeletingTaskId(null);
+    }
+  }
+
+  function handleSelectTask(taskId: string) {
+    setSelectedId(taskId);
+    router.replace(`/tasks?taskId=${encodeURIComponent(taskId)}`, { scroll: false });
+  }
+
+  async function refreshMarketingVideoDetail(workflowId: string) {
+    const workflow = await getMarketingVideoWorkflow(workflowId);
+    setSelectedMarketingVideoDetail(workflow);
+    setMarketingTitleDraft(workflow.title);
+    setItems((current) => {
+      const nextItem = buildMarketingVideoQueueItem(workflow);
+      const rest = current.filter((item) => item.id !== workflow.workflow_id);
+      return [nextItem, ...rest].sort(
+        (left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime(),
+      );
+    });
+    return workflow;
+  }
+
+  async function handleRenameMarketingVideo() {
+    if (!activeMarketingVideoDetail) return;
+    setMarketingAction("rename");
+    setDetailError(null);
+    setDetailNotice(null);
+    try {
+      const workflow = await updateMarketingVideoWorkflowTitle(activeMarketingVideoDetail.workflow_id, marketingTitleDraft);
+      setSelectedMarketingVideoDetail(workflow);
+      setItems((current) => {
+        const nextItem = buildMarketingVideoQueueItem(workflow);
+        const rest = current.filter((item) => item.id !== workflow.workflow_id);
+        return [nextItem, ...rest].sort(
+          (left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime(),
+        );
+      });
+      setDetailNotice("任务名称已更新。");
+    } catch (err) {
+      setDetailError(err instanceof Error ? err.message : "修改任务名称失败");
+    } finally {
+      setMarketingAction(null);
+    }
+  }
+
+  async function handleCancelMarketingVideo() {
+    if (!activeMarketingVideoDetail) return;
+    setMarketingAction("cancel");
+    setDetailError(null);
+    setDetailNotice(null);
+    try {
+      const workflow = await cancelMarketingVideoWorkflow(activeMarketingVideoDetail.workflow_id);
+      setSelectedMarketingVideoDetail(workflow);
+      setItems((current) => {
+        const nextItem = buildMarketingVideoQueueItem(workflow);
+        const rest = current.filter((item) => item.id !== workflow.workflow_id);
+        return [nextItem, ...rest].sort(
+          (left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime(),
+        );
+      });
+      setDetailNotice("任务已停止。");
+    } catch (err) {
+      setDetailError(err instanceof Error ? err.message : "停止任务失败");
+    } finally {
+      setMarketingAction(null);
+    }
+  }
+
+  async function handleArchiveMarketingVideo() {
+    if (!activeMarketingVideoDetail) return;
+    const archivedId = activeMarketingVideoDetail.workflow_id;
+    setMarketingAction("archive");
+    setDetailError(null);
+    setDetailNotice(null);
+    try {
+      await archiveMarketingVideoWorkflow(archivedId);
+      let nextSelectedId = "";
+      setItems((current) => {
+        const remaining = current.filter((item) => item.id !== archivedId);
+        nextSelectedId = remaining[0]?.id ?? "";
+        return remaining;
+      });
+      setSelectedMarketingVideoDetail(null);
+      setSelectedId(nextSelectedId);
+      if (nextSelectedId) router.replace(`/tasks?taskId=${encodeURIComponent(nextSelectedId)}`, { scroll: false });
+      setDetailNotice("任务已从列表归档。");
+    } catch (err) {
+      setDetailError(err instanceof Error ? err.message : "归档任务失败");
+    } finally {
+      setMarketingAction(null);
+    }
+  }
+
+  async function handleMarketingVideoDownload() {
+    if (!activeMarketingVideoDetail) return;
+    setMarketingAction("download");
+    setDetailError(null);
+    try {
+      const url = await getMarketingVideoDownload(activeMarketingVideoDetail.workflow_id);
+      await refreshMarketingVideoDetail(activeMarketingVideoDetail.workflow_id);
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      setDetailError(err instanceof Error ? err.message : "下载链接暂不可用");
+    } finally {
+      setMarketingAction(null);
     }
   }
 
@@ -429,7 +664,7 @@ export function UserTasksShell() {
                       ? "border-[#2b201d] bg-[#fff8ef]"
                       : "border-[#ebe1d3] bg-[#fffdf9] hover:bg-[#faf4eb]",
                   ].join(" ")}
-                  onClick={() => setSelectedId(item.id)}
+                  onClick={() => handleSelectTask(item.id)}
                   type="button"
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -478,8 +713,28 @@ export function UserTasksShell() {
                 ) : null}
                 {activeTaskDetail?.error_message ? (
                   <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{activeTaskDetail.error_message}</p>
+                ) : activeMarketingVideoDetail?.error_message ? (
+                  <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{activeMarketingVideoDetail.error_message}</p>
                 ) : selectedTask.errorMessage ? (
                   <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{selectedTask.errorMessage}</p>
+                ) : null}
+                {activeMarketingVideoDetail ? (
+                  <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                    <Input
+                      aria-label="营销视频任务名称"
+                      disabled={marketingAction !== null}
+                      onChange={(event) => setMarketingTitleDraft(event.target.value)}
+                      value={marketingTitleDraft}
+                    />
+                    <Button
+                      disabled={marketingAction !== null || marketingTitleDraft.trim().length === 0}
+                      onClick={handleRenameMarketingVideo}
+                      type="button"
+                      variant="secondary"
+                    >
+                      {marketingAction === "rename" ? "保存中..." : "保存名称"}
+                    </Button>
+                  </div>
                 ) : null}
               </div>
 
@@ -497,6 +752,27 @@ export function UserTasksShell() {
                   <p className="mt-3 text-lg font-semibold text-[#241714]">{formatTime(selectedTask.updatedAt)}</p>
                 </div>
               </div>
+
+              {activeMarketingVideoDetail ? (
+                <div className="rounded-[28px] border border-[#e4dacb] bg-white p-5">
+                    <p className="text-xs uppercase tracking-[0.24em] text-stone-500">节点状态</p>
+                    <div className="mt-4 space-y-3">
+                      {activeMarketingVideoDetail.subtasks.map((subtask) => (
+                        <div key={subtask.subtask_id} className="rounded-[18px] bg-[#faf7f2] px-4 py-3 text-sm text-stone-600">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <span className="font-semibold text-[#241714]">
+                              {getMarketingVideoNodeLabel(subtask.node_code, subtask.node_name)}
+                            </span>
+                            <span>
+                              {subtask.status} · attempt {subtask.attempt}
+                            </span>
+                          </div>
+                          {subtask.error_message ? <p className="mt-2 text-red-700">{subtask.error_message}</p> : null}
+                        </div>
+                      ))}
+                    </div>
+                </div>
+              ) : null}
 
               <div className="rounded-[28px] border border-[#e4dacb] bg-white p-5">
                 <p className="text-xs uppercase tracking-[0.24em] text-stone-500">输入摘要</p>
@@ -532,9 +808,24 @@ export function UserTasksShell() {
                       {continueLabel}
                     </Button>
                   ) : null}
-                  {selectedTask.taskType === "std_marketing_video" ? (
-                    <Button onClick={() => router.push("/marketing-video")} type="button">
-                      查看营销视频
+                  {activeMarketingVideoDetail && canCancelMarketingVideo ? (
+                    <Button onClick={handleCancelMarketingVideo} type="button" variant="secondary">
+                      {marketingAction === "cancel" ? "停止中..." : "停止任务"}
+                    </Button>
+                  ) : null}
+                  {activeMarketingVideoDetail && canArchiveMarketingVideo ? (
+                    <Button
+                      className="text-red-600 ring-red-200 hover:bg-red-50"
+                      onClick={handleArchiveMarketingVideo}
+                      type="button"
+                      variant="secondary"
+                    >
+                      {marketingAction === "archive" ? "归档中..." : "删除任务"}
+                    </Button>
+                  ) : null}
+                  {activeMarketingVideoDetail?.download.available ? (
+                    <Button onClick={handleMarketingVideoDownload} type="button" variant="secondary">
+                      {marketingAction === "download" ? "打开中..." : "下载成片"}
                     </Button>
                   ) : null}
                   {canDeleteTask ? (

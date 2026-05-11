@@ -24,6 +24,19 @@ async function mockAuth(page: Page, user: TestUser) {
   });
 }
 
+async function createMockMarketingVideoTask(page: Page, filename = "07.txt") {
+  await page.goto("/marketing-video");
+  await page.getByLabel("选择 TXT 文案").setInputFiles({
+    name: filename,
+    mimeType: "text/plain",
+    buffer: Buffer.from("TONGAN sample script"),
+  });
+  await page.getByRole("button", { name: "创建营销视频任务" }).click();
+  await expect(page.getByText("任务已进入任务中心")).toBeVisible();
+  const workflowText = await page.locator("text=/wf_mock_/").first().innerText();
+  return workflowText.trim();
+}
+
 test.beforeEach(async ({ page }) => {
   await page.route("**/api/proxy/auth/logout", async (route) => {
     await route.fulfill({
@@ -40,35 +53,78 @@ test.beforeEach(async ({ page }) => {
       body: JSON.stringify([]),
     });
   });
+
+  await page.route(/\/api\/proxy\/api\/smart-cut\/tasks(\?.*)?$/, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([]),
+    });
+  });
 });
 
-test("marketing video mock workspace creates a TONGAN task and shows terminal states", async ({ page }) => {
+test("marketing video create enters task center and allows another task", async ({ page }) => {
   await mockAuth(page, FULL_ACCESS_USER);
-  await page.goto("/marketing-video");
+  const firstWorkflowId = await createMockMarketingVideoTask(page);
 
-  await expect(page.getByRole("heading", { name: "生成营销视频" })).toBeVisible();
-  await expect(page.getByText("TONGAN 标准", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "创建营销视频任务" })).toBeDisabled();
-
+  await page.getByRole("button", { name: "继续创建" }).click();
   await page.getByLabel("选择 TXT 文案").setInputFiles({
-    name: "07.txt",
+    name: "08.txt",
     mimeType: "text/plain",
-    buffer: Buffer.from("TONGAN sample script"),
+    buffer: Buffer.from("Second TONGAN sample script"),
   });
-
-  await expect(page.getByText(/07\.txt/)).toBeVisible();
   await page.getByRole("button", { name: "创建营销视频任务" }).click();
+  await expect(page.getByText("任务已进入任务中心")).toBeVisible();
 
-  await expect(page.getByText(/Mock 任务已创建/)).toBeVisible();
-  await expect(page.getByText("文案校验")).toBeVisible();
-  await expect(page.getByText("视频合成")).toBeVisible();
+  await page.getByRole("button", { name: "查看任务详情" }).click();
+  await expect(page).toHaveURL(/\/tasks\?taskId=wf_mock_/);
+  await expect(page.getByText("准备素材与基础视频").first()).toBeVisible();
+  await expect(page.getByText("智能匹配素材").first()).toBeVisible();
+  await expect(page.getByText("渲染成片").first()).toBeVisible();
+  await expect(page.getByText(firstWorkflowId)).toBeVisible();
+});
 
-  await page.getByRole("button", { name: "查看失败示例" }).click();
-  await expect(page.getByText("样例 07 文案解析失败，请检查 TXT 内容后重试。").first()).toBeVisible();
+test("tasks page restores marketing video detail, renames, stops, and archives", async ({ page }) => {
+  await mockAuth(page, FULL_ACCESS_USER);
+  const workflowId = await createMockMarketingVideoTask(page);
 
-  await page.getByRole("button", { name: "查看成功示例" }).click();
+  await page.goto(`/tasks?taskId=${encodeURIComponent(workflowId)}`);
+  await expect(page.getByText(workflowId).first()).toBeVisible();
+  await expect(page.getByText("准备素材与基础视频").first()).toBeVisible();
+
+  await page.getByLabel("营销视频任务名称").fill("新的营销视频任务名");
+  await page.getByRole("button", { name: "保存名称" }).click();
+  await expect(page.getByText("任务名称已更新。")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "新的营销视频任务名" })).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "新的营销视频任务名" })).toBeVisible();
+  await expect(page.getByText("准备素材与基础视频").first()).toBeVisible();
+
+  await page.getByRole("button", { name: "停止任务" }).click();
+  await expect(page.getByText("任务已停止。")).toBeVisible();
+  await expect(page.getByText("已停止").first()).toBeVisible();
+
+  await page.getByRole("button", { name: "删除任务" }).click();
+  await expect(page.getByText(workflowId)).toHaveCount(0);
+});
+
+test("succeeded marketing video task shows download entry in task center", async ({ page }) => {
+  await mockAuth(page, FULL_ACCESS_USER);
+  const workflowId = await createMockMarketingVideoTask(page);
+
+  await page.waitForTimeout(9500);
+  await page.goto(`/tasks?taskId=${encodeURIComponent(workflowId)}`);
   await expect(page.getByText("成片已生成")).toBeVisible();
   await expect(page.getByRole("button", { name: "下载成片" })).toBeVisible();
+});
+
+test("Smart Cut task center smoke still loads", async ({ page }) => {
+  await mockAuth(page, FULL_ACCESS_USER);
+  await page.goto("/tasks");
+
+  await expect(page.getByRole("heading", { name: "任务列表" })).toBeVisible();
+  await expect(page.getByText("当前筛选下没有任务")).toBeVisible();
 });
 
 test("company 2 keeps full marketing video access", async ({ page }) => {
