@@ -12,12 +12,13 @@ import { AuthResponse } from "@/lib/auth";
 import {
   archiveMarketingVideoWorkflow,
   cancelMarketingVideoWorkflow,
+  deriveMarketingVideoDisplayQueueStatus,
+  formatMarketingVideoSubtaskStatus,
   getMarketingVideoDownload,
   getMarketingVideoNodeLabel,
   getMarketingVideoWorkflow,
   listMarketingVideoWorkflows,
   MarketingVideoWorkflow,
-  MarketingVideoWorkflowStatus,
   MarketingVideoWorkflowSummary,
   updateMarketingVideoWorkflowTitle,
 } from "@/lib/marketing-video";
@@ -169,25 +170,21 @@ function buildSharedQueueItem(item: TaskCenterItem): UserTaskListItem {
   };
 }
 
-function marketingStatusToQueueStatus(status: MarketingVideoWorkflowStatus): QueueStatus {
-  if (status === "succeeded") return "finished";
-  if (status === "failed") return "failed";
-  if (status === "cancelled") return "cancelled";
-  if (status === "waiting_user" || status === "manual_required") return "waiting";
-  if (status === "queued") return "queued";
-  return "running";
+function marketingStatusToQueueStatus(workflow: MarketingVideoWorkflowSummary | MarketingVideoWorkflow): QueueStatus {
+  return deriveMarketingVideoDisplayQueueStatus(workflow);
 }
 
 function buildMarketingVideoQueueItem(workflow: MarketingVideoWorkflowSummary | MarketingVideoWorkflow): UserTaskListItem {
   const downloadUrl = workflow.download.available ? workflow.download.final_video_url : null;
+  const displayStatus = marketingStatusToQueueStatus(workflow);
   return {
     id: workflow.workflow_id,
     title: workflow.title || `TONGAN ${workflow.workflow_id.slice(3, 11)}`,
     taskType: "std_marketing_video",
-    status: marketingStatusToQueueStatus(workflow.status),
+    status: displayStatus,
     rawStatus: workflow.status,
     progress: workflow.progress_percent,
-    currentStage: workflow.current_node_label || statusLabel(marketingStatusToQueueStatus(workflow.status)),
+    currentStage: workflow.current_node_label || statusLabel(displayStatus),
     updatedAt: workflow.updated_at,
     createdAt: workflow.created_at,
     downloadUrl,
@@ -450,7 +447,7 @@ export function UserTasksShell() {
     : selectedTask?.outputSummary ?? [];
   const detailStatusText =
     activeMarketingVideoDetail
-      ? statusLabel(marketingStatusToQueueStatus(activeMarketingVideoDetail.status))
+      ? statusLabel(marketingStatusToQueueStatus(activeMarketingVideoDetail))
       : selectedTask?.taskType === "smart_cut"
       ? smartCutStatusLabel(activeTaskDetail?.status ?? selectedTask?.rawStatus)
       : selectedTask
@@ -764,7 +761,7 @@ export function UserTasksShell() {
                               {getMarketingVideoNodeLabel(subtask.node_code, subtask.node_name)}
                             </span>
                             <span>
-                              {subtask.status} · attempt {subtask.attempt}
+                              {formatMarketingVideoSubtaskStatus(subtask.status, subtask.attempt)}
                             </span>
                           </div>
                           {subtask.error_message ? <p className="mt-2 text-red-700">{subtask.error_message}</p> : null}
