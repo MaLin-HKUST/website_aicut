@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
 
-import { normalizeMarketingVideoWorkflow } from "../lib/marketing-video";
+import {
+  deriveMarketingVideoDisplayQueueStatus,
+  formatMarketingVideoSubtaskStatus,
+  normalizeMarketingVideoWorkflow,
+  type MarketingVideoWorkflow,
+} from "../lib/marketing-video";
 import { getProxyTargetBaseUrl } from "../lib/proxy-target";
 import {
   STAGE5C_FINAL_VIDEO_URL,
@@ -77,6 +82,15 @@ function workflowListPayload(detail = workflowDetail("running")) {
   return { workflows: [summary] };
 }
 
+function workflowListPayloads(details: MarketingVideoWorkflow[]) {
+  return {
+    workflows: details.map((detail) => {
+      const { subtasks: _subtasks, ...summary } = detail;
+      return summary;
+    }),
+  };
+}
+
 test("real-mode adapter parses Stage 5C succeeded detail payload", async () => {
   const workflow = normalizeMarketingVideoWorkflow(stage5cSucceededDetail);
 
@@ -100,6 +114,22 @@ test("real-mode adapter parses Stage 5C failed special-node detail payload", asy
   expect(workflow.current_node_label).toBe("智能匹配素材");
   expect(workflow.error_message).toContain("智能匹配素材");
   expect(workflow.error_message).toContain("special worker returned non-zero exit code");
+});
+
+test("marketing video display helpers use Chinese status and real execution state", async () => {
+  expect(formatMarketingVideoSubtaskStatus("succeeded", 1)).toBe("已完成 · 第 1 次执行");
+  expect(formatMarketingVideoSubtaskStatus("ready", 0)).toBe("排队中 · 尚未执行");
+  expect(formatMarketingVideoSubtaskStatus("pending", undefined)).toBe("排队中 · 尚未执行");
+  expect(formatMarketingVideoSubtaskStatus("running", 2)).toBe("执行中 · 第 2 次执行");
+  expect(formatMarketingVideoSubtaskStatus("unexpected", 0)).toBe("未知状态 · 尚未执行");
+
+  expect(deriveMarketingVideoDisplayQueueStatus({ status: "running", active_subtask_status: "dispatching" })).toBe("running");
+  expect(deriveMarketingVideoDisplayQueueStatus({ status: "running", subtasks: [{ ...stage5cSucceededDetail.subtasks[0], status: "ready", attempt: 0 }] })).toBe(
+    "queued",
+  );
+  expect(deriveMarketingVideoDisplayQueueStatus({ status: "succeeded" })).toBe("finished");
+  expect(deriveMarketingVideoDisplayQueueStatus({ status: "failed" })).toBe("failed");
+  expect(deriveMarketingVideoDisplayQueueStatus({ status: "cancelled" })).toBe("cancelled");
 });
 
 test("proxy target selection keeps marketing-video and Smart Cut routes separate", async () => {
@@ -342,6 +372,65 @@ test("real mode can stop and archive a Marketing Video task from task center", a
   await expect(page.getByText("任务已停止。")).toBeVisible();
   await page.getByRole("button", { name: "删除任务" }).click();
   await expect(page.getByText(WORKFLOW_ID)).toHaveCount(0);
+});
+
+test("real mode shows Chinese node statuses and queues non-active Marketing Video workflows", async ({ page }) => {
+  const activeDetail = {
+    ...workflowDetail("running"),
+    title: "Active execution task",
+    display_status: "running",
+    active_subtask_status: "accepted",
+    active_node_code: "tongan_pre_pipeline",
+  } satisfies MarketingVideoWorkflow;
+  const queuedDetail = {
+    ...workflowDetail("running"),
+    workflow_id: "wf_display_queued",
+    title: "Queued display task",
+    current_node: "tongan_pipeline_exec",
+    current_node_label: "智能匹配素材",
+    display_status: "queued",
+    active_subtask_status: null,
+    active_node_code: null,
+    subtasks: [
+      { ...stage5cSucceededDetail.subtasks[0], status: "succeeded", attempt: 1, progress_percent: 100 },
+      { ...stage5cSucceededDetail.subtasks[2], status: "ready", attempt: 0, progress_percent: 0 },
+      { ...stage5cSucceededDetail.subtasks[1], status: "pending", attempt: 0, progress_percent: 0 },
+    ],
+  } satisfies MarketingVideoWorkflow;
+
+  await page.route("**/api/proxy/api/marketing-video/workflows", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(workflowListPayloads([activeDetail, queuedDetail])),
+    });
+  });
+
+  await page.route(`**/api/proxy/api/marketing-video/workflows/${activeDetail.workflow_id}`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(activeDetail),
+    });
+  });
+
+  await page.route(`**/api/proxy/api/marketing-video/workflows/${queuedDetail.workflow_id}`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(queuedDetail),
+    });
+  });
+
+  await page.goto(`/tasks?taskId=${queuedDetail.workflow_id}`);
+
+  await expect(page.locator("button").filter({ hasText: "Active execution task" }).getByText("执行中")).toBeVisible();
+  await expect(page.locator("button").filter({ hasText: "Queued display task" }).getByText("排队中")).toBeVisible();
+  await expect(page.getByText("已完成 · 第 1 次执行")).toBeVisible();
+  await expect(page.getByText("排队中 · 尚未执行")).toHaveCount(2);
+  await expect(page.locator("body")).not.toContainText("succeeded · attempt");
+  await expect(page.locator("body")).not.toContainText("ready · attempt");
+  await expect(page.locator("body")).not.toContainText("pending · attempt");
 });
 
 test("real mode shows failure at the Stage 5C special matching node", async ({ page }) => {

@@ -7,6 +7,8 @@ export type MarketingVideoWorkflowStatus =
   | "cancelled"
   | "manual_required";
 
+export type MarketingVideoDisplayStatus = "queued" | "running" | "finished" | "failed" | "cancelled" | "waiting";
+
 export type MarketingVideoSubtask = {
   subtask_id: string;
   node_code: string;
@@ -27,6 +29,9 @@ export type MarketingVideoWorkflow = {
   workflow_name: "TONGAN";
   title: string;
   status: MarketingVideoWorkflowStatus;
+  display_status?: MarketingVideoDisplayStatus;
+  active_subtask_status?: string | null;
+  active_node_code?: string | null;
   current_node: string | null;
   current_node_label: string | null;
   progress_percent: number;
@@ -121,6 +126,63 @@ function getCanonicalNodeIndex(nodeCode: string): number {
 
 function getFailedSubtask(subtasks: MarketingVideoSubtask[]): MarketingVideoSubtask | undefined {
   return subtasks.find((subtask) => subtask.status === "failed" || subtask.status === "manual_required");
+}
+
+function isActiveMarketingVideoSubtaskStatus(status: string | null | undefined): boolean {
+  return status === "running" || status === "accepted" || status === "dispatching";
+}
+
+function isMarketingVideoDisplayStatus(status: unknown): status is MarketingVideoDisplayStatus {
+  return (
+    status === "queued" ||
+    status === "running" ||
+    status === "finished" ||
+    status === "failed" ||
+    status === "cancelled" ||
+    status === "waiting"
+  );
+}
+
+export function formatMarketingVideoSubtaskStatus(status: string | null | undefined, attempt?: number | null): string {
+  const statusText =
+    status === "succeeded"
+      ? "已完成"
+      : status === "running" || status === "accepted" || status === "dispatching"
+        ? "执行中"
+        : status === "ready" || status === "pending" || status === "queued"
+          ? "排队中"
+          : status === "failed"
+            ? "失败"
+            : status === "cancelled"
+              ? "已停止"
+              : status === "skipped"
+                ? "已跳过"
+                : status === "timeout"
+                  ? "已超时"
+                  : status === "lost"
+                    ? "连接丢失"
+                    : status === "manual_required"
+                      ? "需人工处理"
+                      : "未知状态";
+  const attemptText = typeof attempt === "number" && Number.isFinite(attempt) && attempt > 0 ? `第 ${attempt} 次执行` : "尚未执行";
+  return `${statusText} · ${attemptText}`;
+}
+
+export function deriveMarketingVideoDisplayQueueStatus(
+  workflow: Pick<MarketingVideoWorkflow, "status"> &
+    Partial<Pick<MarketingVideoWorkflow, "display_status" | "active_subtask_status" | "subtasks">>,
+): MarketingVideoDisplayStatus {
+  if (isMarketingVideoDisplayStatus(workflow.display_status)) return workflow.display_status;
+
+  if (workflow.status === "succeeded") return "finished";
+  if (workflow.status === "failed") return "failed";
+  if (workflow.status === "cancelled") return "cancelled";
+  if (workflow.status === "waiting_user" || workflow.status === "manual_required") return "waiting";
+  if (isActiveMarketingVideoSubtaskStatus(workflow.active_subtask_status)) return "running";
+  if (workflow.subtasks?.some((subtask) => isActiveMarketingVideoSubtaskStatus(subtask.status))) return "running";
+  if (workflow.status === "queued") return "queued";
+  if (workflow.subtasks && workflow.subtasks.length > 0) return "queued";
+  return "running";
 }
 
 function buildNodeFailureMessage(subtask: MarketingVideoSubtask | undefined, workflowMessage: string | null): string | null {
@@ -250,7 +312,7 @@ function buildSubtasks(stageIndex: number, status: MarketingVideoWorkflowStatus)
       node_name,
       worker_kind,
       status: "queued",
-      attempt: 1,
+      attempt: 0,
       progress_percent: 0,
       error_message: null,
     };
