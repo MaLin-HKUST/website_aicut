@@ -36,6 +36,7 @@ import { getTaskTypeLabel, listTaskCenterItems, TaskCenterItem } from "@/lib/tas
 const FILTERS = [
   { key: "all", label: "全部" },
   { key: "running", label: "执行中" },
+  { key: "queued", label: "排队中" },
   { key: "waiting", label: "等待中" },
   { key: "finished", label: "已完成" },
   { key: "failed", label: "失败" },

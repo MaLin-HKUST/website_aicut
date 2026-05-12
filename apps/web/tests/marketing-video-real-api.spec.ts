@@ -384,7 +384,7 @@ test("real mode shows Chinese node statuses and queues non-active Marketing Vide
   } satisfies MarketingVideoWorkflow;
   const queuedDetail = {
     ...workflowDetail("running"),
-    workflow_id: "wf_display_queued",
+    workflow_id: "wf_display_queued_primary",
     title: "Queued display task",
     current_node: "tongan_pipeline_exec",
     current_node_label: "智能匹配素材",
@@ -397,12 +397,18 @@ test("real mode shows Chinese node statuses and queues non-active Marketing Vide
       { ...stage5cSucceededDetail.subtasks[1], status: "pending", attempt: 0, progress_percent: 0 },
     ],
   } satisfies MarketingVideoWorkflow;
+  const queuedDetailTwo = {
+    ...queuedDetail,
+    workflow_id: "wf_display_waiting_second",
+    title: "Second queued display task",
+    updated_at: "2026-05-08T08:01:00+00:00",
+  } satisfies MarketingVideoWorkflow;
 
   await page.route("**/api/proxy/api/marketing-video/workflows", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify(workflowListPayloads([activeDetail, queuedDetail])),
+      body: JSON.stringify(workflowListPayloads([activeDetail, queuedDetail, queuedDetailTwo])),
     });
   });
 
@@ -422,15 +428,35 @@ test("real mode shows Chinese node statuses and queues non-active Marketing Vide
     });
   });
 
+  await page.route(`**/api/proxy/api/marketing-video/workflows/${queuedDetailTwo.workflow_id}`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(queuedDetailTwo),
+    });
+  });
+
   await page.goto(`/tasks?taskId=${queuedDetail.workflow_id}`);
 
-  await expect(page.locator("button").filter({ hasText: "Active execution task" }).getByText("执行中")).toBeVisible();
-  await expect(page.locator("button").filter({ hasText: "Queued display task" }).getByText("排队中")).toBeVisible();
+  await expect(page.getByRole("button", { name: /^执行中$/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^排队中$/ })).toBeVisible();
+  await expect(page.locator("button").filter({ hasText: "Active execution task" }).getByText("执行中")).toHaveCount(1);
+  await expect(page.locator("button").filter({ hasText: queuedDetail.workflow_id }).getByText("排队中")).toBeVisible();
+  await expect(page.locator("button").filter({ hasText: queuedDetailTwo.workflow_id }).getByText("排队中")).toBeVisible();
   await expect(page.getByText("已完成 · 第 1 次执行")).toBeVisible();
   await expect(page.getByText("排队中 · 尚未执行")).toHaveCount(2);
   await expect(page.locator("body")).not.toContainText("succeeded · attempt");
   await expect(page.locator("body")).not.toContainText("ready · attempt");
   await expect(page.locator("body")).not.toContainText("pending · attempt");
+
+  await page.getByRole("button", { name: /^排队中$/ }).click();
+  await expect(page.locator("button").filter({ hasText: "Active execution task" })).toHaveCount(0);
+  await expect(page.locator("button").filter({ hasText: queuedDetail.workflow_id })).toBeVisible();
+  await expect(page.locator("button").filter({ hasText: queuedDetailTwo.workflow_id })).toBeVisible();
+
+  await page.getByRole("button", { name: /^执行中$/ }).click();
+  await expect(page.locator("button").filter({ hasText: "Active execution task" })).toBeVisible();
+  await expect(page.locator("button").filter({ hasText: queuedDetail.workflow_id })).toHaveCount(0);
 });
 
 test("real mode shows failure at the Stage 5C special matching node", async ({ page }) => {
