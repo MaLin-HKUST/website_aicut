@@ -24,6 +24,7 @@ import {
 } from "@/lib/marketing-video";
 import {
   abandonTask,
+  canAccessSmartCutTask,
   getSmartCutContinueLabel,
   getSmartCutTask,
   isSmartCutDeletable,
@@ -232,6 +233,11 @@ function filteredOutSelected(items: UserTaskListItem[], filter: FilterKey, selec
   return !items.some((item) => item.id === selectedId && (filter === "all" || item.status === filter));
 }
 
+function sameCompany(taskCompanyId: string | number | null | undefined, userCompanyId: number | null | undefined) {
+  if (taskCompanyId === null || taskCompanyId === undefined || userCompanyId === null || userCompanyId === undefined) return false;
+  return String(taskCompanyId) === String(userCompanyId);
+}
+
 export function UserTasksShell() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -274,19 +280,20 @@ export function UserTasksShell() {
           }),
           listSmartCutTasks({
             userId: payload.user.username,
+            companyId: payload.user.company_id,
             limit: 50,
           }),
           listMarketingVideoWorkflows(),
         ]);
 
         const merged = new Map<string, UserTaskListItem>();
-        for (const item of sharedItems) {
+        for (const item of sharedItems.filter((task) => sameCompany(task.companyId, payload.user.company_id))) {
           merged.set(item.id, buildSharedQueueItem(item));
         }
-        for (const item of ownTasks.filter((task) => task.status !== "abandoned")) {
+        for (const item of ownTasks.filter((task) => task.status !== "abandoned" && sameCompany(task.company_id, payload.user.company_id))) {
           merged.set(item.id, buildSelfQueueItem(item, merged.get(item.id)));
         }
-        for (const workflow of marketingWorkflows) {
+        for (const workflow of marketingWorkflows.filter((workflow) => sameCompany(workflow.company_id, payload.user.company_id))) {
           merged.set(workflow.workflow_id, buildMarketingVideoQueueItem(workflow));
         }
 
@@ -325,6 +332,9 @@ export function UserTasksShell() {
           setDetailNotice(null);
           const workflow = await getMarketingVideoWorkflow(selectedId);
           if (cancelled) return;
+          if (!sameCompany(workflow.company_id, user?.company_id)) {
+            throw new Error("无权查看该营销视频任务。");
+          }
           setSelectedMarketingVideoDetail(workflow);
           setMarketingTitleDraft(workflow.title);
           setItems((current) => {
@@ -366,6 +376,9 @@ export function UserTasksShell() {
         setSelectedMarketingVideoDetail(null);
         const task = await getSmartCutTask(selectedId);
         if (cancelled) return;
+        if (user && !canAccessSmartCutTask(task, user)) {
+          throw new Error("无权查看该 Smart Cut 任务。");
+        }
         setSelectedTaskDetail(task);
       } catch (err) {
         if (cancelled) return;

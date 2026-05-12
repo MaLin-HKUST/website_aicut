@@ -35,9 +35,9 @@ export function useUserWorkspaceData(userId?: string, companyId?: number | null)
 
     async function bootstrap() {
       try {
-          const nextItems = await listTaskCenterItems({ mode: "user", userId, companyId });
+        const nextItems = await listTaskCenterItems({ mode: "user", userId, companyId });
         if (!cancelled) {
-          setItems(nextItems);
+          setItems(nextItems.filter((item) => item.companyId !== null && item.companyId === companyId));
         }
       } catch {
         if (!cancelled) {

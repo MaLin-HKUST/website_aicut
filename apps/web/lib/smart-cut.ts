@@ -328,9 +328,10 @@ export function canAccessSmartCutTask(
   return task.company_id === user.company_id;
 }
 
-export async function listSmartCutTasks(opts: { userId?: string; limit?: number } = {}): Promise<SmartCutTaskSummary[]> {
+export async function listSmartCutTasks(opts: { userId?: string; companyId?: number | null; limit?: number } = {}): Promise<SmartCutTaskSummary[]> {
   const params = new URLSearchParams();
   if (opts.userId) params.set("user_id", opts.userId);
+  if (opts.companyId !== undefined && opts.companyId !== null) params.set("company_id", String(opts.companyId));
   if (opts.limit) params.set("limit", String(opts.limit));
   const query = params.size > 0 ? `?${params.toString()}` : "";
   const payload = await fetchJson<any[]>(`/api/proxy/api/smart-cut/tasks${query}`);

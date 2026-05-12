@@ -108,11 +108,11 @@ export function MarketingVideoWorkspace() {
     setNotice(null);
     try {
       setBusy("upload");
-      const upload = await uploadMarketingVideoScript(scriptFile, { onProgress: setUploadProgress });
+      const upload = await uploadMarketingVideoScript(scriptFile, { companyId: user.company_id, onProgress: setUploadProgress });
       setBusy("create");
       const workflow = await createMarketingVideoWorkflow({
         customer_id: "tongan",
-        company_id: "tongan",
+        company_id: String(user.company_id ?? ""),
         task_type: "std_marketing_video",
         workflow_name: "TONGAN",
         mode: "standard",

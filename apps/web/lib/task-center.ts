@@ -19,6 +19,7 @@ export type TaskCenterItem = {
   schedulerTaskId?: string | null;
   schedulerStatus?: string | null;
   workerId?: string | null;
+  companyId?: number | null;
 };
 
 type TaskCenterApiItem = {
@@ -40,6 +41,7 @@ type TaskCenterApiItem = {
   scheduler_task_id?: string | null;
   scheduler_status?: string | null;
   worker_id?: string | null;
+  company_id?: number | string | null;
 };
 
 export const STATUS_META: Record<
@@ -120,6 +122,7 @@ function normalizeItem(payload: TaskCenterApiItem): TaskCenterItem {
     schedulerTaskId: payload.scheduler_task_id ?? null,
     schedulerStatus: payload.scheduler_status ?? null,
     workerId: payload.worker_id ?? null,
+    companyId: payload.company_id === undefined || payload.company_id === null ? null : Number(payload.company_id),
   };
 }
 

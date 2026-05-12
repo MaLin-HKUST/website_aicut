@@ -198,7 +198,7 @@ test("real mode create links the new workflow into task center detail", async ({
     const payload = route.request().postDataJSON() as Record<string, unknown>;
     expect(payload).toMatchObject({
       customer_id: "tongan",
-      company_id: "tongan",
+      company_id: "10",
       task_type: "std_marketing_video",
       workflow_name: "TONGAN",
       mode: "standard",
@@ -333,6 +333,85 @@ test("real mode create links the new workflow into task center detail", async ({
 
   expect(tosPutSeen).toBe(true);
   expect(createPayload?.input_bundle.script_txt.tos_key).toBe(UPLOAD_KEY);
+});
+
+test("task center renders only authenticated company tasks while mixing task types", async ({ page }) => {
+  const sameCompanyMarketing = {
+    ...workflowDetail("running"),
+    workflow_id: "wf_company10_marketing",
+    title: "Company 10 Marketing Video",
+    company_id: "10",
+    updated_at: "2026-05-12T10:05:00+00:00",
+  } satisfies MarketingVideoWorkflow;
+  const otherCompanyMarketing = {
+    ...workflowDetail("running"),
+    workflow_id: "wf_company9_marketing",
+    title: "Company 9 Marketing Video",
+    company_id: "9",
+    updated_at: "2026-05-12T10:04:00+00:00",
+  } satisfies MarketingVideoWorkflow;
+
+  await page.route(/\/api\/proxy\/api\/task-center\/tasks(\?.*)?$/, async (route) => {
+    expect(new URL(route.request().url()).searchParams.get("company_id")).toBe("10");
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([
+        {
+          id: "smart_company10",
+          title: "Company 10 Smart Cut",
+          task_type: "smart_cut",
+          status: "running",
+          current_stage: "Analyze",
+          progress: 40,
+          updated_at: "2026-05-12T10:03:00+00:00",
+          created_at: "2026-05-12T10:00:00+00:00",
+          company_id: 10,
+          input_files: ["same-company.mp4"],
+        },
+        {
+          id: "smart_company9",
+          title: "Company 9 Smart Cut",
+          task_type: "smart_cut",
+          status: "running",
+          current_stage: "Analyze",
+          progress: 40,
+          updated_at: "2026-05-12T10:02:00+00:00",
+          created_at: "2026-05-12T10:00:00+00:00",
+          company_id: 9,
+          input_files: ["other-company.mp4"],
+        },
+      ]),
+    });
+  });
+
+  await page.route(/\/api\/proxy\/api\/smart-cut\/tasks(\?.*)?$/, async (route) => {
+    expect(new URL(route.request().url()).searchParams.get("company_id")).toBe("10");
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify([]) });
+  });
+
+  await page.route("**/api/proxy/api/marketing-video/workflows", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(workflowListPayloads([sameCompanyMarketing, otherCompanyMarketing])),
+    });
+  });
+
+  await page.route(`**/api/proxy/api/marketing-video/workflows/${sameCompanyMarketing.workflow_id}`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(sameCompanyMarketing),
+    });
+  });
+
+  await page.goto("/tasks");
+
+  await expect(page.getByText("Company 10 Marketing Video").first()).toBeVisible();
+  await expect(page.getByText("Company 10 Smart Cut").first()).toBeVisible();
+  await expect(page.getByText("Company 9 Marketing Video")).toHaveCount(0);
+  await expect(page.getByText("Company 9 Smart Cut")).toHaveCount(0);
 });
 
 test("real mode can stop and archive a Marketing Video task from task center", async ({ page }) => {

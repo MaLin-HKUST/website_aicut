@@ -407,7 +407,7 @@ export function buildMarketingVideoMockWorkflow(outcome: Exclude<MockOutcome, "a
 
 export async function uploadMarketingVideoScript(
   file: File,
-  options?: { onProgress?: (percent: number) => void },
+  options?: { companyId?: number | string | null; onProgress?: (percent: number) => void },
 ): Promise<MarketingVideoUploadResult> {
   if (!file.name.toLowerCase().endsWith(".txt")) {
     throw new Error("请上传 TXT 文案文件。");
@@ -434,7 +434,7 @@ export async function uploadMarketingVideoScript(
     method: "POST",
     body: JSON.stringify({
       customer_id: "tongan",
-      company_id: "tongan",
+      ...(options?.companyId !== undefined && options.companyId !== null ? { company_id: String(options.companyId) } : {}),
       filename: file.name,
       content_type: file.type || "text/plain",
       task_type: "std_marketing_video",

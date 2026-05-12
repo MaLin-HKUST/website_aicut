@@ -57,9 +57,13 @@ export function TaskCenterShell({ mode = "user" }: { mode?: "user" | "admin" }) 
           userId: mode === "user" ? authPayload.user.username : undefined,
           companyId: mode === "user" ? authPayload.user.company_id : undefined,
         });
-        setItems(taskItems);
+        const visibleItems =
+          mode === "user"
+            ? taskItems.filter((item) => item.companyId !== null && item.companyId === authPayload.user.company_id)
+            : taskItems;
+        setItems(visibleItems);
         const requestedTaskId = searchParams.get("taskId");
-        setSelectedId((current) => requestedTaskId || current || taskItems[0]?.id || "");
+        setSelectedId((current) => requestedTaskId || current || visibleItems[0]?.id || "");
       } catch (err) {
         setError(err instanceof Error ? err.message : "读取任务中心失败");
       }

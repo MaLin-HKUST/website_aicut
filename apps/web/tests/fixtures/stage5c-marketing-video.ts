@@ -4,7 +4,7 @@ export const STAGE5C_WORKFLOW_ID = "wf_0963371cc1a241e488b475f92fbf3365";
 export const STAGE5C_FINAL_VIDEO_URL = "https://example.com/stage5c/wf_0963371cc1a241e488b475f92fbf3365/b_video.mp4";
 
 export const stage5cSucceededDetail = {
-  company_id: "tongan",
+  company_id: "10",
   created_at: "2026-05-08T08:01:21.871462+00:00",
   current_node: null,
   current_node_label: null,
