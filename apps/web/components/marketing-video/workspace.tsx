@@ -163,7 +163,7 @@ export function MarketingVideoWorkspace() {
                 <p className="text-xs tracking-[0.24em] text-stone-500">MARKETING VIDEO</p>
                 <h2 className="mt-2 text-[26px] font-semibold text-[#241714]">生成营销视频</h2>
                 <p className="mt-2 max-w-3xl text-sm leading-7 text-stone-600">
-                  上传一个 TXT 文案并创建 TONGAN 标准营销视频任务。创建后可以离开本页，后续进度、停止、改名和下载都在任务中心处理。
+                  上传短视频的文案并创建 标准营销视频任务。创建后可以离开本页，后续进度、停止、改名和下载都在任务中心处理。
                 </p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -187,10 +187,10 @@ export function MarketingVideoWorkspace() {
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-[#241714]">任务输入</h3>
-                  <p className="mt-2 text-sm leading-7 text-stone-500">只支持一个 TXT 文案文件。RBZJ/KDT IP 模式暂未开放。</p>
+                  <p className="mt-2 text-sm leading-7 text-stone-500">输入短视频的文案(txt文件格式)</p>
                 </div>
                 <span className="self-start rounded-full border border-[#dfd5c5] bg-[#faf7f2] px-4 py-2 text-sm text-stone-600">
-                  std_marketing_video
+                  标准视频模式
                 </span>
               </div>
 

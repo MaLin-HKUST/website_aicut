@@ -132,6 +132,11 @@ test("company 2 keeps full marketing video access", async ({ page }) => {
   await page.goto("/marketing-video");
 
   await expect(page.getByTestId("marketing-video-development-lock")).toHaveCount(0);
+  await expect(page.getByText("标准视频模式")).toBeVisible();
+  await expect(page.getByText("输入短视频的文案(txt文件格式)")).toBeVisible();
+  await expect(page.getByText("上传短视频的文案并创建 标准营销视频任务。")).toBeVisible();
+  await expect(page.getByText("只支持一个 TXT 文案文件。RBZJ/KDT IP 模式暂未开放。")).toHaveCount(0);
+  await expect(page.getByText("上传一个 TXT 文案并创建 TONGAN 标准营销视频任务。")).toHaveCount(0);
   await page.getByLabel("选择 TXT 文案").setInputFiles({
     name: "07.txt",
     mimeType: "text/plain",
