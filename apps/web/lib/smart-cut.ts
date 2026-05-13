@@ -18,8 +18,10 @@ export type SmartCutTask = {
   active_edit_id: string | null;
   audio_b_url: string | null;
   final_video_url: string | null;
+  subtitle_srt_url: string | null;
   groundtruth_url: string | null;
   error_message: string | null;
+  status_detail: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -61,6 +63,7 @@ export type SmartCutTaskSummary = {
   company_id: number | null;
   status: string;
   current_stage: string | null;
+  status_detail: string | null;
   active_edit_id: string | null;
   created_at: string;
   updated_at: string;
@@ -210,8 +213,8 @@ export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> 
   });
 
   if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as { detail?: string } | null;
-    throw new Error(payload?.detail ?? `Request failed: ${response.status}`);
+    const payload = (await response.json().catch(() => null)) as { detail?: unknown; message?: unknown } | null;
+    throw new Error(formatApiError(payload) ?? `Request failed: ${response.status}`);
   }
 
   if (response.status === 204) {
@@ -219,6 +222,24 @@ export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> 
   }
 
   return (await response.json()) as T;
+}
+
+function formatApiError(payload: unknown): string | null {
+  if (payload == null) return null;
+  if (typeof payload === "string") return payload;
+  if (typeof payload !== "object") return String(payload);
+
+  const record = payload as Record<string, unknown>;
+  for (const key of ["message", "detail", "error"]) {
+    const message = formatApiError(record[key]);
+    if (message) return message;
+  }
+
+  try {
+    return JSON.stringify(payload);
+  } catch {
+    return String(payload);
+  }
 }
 
 function normalizeTask(payload: any): SmartCutTask {
@@ -242,8 +263,10 @@ function normalizeTask(payload: any): SmartCutTask {
     active_edit_id: payload.active_edit_id ?? null,
     audio_b_url: resolveTosUrl(payload.audio_b_url ?? null),
     final_video_url: resolveTosUrl(payload.final_video_url ?? null),
+    subtitle_srt_url: resolveTosUrl(payload.subtitle_srt_url ?? null),
     groundtruth_url: resolveTosUrl(payload.groundtruth_url ?? null),
     error_message: payload.error_message ?? null,
+    status_detail: payload.status_detail ?? null,
     created_at: payload.created_at,
     updated_at: payload.updated_at,
   };
@@ -291,6 +314,7 @@ function normalizeTaskSummary(payload: any): SmartCutTaskSummary {
     company_id: payload.company_id ?? null,
     status: payload.status,
     current_stage: payload.current_stage ?? null,
+    status_detail: payload.status_detail ?? null,
     active_edit_id: payload.active_edit_id ?? null,
     created_at: payload.created_at,
     updated_at: payload.updated_at,
@@ -364,10 +388,17 @@ export async function uploadDirectInputs(
   taskId: string,
   videoFile: File,
   referenceFile: File,
-  options?: { onProgress?: (percent: number) => void },
+  options?: {
+    onProgress?: (percent: number) => void;
+    signal?: AbortSignal;
+    autoFinalizeAfterAnalyze?: boolean;
+    outputMode?: "original" | "vertical_1080p";
+    feedToAi?: boolean;
+  },
 ): Promise<SmartCutTask> {
   const videoExt = videoFile.name.split(".").pop()?.toLowerCase() ?? "mp4";
   const prepare = await fetchJson<{
+    upload_session_id: string;
     video_upload_url: string;
     video_key: string;
     text_upload_url: string;
@@ -385,7 +416,16 @@ export async function uploadDirectInputs(
     offset: number,
   ): Promise<void> {
     await new Promise<void>((resolve, reject) => {
+      if (options?.signal?.aborted) {
+        reject(new DOMException("Upload aborted", "AbortError"));
+        return;
+      }
       const xhr = new XMLHttpRequest();
+      const abort = () => {
+        xhr.abort();
+        reject(new DOMException("Upload aborted", "AbortError"));
+      };
+      options?.signal?.addEventListener("abort", abort, { once: true });
       xhr.open("PUT", url);
       xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
       xhr.upload.onprogress = (event) => {
@@ -393,8 +433,12 @@ export async function uploadDirectInputs(
         const loaded = offset + event.loaded;
         options.onProgress(Math.round((loaded / totalBytes) * 100));
       };
-      xhr.onerror = () => reject(new Error("上传到 TOS 失败，请检查网络后重试"));
+      xhr.onerror = () => {
+        options?.signal?.removeEventListener("abort", abort);
+        reject(new Error("上传到 TOS 失败，请检查网络后重试"));
+      };
       xhr.onload = () => {
+        options?.signal?.removeEventListener("abort", abort);
         if (xhr.status >= 200 && xhr.status < 300) {
           resolve();
           return;
@@ -411,12 +455,54 @@ export async function uploadDirectInputs(
   await fetchJson(`/api/proxy/api/smart-cut/tasks/${taskId}/upload-complete`, {
     method: "POST",
     body: JSON.stringify({
+      upload_session_id: prepare.upload_session_id,
       uploaded_keys: [prepare.video_key, prepare.text_key],
+      auto_finalize_after_analyze: options?.autoFinalizeAfterAnalyze ?? false,
+      output_mode: options?.outputMode ?? "original",
+      feed_to_ai: options?.feedToAi ?? true,
     }),
   });
 
   options?.onProgress?.(100);
   return getSmartCutTask(taskId);
+}
+
+type AnalyzeOptions = {
+  autoFinalizeAfterAnalyze?: boolean;
+  outputMode?: "original" | "vertical_1080p";
+  feedToAi?: boolean;
+};
+
+function toAnalyzeBody(options?: AnalyzeOptions): string {
+  return JSON.stringify({
+    auto_finalize_after_analyze: options?.autoFinalizeAfterAnalyze ?? false,
+    output_mode: options?.outputMode ?? "original",
+    feed_to_ai: options?.feedToAi ?? true,
+  });
+}
+
+export async function startAnalyze(taskId: string, options?: AnalyzeOptions): Promise<SmartCutTask> {
+  await fetchJson(`/api/proxy/api/smart-cut/tasks/${taskId}/analyze`, {
+    method: "POST",
+    body: toAnalyzeBody(options),
+  });
+  return getSmartCutTask(taskId);
+}
+
+export async function reconcileUpload(taskId: string, options?: AnalyzeOptions): Promise<SmartCutTask> {
+  await fetchJson(`/api/proxy/api/smart-cut/tasks/${taskId}/upload-reconcile`, {
+    method: "POST",
+    body: toAnalyzeBody(options),
+  });
+  return getSmartCutTask(taskId);
+}
+
+export async function updateSmartCutTaskTitle(taskId: string, taskTitle: string): Promise<SmartCutTask> {
+  const payload = await fetchJson<any>(`/api/proxy/api/smart-cut/tasks/${taskId}/title`, {
+    method: "PATCH",
+    body: JSON.stringify({ task_title: taskTitle }),
+  });
+  return normalizeTask(payload);
 }
 
 export async function startPreview(taskId: string, editedScript: string): Promise<SmartCutTask> {
