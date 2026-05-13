@@ -288,6 +288,19 @@ test.beforeEach(async ({ page }) => {
     });
   });
 
+  await page.route(/\/api\/proxy\/api\/smart-cut\/tasks\/([^/?]+)\/title(\?.*)?$/, async (route) => {
+    const taskId = route.request().url().match(/\/tasks\/([^/?]+)\/title/)?.[1] ?? "";
+    const payload = route.request().postDataJSON() as { task_title?: string };
+    const detail = detailFor(taskId);
+    detail.task_title = payload.task_title ?? detail.task_title;
+    detail.updated_at = "2026-04-18T12:40:00Z";
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(detail),
+    });
+  });
+
   await page.route(/\/api\/proxy\/api\/smart-cut\/tasks\/([^/?]+)$/, async (route) => {
     const taskId = route.request().url().match(/\/tasks\/([^/?]+)$/)?.[1] ?? "";
     await route.fulfill({
@@ -370,4 +383,17 @@ test("tasks detail delete removes failed task from the list", async ({ page }) =
   await page.goto("/tasks?taskId=smartcut_analyze_failed_001");
   await page.getByRole("button", { name: "删除任务" }).click();
   await expect(page.getByText("分析失败任务")).toHaveCount(0);
+});
+
+test("tasks detail lets the owner rename a Smart Cut task", async ({ page }) => {
+  await page.goto("/tasks?taskId=smartcut_route_smoke_001");
+  await expect(page.getByRole("heading", { name: "我的待处理任务" })).toBeVisible();
+
+  await page.getByRole("button", { name: "修改名称" }).click();
+  await page.getByLabel("任务名称").fill("客户素材剪辑第一版");
+  await page.getByRole("button", { name: "保存" }).click();
+
+  await expect(page.getByText("任务名称已更新。")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "客户素材剪辑第一版" })).toBeVisible();
+  await expect(page.getByText("我的待处理任务")).toHaveCount(0);
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import {
   listSmartCutTasks,
   SmartCutTask,
   SmartCutTaskSummary,
+  updateSmartCutTaskTitle,
 } from "@/lib/smart-cut";
 import { listTaskCenterItems, TaskCenterItem } from "@/lib/task-center";
 
@@ -203,6 +204,9 @@ export function UserTasksShell() {
   const [detailError, setDetailError] = useState<string | null>(null);
   const [detailNotice, setDetailNotice] = useState<string | null>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [renamingTaskId, setRenamingTaskId] = useState<string | null>(null);
   const workspace = useUserWorkspaceData(user?.username, user?.company_id);
 
   useEffect(() => {
@@ -262,6 +266,8 @@ export function UserTasksShell() {
       setSelectedTaskDetail(null);
       setDetailError(null);
       setDetailNotice(null);
+      setEditingTitle(false);
+      setTitleDraft("");
       return;
     }
 
@@ -336,6 +342,7 @@ export function UserTasksShell() {
       isSmartCutDeletable(activeTaskDetail.status) &&
       deletingTaskId === null,
   );
+  const canRenameTask = Boolean(activeTaskDetail && user && activeTaskDetail.user_id === user.username);
 
   async function handleDeleteTask() {
     if (!activeTaskDetail) return;
@@ -357,6 +364,55 @@ export function UserTasksShell() {
       setDetailError(err instanceof Error ? err.message : "删除任务失败");
     } finally {
       setDeletingTaskId(null);
+    }
+  }
+
+  function beginRenameTask() {
+    setTitleDraft(detailTitle);
+    setEditingTitle(true);
+    setDetailError(null);
+    setDetailNotice(null);
+  }
+
+  async function handleRenameTask(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!activeTaskDetail) return;
+
+    const nextTitle = titleDraft.trim();
+    if (!nextTitle) {
+      setDetailError("任务名称不能为空。");
+      return;
+    }
+    if (nextTitle.length > 120) {
+      setDetailError("任务名称不能超过 120 个字符。");
+      return;
+    }
+
+    setRenamingTaskId(activeTaskDetail.id);
+    setDetailError(null);
+    setDetailNotice(null);
+    try {
+      const updatedTask = await updateSmartCutTaskTitle(activeTaskDetail.id, nextTitle);
+      const updatedTitle = updatedTask.task_title || nextTitle;
+      setSelectedTaskDetail(updatedTask);
+      setItems((current) =>
+        current.map((item) =>
+          item.id === updatedTask.id
+            ? {
+                ...item,
+                title: updatedTitle,
+                updatedAt: updatedTask.updated_at,
+              }
+            : item,
+        ),
+      );
+      setEditingTitle(false);
+      setTitleDraft(updatedTitle);
+      setDetailNotice("任务名称已更新。");
+    } catch (err) {
+      setDetailError(err instanceof Error ? err.message : "修改任务名称失败");
+    } finally {
+      setRenamingTaskId(null);
     }
   }
 
@@ -442,7 +498,47 @@ export function UserTasksShell() {
             <div className="space-y-5">
               <div className="rounded-[28px] border border-[#e4dacb] bg-white p-5">
                 <p className="text-xs uppercase tracking-[0.28em] text-stone-500">任务详情</p>
-                <h3 className="mt-3 text-4xl font-semibold text-[#241714]">{detailTitle}</h3>
+                <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  {editingTitle ? (
+                    <form className="flex flex-1 flex-col gap-3 sm:flex-row" onSubmit={handleRenameTask}>
+                      <label className="sr-only" htmlFor="task-title-input">
+                        任务名称
+                      </label>
+                      <input
+                        id="task-title-input"
+                        className="min-h-12 flex-1 rounded-2xl border border-[#d8cbbb] bg-[#fffdf9] px-4 text-base font-semibold text-[#241714] outline-none transition focus:border-[#2b201d] focus:ring-2 focus:ring-[#2b201d]/10"
+                        maxLength={120}
+                        onChange={(event) => setTitleDraft(event.target.value)}
+                        value={titleDraft}
+                      />
+                      <div className="flex gap-2">
+                        <Button disabled={renamingTaskId === activeTaskDetail?.id} type="submit">
+                          保存
+                        </Button>
+                        <Button
+                          disabled={renamingTaskId === activeTaskDetail?.id}
+                          onClick={() => {
+                            setEditingTitle(false);
+                            setTitleDraft(detailTitle);
+                          }}
+                          type="button"
+                          variant="secondary"
+                        >
+                          取消
+                        </Button>
+                      </div>
+                    </form>
+                  ) : (
+                    <>
+                      <h3 className="text-4xl font-semibold text-[#241714]">{detailTitle}</h3>
+                      {canRenameTask ? (
+                        <Button onClick={beginRenameTask} type="button" variant="secondary">
+                          修改名称
+                        </Button>
+                      ) : null}
+                    </>
+                  )}
+                </div>
                 <div className="mt-4 flex flex-wrap gap-3">
                   <span className={`rounded-full px-4 py-2 text-sm font-semibold ${statusTone(selectedTask.status)}`}>
                     {detailStatusText}
