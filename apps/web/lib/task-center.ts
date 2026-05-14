@@ -1,5 +1,5 @@
-export type TaskCenterStatus = "queued" | "running" | "waiting" | "finished" | "failed";
-export type TaskCenterType = "smart_cut" | "tts" | "batch";
+export type TaskCenterStatus = "queued" | "running" | "waiting" | "finished" | "failed" | "cancelled";
+export type TaskCenterType = "smart_cut" | "std_marketing_video" | "tts" | "batch";
 
 export type TaskCenterItem = {
   id: string;
@@ -75,6 +75,11 @@ export const STATUS_META: Record<
     badgeClassName: "border border-rose-300 bg-rose-50 text-rose-700",
     progressClassName: "bg-rose-500",
   },
+  cancelled: {
+    label: "Stopped",
+    badgeClassName: "border border-stone-300 bg-stone-50 text-stone-600",
+    progressClassName: "bg-stone-400",
+  },
 };
 
 export const FILTER_OPTIONS = [
@@ -122,11 +127,20 @@ export function getTaskSubtitle(task: TaskCenterItem): string {
   if (task.status === "waiting" && task.queuePosition) return `Queue #${task.queuePosition}`;
   if (task.status === "finished" && task.downloadUrl) return "Result ready to download";
   if (task.status === "failed" && task.errorMessage) return task.errorMessage;
+  if (task.status === "cancelled") return "已停止";
   return task.currentStage;
+}
+
+export function getTaskTypeLabel(taskType: TaskCenterType): string {
+  if (taskType === "smart_cut") return "智能剪气口";
+  if (taskType === "std_marketing_video") return "标准营销视频剪辑";
+  if (taskType === "tts") return "文案生成语音";
+  return "批量任务";
 }
 
 export function getTimelineItems(task: TaskCenterItem): string[] {
   if (task.taskType === "smart_cut") return ["Upload", "Analyze", "Preview", "Finalize"];
+  if (task.taskType === "std_marketing_video") return ["Upload", "Create", "Generate", "Download"];
   if (task.taskType === "tts") return ["Submit", "Generate", "Review", "Export"];
   return ["Queued", "Running", "Review", "Done"];
 }

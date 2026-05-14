@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
-export type UserWorkspaceNavKey = "tts" | "smart-cut" | "tasks";
+export type UserWorkspaceNavKey = "tts" | "smart-cut" | "marketing-video" | "tasks";
 
 export type UserWorkspaceMetric = {
   label: string;
@@ -28,6 +28,7 @@ const PRIMARY_ITEMS: Array<{
 }> = [
   { key: "tts", label: "文案生成语音", href: "/tts", icon: "M" },
   { key: "smart-cut", label: "智能剪气口", href: "/smart-cut", icon: "V" },
+  { key: "marketing-video", label: "生成营销视频", href: "/marketing-video", icon: "G" },
   { key: "tasks", label: "任务列表", href: "/tasks", icon: "T" },
 ];
 
