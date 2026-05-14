@@ -58,7 +58,7 @@ async def list_user_task_center(
 ) -> list[TaskCenterTaskRead]:
     stmt = (
         select(SmartCutTask)
-        .order_by(desc(SmartCutTask.updated_at))
+        .order_by(desc(SmartCutTask.created_at))
         .limit(limit)
     )
     if company_id is not None:
@@ -91,7 +91,7 @@ async def list_admin_task_center(
     tasks = list(
         db.execute(
             select(SmartCutTask)
-            .order_by(desc(SmartCutTask.updated_at))
+            .order_by(desc(SmartCutTask.created_at))
             .limit(limit)
         ).scalars().all()
     )

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -225,6 +226,48 @@ def test_rel0415_edits_and_task_center_routes(api_client):
     company_payload = company_center.json()
     assert [item["id"] for item in company_payload] == [visible_task_id]
     assert company_payload[0]["company_id"] == 9
+
+
+def test_task_center_lists_by_created_time_not_rename_time(api_client):
+    client, SessionLocal = api_client
+    base_time = datetime(2026, 5, 15, 8, 0, 0)
+
+    with SessionLocal() as db:
+        older_task = SmartCutTask(
+            user_id="alice",
+            company_id=9,
+            status=TaskStatus.SUCCESS,
+            current_stage=CurrentStage.COMPLETE,
+            task_title="older renamed later",
+            visible_in_task_center=True,
+            created_at=base_time,
+            updated_at=base_time + timedelta(hours=2),
+        )
+        newer_task = SmartCutTask(
+            user_id="alice",
+            company_id=9,
+            status=TaskStatus.SUCCESS,
+            current_stage=CurrentStage.COMPLETE,
+            task_title="newer created later",
+            visible_in_task_center=True,
+            created_at=base_time + timedelta(hours=1),
+            updated_at=base_time + timedelta(hours=1),
+        )
+        db.add_all([older_task, newer_task])
+        db.commit()
+
+        older_id = older_task.id
+        newer_id = newer_task.id
+
+    response = client.get("/api/task-center/tasks", params={"company_id": 9})
+    assert response.status_code == 200
+    payload = response.json()
+    assert [item["id"] for item in payload[:2]] == [newer_id, older_id]
+
+    smart_cut_response = client.get("/api/smart-cut/tasks", params={"company_id": 9})
+    assert smart_cut_response.status_code == 200
+    smart_cut_payload = smart_cut_response.json()
+    assert [item["id"] for item in smart_cut_payload[:2]] == [newer_id, older_id]
 
 
 def test_current_draft_endpoints_are_scoped_to_login_session(api_client):

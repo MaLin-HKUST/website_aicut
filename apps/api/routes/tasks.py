@@ -478,7 +478,7 @@ async def list_tasks(
     user_id: str | None = Query(default=None, description="用户 ID；为空时返回全部任务"),
     limit: int = Query(default=50, ge=1, le=200),
 ) -> list[SmartCutTaskSummaryRead]:
-    stmt = select(SmartCutTask).order_by(desc(SmartCutTask.updated_at)).limit(limit)
+    stmt = select(SmartCutTask).order_by(desc(SmartCutTask.created_at)).limit(limit)
     if user_id:
         stmt = stmt.where(SmartCutTask.user_id == user_id)
     tasks = list(db.execute(stmt).scalars().all())

@@ -27,7 +27,12 @@ from typing import Any, Optional
 from apps.models.scheduler_task import SchedulerTask
 from apps.models.edit import SmartCutEdit
 from apps.models.task import SmartCutTask as BusinessTask, TaskStatus, CurrentStage
+from apps.services.smart_cut_contract import (
+    STATUS_DETAIL_GENERATING_SUBTITLE,
+    default_status_detail,
+)
 from worker.base_processor import BaseProcessor
+from worker.services.pause_cuts import generate_pause_cuts_from_delay_audio
 from worker.utils.video_info import get_video_info
 
 
@@ -53,9 +58,9 @@ class FinalizeProcessor(BaseProcessor):
     AICUT_PYTHON = os.environ.get("AICUT_PYTHON", sys.executable)
     ONLINE_VERSION_PATH = f"{AICUT_ROOT}/libs/cut_breakpoints/online_version"
     RAW_CUT_PATH = f"{AICUT_ROOT}/libs/cut_breakpoints/src"
-    
-    # 最大输出码率 (12Mbps)
-    MAX_BITRATE = 12_000_000
+    # 最大输出码率 (12Mbps by default)
+    MAX_BITRATE = int(os.environ.get("SMART_CUT_FINALIZE_MAX_BITRATE", "12000000"))
+    REENCODE_BITRATE = int(os.environ.get("SMART_CUT_FINALIZE_REENCODE_BITRATE", "0"))
     
     def __init__(self, tos_service: Any, workspace: str):
         """初始化处理器
@@ -144,6 +149,10 @@ class FinalizeProcessor(BaseProcessor):
                         "local_path": str(result.get("final_video_path")) if result.get("final_video_path") else None,
                         "tos_key": result.get("final_video_url"),
                     },
+                    "subtitle_srt": {
+                        "local_path": str(result.get("subtitle_srt_path")) if result.get("subtitle_srt_path") else None,
+                        "tos_key": result.get("subtitle_srt_url"),
+                    },
                     "groundtruth": {
                         "local_path": str(self._work_dir / "groundtruth") if self._input_data.get("feed_to_ai") else None,
                         "tos_key": result.get("groundtruth_url"),
@@ -161,6 +170,7 @@ class FinalizeProcessor(BaseProcessor):
             return {
                 "status": "success",
                 "final_video_url": result.get("final_video_url"),
+                "subtitle_srt_url": result.get("subtitle_srt_url"),
                 "final_video_bitrate": output_bitrate,
                 "groundtruth_url": result.get("groundtruth_url"),
             }
@@ -245,17 +255,38 @@ class FinalizeProcessor(BaseProcessor):
             else:
                 raise ValueError("Missing delay_cuts_tos_key in edit")
             
-            # 下载 pause_cuts
-            if edit.pause_cuts_tos_key:
+            # 下载或生成 pause_cuts。PauseCut 是 DelayCut 后的必备产物，
+            # finalize 不允许用空文件替代。
+            pause_cuts_source = edit.pause_cuts_tos_key or payload.get("pause_cuts_on_original_tos_key")
+            if pause_cuts_source:
                 pause_cuts_path = input_dir / "pause_cuts_on_original.json"
-                await self._download_from_tos_async(edit.pause_cuts_tos_key, pause_cuts_path)
+                await self._download_from_tos_async(pause_cuts_source, pause_cuts_path)
+                if not edit.pause_cuts_tos_key:
+                    edit.pause_cuts_tos_key = pause_cuts_source
+                    db.commit()
                 with open(pause_cuts_path, 'r', encoding='utf-8') as f:
                     self._input_data["pause_cuts"] = json.load(f)
             else:
                 pause_cuts_path = input_dir / "pause_cuts_on_original.json"
-                empty_pause_cuts = {"config": {}, "segments": []}
-                pause_cuts_path.write_text(json.dumps(empty_pause_cuts, ensure_ascii=False, indent=2), encoding="utf-8")
-                self._input_data["pause_cuts"] = empty_pause_cuts
+                try:
+                    await self._generate_and_persist_pause_cuts_for_edit(
+                        db=db,
+                        business_task=business_task,
+                        edit=edit,
+                        input_dir=input_dir,
+                        pause_cuts_path=pause_cuts_path,
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "Pause cuts unavailable for edit %s (%s); proceeding without --pause-cuts",
+                        edit.id,
+                        exc,
+                    )
+                if pause_cuts_path.exists():
+                    with open(pause_cuts_path, 'r', encoding='utf-8') as f:
+                        self._input_data["pause_cuts"] = json.load(f)
+                else:
+                    self._input_data["pause_cuts"] = {}
             
             # 下载ASR结果
             if business_task.asr_result_tos_key:
@@ -292,6 +323,7 @@ class FinalizeProcessor(BaseProcessor):
                 },
                 expected_outputs=[
                     {"name": "final_video", "path": str(self._work_dir / "finalize" / "final_video.mp4")},
+                    {"name": "subtitle_srt", "path": str(self._work_dir / "finalize" / "subtitle" / "final_video.srt")},
                     {"name": "groundtruth", "path": str(self._work_dir / "groundtruth")},
                 ],
                 payload=dict(payload),
@@ -299,6 +331,46 @@ class FinalizeProcessor(BaseProcessor):
             
         finally:
             db.close()
+
+    async def _generate_and_persist_pause_cuts_for_edit(
+        self,
+        *,
+        db: Any,
+        business_task: BusinessTask,
+        edit: SmartCutEdit,
+        input_dir: Path,
+        pause_cuts_path: Path,
+    ) -> None:
+        """Generate missing mandatory PauseCut output and store it on the edit."""
+        delay_cuts_path = input_dir / "edited_delay_cuts.json"
+        original_video_path = input_dir / "source_video.mp4"
+        audio_source = edit.audio_b_url or edit.audio_a_url
+        if not audio_source:
+            raise RuntimeError(
+                f"Cannot generate required pause cuts for edit {edit.id}: missing post-DelayCut audio"
+            )
+
+        post_delay_audio_path = input_dir / "post_delay_audio.mp3"
+        await self._download_from_tos_async(audio_source, post_delay_audio_path)
+        generate_pause_cuts_from_delay_audio(
+            original_video=original_video_path,
+            edited_delay_cuts_path=delay_cuts_path,
+            audio_path=post_delay_audio_path,
+            pause_cuts_path=pause_cuts_path,
+            aicut_root=self.AICUT_ROOT,
+            source="smart_cut_finalize_repair",
+        )
+
+        pause_cuts_key = f"smart-cut/{business_task.id}/preview/{edit.id}/pause_cuts_on_original.json"
+        await self._upload_file_async(pause_cuts_path, pause_cuts_key)
+        edit.pause_cuts_tos_key = pause_cuts_key
+        db.commit()
+        logger.info(
+            "Generated required pause cuts for finalize: task_id=%s edit_id=%s key=%s",
+            business_task.id,
+            edit.id,
+            pause_cuts_key,
+        )
     
     async def normalize_video(self) -> Path:
         """F21: 视频归一化
@@ -472,46 +544,150 @@ class FinalizeProcessor(BaseProcessor):
         task_id: str
     ) -> dict[str, Any]:
         """异步执行 finalize 算法"""
-        # 添加 online_version 到 Python 路径
-        if self.ONLINE_VERSION_PATH not in sys.path:
-            sys.path.insert(0, self.ONLINE_VERSION_PATH)
-        
         try:
-            # 尝试导入 finalize_processor
-            from src.finalize_processor import FinalizeProcessor as AlgorithmFinalizeProcessor
-            from src.final_video_cutter import OnlineFinalVideoCutter
-            
-            # 保存配置到文件
-            cuts_path = output_dir / "cuts_config.json"
-            with open(cuts_path, 'w', encoding='utf-8') as f:
-                json.dump({
-                    "edited_delay_cuts": edited_delay_cuts,
-                    "pause_cuts": pause_cuts,
-                }, f, indent=2)
-            
-            # 创建算法处理器实例
-            processor = AlgorithmFinalizeProcessor(
-                video_path=str(video_path),
-                cuts_config_path=str(cuts_path),
-                output_dir=str(output_dir),
+            return await self._run_formal_flow_b_async(
+                video_path=video_path,
+                output_dir=output_dir,
                 output_bitrate=output_bitrate,
-                task_id=task_id
             )
-            
-            # 执行处理（在线程池中运行同步代码）
-            loop = asyncio.get_event_loop()
-            algorithm_result = await loop.run_in_executor(None, processor.process)
-            
-            return {
-                "final_video_path": Path(algorithm_result.get("final_video_path")),
-            }
-            
-        except ImportError as e:
-            logger.warning(f"Cannot import finalize_processor: {e}, using mock result")
-            return await self._mock_algorithm_result_async(output_dir, video_path)
         except Exception as e:
-            logger.error(f"Algorithm execution failed: {e}")
-            return await self._mock_algorithm_result_async(output_dir, video_path)
+            logger.exception("Formal finalize flow-b failed; refusing to publish fallback black/mock output")
+            raise
+
+    async def _run_formal_flow_b_async(
+        self,
+        video_path: Path,
+        output_dir: Path,
+        output_bitrate: int | None = None,
+    ) -> dict[str, Any]:
+        input_dir = self._work_dir / "input"
+        delay_cuts_path = input_dir / "edited_delay_cuts.json"
+        asr_result_path = input_dir / "asr_result.json"
+        pause_cuts_path = input_dir / "pause_cuts_on_original.json"
+
+        if not delay_cuts_path.exists():
+            raise ValueError(f"Missing delay cuts file for formal finalize: {delay_cuts_path}")
+        if not asr_result_path.exists():
+            raise ValueError(f"Missing ASR result file for formal finalize: {asr_result_path}")
+
+        base_name = f"task_{self._task.business_task_id}_formal_finalize"
+        cmd = [
+            self.AICUT_PYTHON,
+            "-m",
+            "libs.cut_breakpoints.src.run_raw_cut",
+            "-i",
+            str(video_path),
+            "-o",
+            str(output_dir),
+            "--flow-b",
+            "--delay-cuts",
+            str(delay_cuts_path),
+            "--asr-result",
+            str(asr_result_path),
+            "-n",
+            base_name,
+        ]
+        if pause_cuts_path.exists():
+            cmd.extend(["--pause-cuts", str(pause_cuts_path)])
+        if self._output_mode == "original":
+            fallback_mbps = max((output_bitrate or self.MAX_BITRATE) / 1_000_000, 0.001)
+            cmd.extend(
+                [
+                    "--bitrate-mode",
+                    "min_of_input_and_cap",
+                    "--video-bitrate-fallback-mbps",
+                    f"{fallback_mbps:.6f}",
+                ]
+            )
+
+        logger.info("Running formal finalize flow-b: %s", " ".join(cmd))
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            cwd=self.AICUT_ROOT,
+        )
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=3600)
+        if proc.returncode != 0:
+            raise RuntimeError(stderr.decode() or stdout.decode() or "run_raw_cut flow-b failed")
+
+        final_video_candidates = [
+            output_dir / f"{base_name}_final.mp4",
+            output_dir / f"{video_path.stem}_final.mp4",
+            output_dir / "final_video.mp4",
+        ]
+        final_video_path = next((path for path in final_video_candidates if path.exists()), None)
+        if final_video_path is None:
+            generated = sorted(output_dir.glob("*_final.mp4"), key=lambda path: path.stat().st_mtime, reverse=True)
+            final_video_path = generated[0] if generated else None
+        if final_video_path is None or not final_video_path.exists():
+            raise RuntimeError(f"Formal finalize did not produce an output video. stdout={stdout.decode()}")
+
+        canonical_final_video = output_dir / "final_video.mp4"
+        if final_video_path != canonical_final_video:
+            shutil.copy2(final_video_path, canonical_final_video)
+            final_video_path = canonical_final_video
+
+        final_video_path = await self._maybe_reencode_final_video(final_video_path)
+
+        return {
+            "final_video_path": final_video_path,
+        }
+
+    async def _maybe_reencode_final_video(self, final_video_path: Path) -> Path:
+        """Optionally shrink the final artifact for constrained upload links."""
+        if self._output_mode == "original":
+            logger.info("Skipping final video re-encode for original output mode: %s", final_video_path)
+            return final_video_path
+
+        if self.REENCODE_BITRATE <= 0:
+            return final_video_path
+
+        compressed_path = final_video_path.with_name(f"{final_video_path.stem}.compressed.mp4")
+        bitrate = str(self.REENCODE_BITRATE)
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(final_video_path),
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-b:v",
+            bitrate,
+            "-maxrate",
+            bitrate,
+            "-bufsize",
+            str(self.REENCODE_BITRATE * 2),
+            "-c:a",
+            "aac",
+            "-b:a",
+            os.environ.get("SMART_CUT_FINALIZE_REENCODE_AUDIO_BITRATE", "96k"),
+            "-movflags",
+            "+faststart",
+            str(compressed_path),
+        ]
+        logger.info("Re-encoding final video for upload: %s", " ".join(cmd))
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await asyncio.wait_for(
+            proc.communicate(),
+            timeout=int(os.environ.get("SMART_CUT_FINALIZE_REENCODE_TIMEOUT_SECONDS", "1800")),
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(stderr.decode() or stdout.decode() or "final video re-encode failed")
+
+        if compressed_path.stat().st_size < final_video_path.stat().st_size:
+            shutil.move(str(compressed_path), str(final_video_path))
+            logger.info("Final video re-encoded: %s", final_video_path)
+        else:
+            compressed_path.unlink(missing_ok=True)
+            logger.info("Skipped re-encoded video because it was not smaller")
+        return final_video_path
     
     async def _mock_algorithm_result_async(self, output_dir: Path, video_path: Path) -> dict[str, Any]:
         """模拟算法结果（异步版本）"""
@@ -545,11 +721,127 @@ class FinalizeProcessor(BaseProcessor):
         await self._upload_file_async(final_video_path, final_video_key)
         
         result["final_video_url"] = final_video_key
+
+        await self._set_status_detail_async(STATUS_DETAIL_GENERATING_SUBTITLE)
+        subtitle_srt_path = await self._generate_subtitle_srt_async(Path(final_video_path))
+        subtitle_srt_key = f"smart-cut/{self._task.business_task_id}/finalize/final_video.srt"
+        await self._upload_file_async(subtitle_srt_path, subtitle_srt_key)
+        result["subtitle_srt_path"] = subtitle_srt_path
+        result["subtitle_srt_url"] = subtitle_srt_key
         
         # 更新数据库
         await self._update_database_async(result)
         
         logger.info(f"Final video uploaded and database updated: {final_video_key}")
+
+    async def _set_status_detail_async(self, status_detail: str) -> None:
+        db = self.get_db_session()
+        try:
+            business_task = db.query(BusinessTask).filter_by(id=self._task.business_task_id).first()
+            if business_task:
+                business_task.status_detail = status_detail
+                db.commit()
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()
+
+    def _subtitle_config(self) -> dict[str, str | int | float]:
+        return {
+            "model": os.getenv("SMART_CUT_SUBTITLE_MODEL", "deepseek-v4-flash"),
+            "temperature": float(os.getenv("SMART_CUT_SUBTITLE_TEMPERATURE", "0.3")),
+            "reasoning_effort": os.getenv("SMART_CUT_SUBTITLE_REASONING_EFFORT", "disabled"),
+            "max_tokens": int(os.getenv("SMART_CUT_SUBTITLE_MAX_TOKENS", "8192")),
+            "max_caption_chars": int(os.getenv("SMART_CUT_SUBTITLE_MAX_CAPTION_CHARS", "11")),
+            "timeout_seconds": int(os.getenv("SMART_CUT_SUBTITLE_TIMEOUT_SECONDS", "1800")),
+        }
+
+    def _subtitle_script_path(self) -> Path:
+        return Path(os.environ.get("AICUT_ROOT", self.AICUT_ROOT)) / "scripts" / "smart_cut" / "run_deepseek_semantic_srt.sh"
+
+    def _script_value_to_text(self, value: Any) -> str:
+        if value is None:
+            return ""
+        if isinstance(value, str):
+            return value
+        if isinstance(value, list):
+            parts: list[str] = []
+            for segment in value:
+                if isinstance(segment, str):
+                    parts.append(segment)
+                elif isinstance(segment, dict):
+                    parts.append(str(segment.get("text", "")))
+                else:
+                    parts.append(str(segment))
+            return "".join(parts)
+        if isinstance(value, dict) and isinstance(value.get("segments"), list):
+            parts: list[str] = []
+            for segment in value["segments"]:
+                if isinstance(segment, str):
+                    parts.append(segment)
+                elif isinstance(segment, dict):
+                    parts.append(str(segment.get("text", "")))
+                else:
+                    parts.append(str(segment))
+            return "".join(parts)
+        try:
+            return json.dumps(value, ensure_ascii=False, indent=2)
+        except TypeError:
+            return str(value)
+
+    def _write_subtitle_script_input(self, subtitle_output_dir: Path) -> Path:
+        script_text = self._script_value_to_text(self._input_data.get("edited_script")).strip()
+        script_source = "edited_script"
+        if not script_text:
+            script_text = self._script_value_to_text(self._input_data.get("analyze_script")).strip()
+            script_source = "analyze_script"
+        if not script_text:
+            raise ValueError("Missing edited_script/analyze_script for semantic subtitle generation")
+
+        script_path = subtitle_output_dir / "final_video_Script1.txt"
+        script_path.write_text(script_text + "\n", encoding="utf-8")
+        logger.info("Prepared semantic subtitle script from %s: %s", script_source, script_path)
+        return script_path
+
+    async def _generate_subtitle_srt_async(self, final_video_path: Path) -> Path:
+        subtitle_script_path = self._subtitle_script_path()
+        if not subtitle_script_path.exists():
+            raise ValueError(f"Subtitle script not found: {subtitle_script_path}")
+
+        subtitle_output_dir = self._work_dir / "finalize" / "subtitles"
+        subtitle_output_dir.mkdir(parents=True, exist_ok=True)
+        semantic_script_input = self._write_subtitle_script_input(subtitle_output_dir)
+        config = self._subtitle_config()
+        expected_srt = subtitle_output_dir / "final_video_checked.srt"
+        cmd = [
+            "bash",
+            str(subtitle_script_path),
+            "--video",
+            str(final_video_path),
+            "--script",
+            str(semantic_script_input),
+            "--max-caption-chars",
+            str(config["max_caption_chars"]),
+            "--output-dir",
+            str(subtitle_output_dir),
+            "--name",
+            "final_video",
+        ]
+
+        logger.info("Generating DeepSeek semantic subtitle SRT: %s", " ".join(cmd))
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            cwd=self.AICUT_ROOT,
+        )
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=int(config["timeout_seconds"]))
+        if proc.returncode != 0:
+            raise RuntimeError(f"Semantic subtitle generation failed: {stderr.decode() or stdout.decode()}")
+        if not expected_srt.exists():
+            raise RuntimeError(f"Semantic subtitle generation did not create checked SRT: {expected_srt}")
+        return expected_srt
     
     async def _calculate_output_bitrate(self) -> int:
         """计算输出码率
@@ -656,7 +948,9 @@ class FinalizeProcessor(BaseProcessor):
             if business_task:
                 business_task.status = TaskStatus.SUCCESS
                 business_task.current_stage = CurrentStage.COMPLETE
+                business_task.status_detail = default_status_detail(TaskStatus.SUCCESS.value)
                 business_task.final_video_url = result.get("final_video_url")
+                business_task.subtitle_srt_url = result.get("subtitle_srt_url")
                 
                 if result.get("groundtruth_url"):
                     business_task.groundtruth_url = result["groundtruth_url"]
@@ -692,11 +986,12 @@ class FinalizeProcessor(BaseProcessor):
                 )
             business_task = db.query(BusinessTask).filter_by(id=self._task.business_task_id).first()
             if business_task:
-                business_task.status = TaskStatus.WAITING_USER
-                business_task.current_stage = CurrentStage.USER_SELECT
+                business_task.status = TaskStatus.FINALIZE_FAILED
+                business_task.current_stage = CurrentStage.FINALIZE
                 business_task.failed_stage = "finalize"
+                business_task.status_detail = default_status_detail(TaskStatus.FINALIZE_FAILED.value)
                 db.commit()
-                logger.info(f"Task returned to waiting_user after finalize failure: {business_task.id}")
+                logger.info(f"Task marked finalize_failed after finalize failure: {business_task.id}")
         except Exception as e:
             db.rollback()
             logger.error(f"Failed to update failure status: {e}")
