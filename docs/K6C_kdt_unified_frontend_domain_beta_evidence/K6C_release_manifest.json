@@ -1,0 +1,36 @@
+{
+  "task_id": "K6C-kdt-unified-frontend-domain-beta",
+  "decision": "PASS_WITH_CONDITIONS",
+  "frontend_branch": "feature/K6C-kdt-unified-frontend-domain-beta",
+  "source_commits": [
+    "6435d78",
+    "fe157d9"
+  ],
+  "production_archive": "/home/malin/preview_3302_slot/K6C-kdt-unified-frontend-domain-beta-20260516-0218-r2_web_runtime.tgz",
+  "production_archive_sha256": "853635f321f408d0187c88b0107640de08f8254605ac8c36596a5015c1b6d66d",
+  "source_archive_sha256": "bbe1f1caef1f92b1560c3ef9b5d8ed3a48417670e35b4cd24fef8146fe9b4489",
+  "build_env": {
+    "NEXT_PUBLIC_MARKETING_VIDEO_API_MODE": "real",
+    "MARKETING_VIDEO_API_BASE_URL": "http://14.103.87.112:18080"
+  },
+  "production_url": "https://xiaomajianji.cn/marketing-video",
+  "rollback_command": "ssh aliyun 'bash /home/malin/release_0425/website_aicut/scripts/release_0425/rollback_web_3301_last_promotion.sh'",
+  "backup_dir": "/home/malin/website_aicut_prod/backups/web_runtime/web_runtime_20260516_020107",
+  "kdt_workflows": {
+    "no_open_end": "wf_6eb07f744f324ebe8a631d8b75a3844d",
+    "custom_open_end": "wf_da40308789ef4382b2b56a67304ed647"
+  },
+  "custom_open_end_final": {
+    "key": "video-workflows/staging/kdt/wf_da40308789ef4382b2b56a67304ed647/final/a_video.mp4",
+    "sha256": "bfb454df4d94345e94450ef5ed3b80f1b524cde623b63ab92ca14e2f4f31b062",
+    "duration": "3.000000",
+    "size": "13001",
+    "visual_quality_condition": "black/silent placeholder; same sha as K6B baseline output"
+  },
+  "company10_tongan_smoke": "pass",
+  "audit": {
+    "high": 0,
+    "critical": 0,
+    "moderate": 2
+  }
+}

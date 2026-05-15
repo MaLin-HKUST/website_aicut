@@ -1,0 +1,32 @@
+{
+  "base": "https://xiaomajianji.cn",
+  "username": "rbzj",
+  "workflow_id": "wf_6eb07f744f324ebe8a631d8b75a3844d",
+  "tos_puts": [
+    {
+      "method": "PUT",
+      "status": 200,
+      "url_host": "autocut-malin.tos-cn-shanghai.volces.com",
+      "path_hint": "/video-workflows/staging/kdt/uploads"
+    }
+  ],
+  "api_events": [
+    {
+      "method": "POST",
+      "status": 200,
+      "url_host": "xiaomajianji.cn",
+      "path_hint": "/api/proxy/api/marketing-video"
+    },
+    {
+      "method": "POST",
+      "status": 201,
+      "url_host": "xiaomajianji.cn",
+      "path_hint": "/api/proxy/api/marketing-video"
+    }
+  ],
+  "bridge_used": false,
+  "route_interception_used": false,
+  "backend_upload_fallback_used": false,
+  "page_mode": "Real",
+  "sample_path": "/tmp/k6c_domain_beta/kdt_sample_07.txt"
+}

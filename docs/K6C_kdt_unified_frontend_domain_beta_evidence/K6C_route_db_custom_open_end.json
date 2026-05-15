@@ -1,0 +1,61 @@
+{
+  "workflow": {
+    "workflow_id": "wf_6eb07f744f324ebe8a631d8b75a3844d",
+    "workflow_name": "RBZJ_KDT",
+    "task_type": "ip_marketing_video",
+    "company_id": "1",
+    "status": "succeeded",
+    "created_at": "2026-05-15T18:01:47.937062+00:00",
+    "updated_at": "2026-05-15T18:01:55.859619+00:00"
+  },
+  "route_rows": [
+    {
+      "node_code": "kdt_pipeline_exec",
+      "status": "succeeded",
+      "worker_kind": "special",
+      "worker_id": "sworker-1-kdt-special",
+      "attempt": 1,
+      "device_worker_id": "sworker-1-kdt-special",
+      "company_id": "1",
+      "build_id": "k6b-kdt-runtime-deploy-20260515-2312-r2",
+      "node_contract_version": "kdt-node-contract-k6a-v1",
+      "data_version": "kdt-materials-20260511-01"
+    },
+    {
+      "node_code": "kdt_post_pipeline",
+      "status": "succeeded",
+      "worker_kind": "general",
+      "worker_id": "gworker-2-kdt-general",
+      "attempt": 1,
+      "device_worker_id": "gworker-2-kdt-general",
+      "company_id": "1",
+      "build_id": "k6b-kdt-runtime-deploy-20260515-2312-r2",
+      "node_contract_version": "kdt-node-contract-k6a-v1",
+      "data_version": "kdt-materials-20260511-01"
+    },
+    {
+      "node_code": "kdt_pre_pipeline",
+      "status": "succeeded",
+      "worker_kind": "general",
+      "worker_id": "gworker-2-kdt-general",
+      "attempt": 1,
+      "device_worker_id": "gworker-2-kdt-general",
+      "company_id": "1",
+      "build_id": "k6b-kdt-runtime-deploy-20260515-2312-r2",
+      "node_contract_version": "kdt-node-contract-k6a-v1",
+      "data_version": "kdt-materials-20260511-01"
+    },
+    {
+      "node_code": "kdt_validate_inputs",
+      "status": "succeeded",
+      "worker_kind": "general",
+      "worker_id": "gworker-2-kdt-general",
+      "attempt": 1,
+      "device_worker_id": "gworker-2-kdt-general",
+      "company_id": "1",
+      "build_id": "k6b-kdt-runtime-deploy-20260515-2312-r2",
+      "node_contract_version": "kdt-node-contract-k6a-v1",
+      "data_version": "kdt-materials-20260511-01"
+    }
+  ]
+}

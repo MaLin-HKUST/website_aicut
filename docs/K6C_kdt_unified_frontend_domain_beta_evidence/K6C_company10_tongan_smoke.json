@@ -1,0 +1,10 @@
+{
+  "username": "tongan1",
+  "ok": true,
+  "url": "https://xiaomajianji.cn/marketing-video",
+  "hasTongan": true,
+  "hasKdt": false,
+  "locked": false,
+  "error": null,
+  "body": "小马 AI 剪辑\n\n功能\n\nM\n文案生成语音\nV\n智能剪气口\nG\n生成营销视频\nT\n任务列表\n素材管理\n即将开放\n账户中心\n即将开放\n\n任务列表\n\n暂无任务\n退出登录\n你好，同安影视城，小马AI准备就绪~\n\n已剪辑条数\n\n0\n\n剩余条数\n\n--\n\n当前执行任务\n\n0\n\n当前账号\n\ntongan1\n\nMARKETING VIDEO\n\n生成营销视频\n\n上传短视频的文案并创建 TONGAN 标准营销视频任务。创建后可以离开本页，后续进度、停止、改名和下载都在任务中心处理。\n\n当前模式\n\nTONGAN 标准\n\nAPI\n\nReal\n\n任务输入\n\n输入短视频的文案(txt文件格式)\n\n标准视频模式\n选择 TXT 文案\n尚未选择 TXT 文件\n任务标题\n创建营销视频任务\n创建后任务会持久显示在任务中心\n任务中心\n\n创建成功后会出现任务详情入口。刷新或离开页面不会影响后端工作流，任务状态会从任务中心重新读取。"
+}

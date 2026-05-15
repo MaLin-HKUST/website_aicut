@@ -1,0 +1,69 @@
+{
+  "archived_at": null,
+  "company_id": "1",
+  "created_at": "2026-05-15T18:06:18.546858+00:00",
+  "current_node": null,
+  "current_node_label": null,
+  "customer_id": "kdt",
+  "download": {
+    "available": true,
+    "final_video_key": "video-workflows/staging/kdt/wf_da40308789ef4382b2b56a67304ed647/final/a_video.mp4",
+    "final_video_url": "https://autocut-malin.tos-cn-shanghai.volces.com/video-workflows/staging/kdt/wf_da40308789ef4382b2b56a67304ed647/final/a_video.mp4?<redacted>",
+    "output_manifest_key": "video-workflows/staging/kdt/wf_da40308789ef4382b2b56a67304ed647/subtasks/kdt_post_pipeline/attempt-1/outputs/output_manifest.json",
+    "status": "succeeded",
+    "task_manifest_key": "video-workflows/staging/kdt/wf_da40308789ef4382b2b56a67304ed647/final/task_manifest.json",
+    "workflow_id": "wf_da40308789ef4382b2b56a67304ed647"
+  },
+  "error_message": null,
+  "progress_percent": 100,
+  "status": "succeeded",
+  "status_label": "已完成",
+  "subtasks": [
+    {
+      "attempt": 1,
+      "error_message": null,
+      "node_code": "kdt_validate_inputs",
+      "node_name": "KDT validate uploaded inputs",
+      "progress_percent": 100,
+      "status": "succeeded",
+      "subtask_id": "st_f82607509e10444f9226cbf3150a2f72",
+      "worker_kind": "general"
+    },
+    {
+      "attempt": 1,
+      "error_message": null,
+      "node_code": "kdt_pre_pipeline",
+      "node_name": "KDT prepare pipeline bundle",
+      "progress_percent": 100,
+      "status": "succeeded",
+      "subtask_id": "st_90f016b340ca43d8a81546b5b47fed86",
+      "worker_kind": "general"
+    },
+    {
+      "attempt": 1,
+      "error_message": null,
+      "node_code": "kdt_pipeline_exec",
+      "node_name": "KDT/RBZJ pipeline execution",
+      "progress_percent": 100,
+      "status": "succeeded",
+      "subtask_id": "st_71fc51b07d794c4cbb984e2b3f922d7a",
+      "worker_kind": "special"
+    },
+    {
+      "attempt": 1,
+      "error_message": null,
+      "node_code": "kdt_post_pipeline",
+      "node_name": "KDT post pipeline final video",
+      "progress_percent": 100,
+      "status": "succeeded",
+      "subtask_id": "st_cb1b3a1d08ac423a81ee4386b27dfda8",
+      "worker_kind": "general"
+    }
+  ],
+  "task_type": "ip_marketing_video",
+  "task_type_label": "有 IP 出镜营销视频剪辑",
+  "title": "kdt_sample_07",
+  "updated_at": "2026-05-15T18:06:26.354918+00:00",
+  "workflow_id": "wf_da40308789ef4382b2b56a67304ed647",
+  "workflow_name": "RBZJ_KDT"
+}

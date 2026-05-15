@@ -1,0 +1,10 @@
+{
+  "available": true,
+  "final_video_key": "video-workflows/staging/kdt/wf_da40308789ef4382b2b56a67304ed647/final/a_video.mp4",
+  "final_video_url": "https://autocut-malin.tos-cn-shanghai.volces.com/video-workflows/staging/kdt/wf_da40308789ef4382b2b56a67304ed647/final/a_video.mp4?<redacted>",
+  "output_manifest_key": "video-workflows/staging/kdt/wf_da40308789ef4382b2b56a67304ed647/subtasks/kdt_post_pipeline/attempt-1/outputs/output_manifest.json",
+  "status": "succeeded",
+  "task_manifest_key": "video-workflows/staging/kdt/wf_da40308789ef4382b2b56a67304ed647/final/task_manifest.json",
+  "workflow_id": "wf_da40308789ef4382b2b56a67304ed647",
+  "download_url": "https://autocut-malin.tos-cn-shanghai.volces.com/video-workflows/staging/kdt/wf_da40308789ef4382b2b56a67304ed647/final/a_video.mp4?<redacted>"
+}

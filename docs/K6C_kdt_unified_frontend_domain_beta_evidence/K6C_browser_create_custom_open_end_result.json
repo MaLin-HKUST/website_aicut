@@ -1,0 +1,42 @@
+{
+  "workflow_id": "wf_da40308789ef4382b2b56a67304ed647",
+  "tos_puts": [
+    {
+      "method": "PUT",
+      "status": 200,
+      "url_host": "autocut-malin.tos-cn-shanghai.volces.com",
+      "path_hint": "/video-workflows/staging/kdt/uploads"
+    },
+    {
+      "method": "PUT",
+      "status": 200,
+      "url_host": "autocut-malin.tos-cn-shanghai.volces.com",
+      "path_hint": "/video-workflows/staging/kdt/uploads"
+    },
+    {
+      "method": "PUT",
+      "status": 200,
+      "url_host": "autocut-malin.tos-cn-shanghai.volces.com",
+      "path_hint": "/video-workflows/staging/kdt/uploads"
+    }
+  ],
+  "api_events": [
+    {
+      "method": "POST",
+      "status": 200,
+      "url_host": "xiaomajianji.cn",
+      "path_hint": "/api/proxy/api/marketing-video"
+    },
+    {
+      "method": "POST",
+      "status": 201,
+      "url_host": "xiaomajianji.cn",
+      "path_hint": "/api/proxy/api/marketing-video"
+    }
+  ],
+  "opener_uploaded": true,
+  "ending_uploaded": true,
+  "bridge_used": false,
+  "route_interception_used": false,
+  "backend_upload_fallback_used": false
+}
