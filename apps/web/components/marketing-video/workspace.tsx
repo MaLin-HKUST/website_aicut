@@ -6,9 +6,10 @@ import { useRouter } from "next/navigation";
 import { AuthResponse } from "@/lib/auth";
 import {
   createMarketingVideoWorkflow,
+  getMarketingVideoWorkflowProfile,
   isMarketingVideoMockMode,
   MarketingVideoWorkflowSummary,
-  uploadMarketingVideoScript,
+  uploadMarketingVideoInputs,
 } from "@/lib/marketing-video";
 import { UserWorkspaceShell } from "@/components/navigation/user-workspace-shell";
 import { useUserWorkspaceData } from "@/components/navigation/use-user-workspace-data";
@@ -18,15 +19,13 @@ import { Input } from "@/components/ui/input";
 
 type BusyState = "upload" | "create" | null;
 
-const MARKETING_VIDEO_FULL_ACCESS_COMPANY_IDS = new Set([2, 10]);
-
-function buildDefaultTitle(file: File | null) {
-  if (!file) return "TONGAN 07 staging sample";
-  return file.name.replace(/\.txt$/i, "") || "TONGAN 07 staging sample";
+function buildDefaultTitle(file: File | null, fallback: string) {
+  if (!file) return fallback;
+  return file.name.replace(/\.txt$/i, "") || fallback;
 }
 
 function hasMarketingVideoFullAccess(companyId: number | null | undefined) {
-  return companyId !== null && companyId !== undefined && MARKETING_VIDEO_FULL_ACCESS_COMPANY_IDS.has(companyId);
+  return Boolean(getMarketingVideoWorkflowProfile(companyId));
 }
 
 export function MarketingVideoWorkspace() {
@@ -36,7 +35,13 @@ export function MarketingVideoWorkspace() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<BusyState>(null);
   const [scriptFile, setScriptFile] = useState<File | null>(null);
+  const [useCustomOpenEnd, setUseCustomOpenEnd] = useState(false);
+  const [openerFile, setOpenerFile] = useState<File | null>(null);
+  const [endingFile, setEndingFile] = useState<File | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
+  const [openerInputKey, setOpenerInputKey] = useState(0);
+  const [endingInputKey, setEndingInputKey] = useState(0);
+  const activeProfile = getMarketingVideoWorkflowProfile(user?.company_id);
   const [title, setTitle] = useState("TONGAN 07 staging sample");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [createdWorkflow, setCreatedWorkflow] = useState<MarketingVideoWorkflowSummary | null>(null);
@@ -45,12 +50,29 @@ export function MarketingVideoWorkspace() {
   const mockMode = isMarketingVideoMockMode();
   const pageLocked = Boolean(user && !hasMarketingVideoFullAccess(user.company_id));
 
-  const canCreate = Boolean(user && !pageLocked && scriptFile && busy === null);
+  const canCreate = Boolean(
+    user &&
+      activeProfile &&
+      !pageLocked &&
+      scriptFile &&
+      busy === null &&
+      (!activeProfile.supportsOpenerEnding || !useCustomOpenEnd || (openerFile && endingFile)),
+  );
   const selectedFileMeta = useMemo(() => {
     if (!scriptFile) return "尚未选择 TXT 文件";
     const sizeKb = Math.max(1, Math.round(scriptFile.size / 1024));
     return `${scriptFile.name} · ${sizeKb} KB`;
   }, [scriptFile]);
+  const openerFileMeta = useMemo(() => {
+    if (!openerFile) return "尚未选择开头 MP4";
+    const sizeMb = Math.max(1, Math.round(openerFile.size / 1024 / 1024));
+    return `${openerFile.name} · ${sizeMb} MB`;
+  }, [openerFile]);
+  const endingFileMeta = useMemo(() => {
+    if (!endingFile) return "尚未选择结尾 MP4";
+    const sizeMb = Math.max(1, Math.round(endingFile.size / 1024 / 1024));
+    return `${endingFile.name} · ${sizeMb} MB`;
+  }, [endingFile]);
 
   useEffect(() => {
     async function bootstrap() {
@@ -67,6 +89,8 @@ export function MarketingVideoWorkspace() {
       }
 
       setUser(payload.user);
+      const profile = getMarketingVideoWorkflowProfile(payload.user.company_id);
+      if (profile) setTitle(profile.defaultTitle);
       setLoading(false);
     }
 
@@ -88,14 +112,31 @@ export function MarketingVideoWorkspace() {
     setNotice(null);
     setScriptFile(file);
     setUploadProgress(0);
-    if (file) setTitle(buildDefaultTitle(file));
+    if (file) setTitle(buildDefaultTitle(file, activeProfile?.defaultTitle ?? "TONGAN 07 staging sample"));
+  }
+
+  function handleOpenerFileChange(event: ChangeEvent<HTMLInputElement>) {
+    setError(null);
+    setNotice(null);
+    setOpenerFile(event.target.files?.[0] ?? null);
+  }
+
+  function handleEndingFileChange(event: ChangeEvent<HTMLInputElement>) {
+    setError(null);
+    setNotice(null);
+    setEndingFile(event.target.files?.[0] ?? null);
   }
 
   function resetForm(options: { clearMessages?: boolean } = { clearMessages: true }) {
     setScriptFile(null);
-    setTitle("TONGAN 07 staging sample");
+    setOpenerFile(null);
+    setEndingFile(null);
+    setUseCustomOpenEnd(false);
+    setTitle(activeProfile?.defaultTitle ?? "TONGAN 07 staging sample");
     setUploadProgress(0);
     setFileInputKey((value) => value + 1);
+    setOpenerInputKey((value) => value + 1);
+    setEndingInputKey((value) => value + 1);
     if (options.clearMessages !== false) {
       setNotice(null);
       setError(null);
@@ -103,27 +144,53 @@ export function MarketingVideoWorkspace() {
   }
 
   async function handleCreateTask() {
-    if (!user || user.company_id === null || user.company_id === undefined || !scriptFile || pageLocked) return;
+    if (!user || user.company_id === null || user.company_id === undefined || !scriptFile || pageLocked || !activeProfile) return;
     setError(null);
     setNotice(null);
     try {
       setBusy("upload");
-      const upload = await uploadMarketingVideoScript(scriptFile, { companyId: user.company_id, onProgress: setUploadProgress });
+      const uploads = await uploadMarketingVideoInputs({
+        scriptFile,
+        companyId: user.company_id,
+        profile: activeProfile,
+        openerFile: activeProfile.supportsOpenerEnding && useCustomOpenEnd ? openerFile : null,
+        endingFile: activeProfile.supportsOpenerEnding && useCustomOpenEnd ? endingFile : null,
+        onProgress: setUploadProgress,
+      });
       setBusy("create");
-      const workflow = await createMarketingVideoWorkflow({
-        customer_id: "tongan",
-        company_id: String(user.company_id),
-        task_type: "std_marketing_video",
-        workflow_name: "TONGAN",
-        mode: "standard",
-        title: title.trim() || buildDefaultTitle(scriptFile),
-        input_bundle: {
-          script_txt: {
-            upload_session_id: upload.upload_session_id,
-            filename: upload.filename,
-            tos_key: upload.tos_key,
-          },
+      const inputBundle = {
+        script_txt: {
+          upload_session_id: uploads.script_txt.upload_session_id,
+          filename: uploads.script_txt.filename,
+          tos_key: uploads.script_txt.tos_key,
         },
+        ...(uploads.opener_video
+          ? {
+              opener_video: {
+                upload_session_id: uploads.opener_video.upload_session_id,
+                filename: uploads.opener_video.filename,
+                tos_key: uploads.opener_video.tos_key,
+              },
+            }
+          : {}),
+        ...(uploads.ending_video
+          ? {
+              ending_video: {
+                upload_session_id: uploads.ending_video.upload_session_id,
+                filename: uploads.ending_video.filename,
+                tos_key: uploads.ending_video.tos_key,
+              },
+            }
+          : {}),
+      };
+      const workflow = await createMarketingVideoWorkflow({
+        customer_id: activeProfile.customerId,
+        company_id: String(user.company_id),
+        task_type: activeProfile.taskType,
+        workflow_name: activeProfile.workflowName,
+        mode: activeProfile.mode,
+        title: title.trim() || buildDefaultTitle(scriptFile, activeProfile.defaultTitle),
+        input_bundle: inputBundle,
       });
       const { subtasks: _subtasks, ...summary } = workflow;
       setCreatedWorkflow(summary);
@@ -163,13 +230,13 @@ export function MarketingVideoWorkspace() {
                 <p className="text-xs tracking-[0.24em] text-stone-500">MARKETING VIDEO</p>
                 <h2 className="mt-2 text-[26px] font-semibold text-[#241714]">生成营销视频</h2>
                 <p className="mt-2 max-w-3xl text-sm leading-7 text-stone-600">
-                  上传短视频的文案并创建 标准营销视频任务。创建后可以离开本页，后续进度、停止、改名和下载都在任务中心处理。
+                  {activeProfile?.description ?? "上传短视频的文案并创建营销视频任务。创建后可以离开本页，后续进度、停止、改名和下载都在任务中心处理。"}
                 </p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-[20px] border border-[#e4dacb] bg-[#fffaf5] px-4 py-3">
                   <p className="text-xs tracking-[0.2em] text-stone-500">当前模式</p>
-                  <p className="mt-2 text-base font-semibold text-[#241714]">TONGAN 标准</p>
+                  <p className="mt-2 text-base font-semibold text-[#241714]">{activeProfile?.modeLabel ?? "暂未开放"}</p>
                 </div>
                 <div className="rounded-[20px] border border-[#e4dacb] bg-[#fffaf5] px-4 py-3">
                   <p className="text-xs tracking-[0.2em] text-stone-500">API</p>
@@ -187,10 +254,10 @@ export function MarketingVideoWorkspace() {
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-[#241714]">任务输入</h3>
-                  <p className="mt-2 text-sm leading-7 text-stone-500">输入短视频的文案(txt文件格式)</p>
+                  <p className="mt-2 text-sm leading-7 text-stone-500">{activeProfile?.inputHint ?? "输入短视频的文案(txt文件格式)"}</p>
                 </div>
                 <span className="self-start rounded-full border border-[#dfd5c5] bg-[#faf7f2] px-4 py-2 text-sm text-stone-600">
-                  标准视频模式
+                  {activeProfile?.taskBadge ?? "未开放"}
                 </span>
               </div>
 
@@ -221,6 +288,63 @@ export function MarketingVideoWorkspace() {
                   />
                 </div>
               </div>
+
+              {activeProfile?.supportsOpenerEnding ? (
+                <div className="mt-5 rounded-[24px] border border-[#e4dacb] bg-[#fffdf9] p-4" data-testid="kdt-open-end-controls">
+                  <label className="flex items-start gap-3 text-sm font-semibold text-[#241714]">
+                    <input
+                      checked={useCustomOpenEnd}
+                      className="mt-1 h-4 w-4 accent-[#8f5d38]"
+                      disabled={busy !== null || pageLocked}
+                      onChange={(event) => {
+                        setUseCustomOpenEnd(event.target.checked);
+                        if (!event.target.checked) {
+                          setOpenerFile(null);
+                          setEndingFile(null);
+                          setOpenerInputKey((value) => value + 1);
+                          setEndingInputKey((value) => value + 1);
+                        }
+                      }}
+                      type="checkbox"
+                    />
+                    <span>
+                      使用自定义开头和结尾视频
+                      <span className="mt-1 block text-sm font-normal leading-6 text-stone-500">
+                        勾选后需要上传开头 MP4 和结尾 MP4；不勾选时后端使用默认素材策略。
+                      </span>
+                    </span>
+                  </label>
+
+                  {useCustomOpenEnd ? (
+                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                      <label className="flex min-h-[88px] cursor-pointer flex-col items-center justify-center rounded-[22px] border border-dashed border-[#dccab6] bg-[#fffaf5] px-4 py-4 text-center transition hover:bg-[#fff5e9]">
+                        <span className="text-[16px] font-semibold text-[#302520]">选择开头 MP4</span>
+                        <span className="mt-2 max-w-full break-all text-sm text-stone-500">{openerFileMeta}</span>
+                        <Input
+                          key={openerInputKey}
+                          accept=".mp4,video/mp4"
+                          className="hidden"
+                          disabled={busy !== null || pageLocked}
+                          onChange={handleOpenerFileChange}
+                          type="file"
+                        />
+                      </label>
+                      <label className="flex min-h-[88px] cursor-pointer flex-col items-center justify-center rounded-[22px] border border-dashed border-[#dccab6] bg-[#fffaf5] px-4 py-4 text-center transition hover:bg-[#fff5e9]">
+                        <span className="text-[16px] font-semibold text-[#302520]">选择结尾 MP4</span>
+                        <span className="mt-2 max-w-full break-all text-sm text-stone-500">{endingFileMeta}</span>
+                        <Input
+                          key={endingInputKey}
+                          accept=".mp4,video/mp4"
+                          className="hidden"
+                          disabled={busy !== null || pageLocked}
+                          onChange={handleEndingFileChange}
+                          type="file"
+                        />
+                      </label>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
 
               <div className="mt-5 flex flex-wrap items-center gap-3">
                 <Button disabled={!canCreate} onClick={handleCreateTask} type="button">

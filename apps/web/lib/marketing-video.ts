@@ -20,13 +20,17 @@ export type MarketingVideoSubtask = {
   error_message: string | null;
 };
 
+export type MarketingVideoTaskType = "std_marketing_video" | "ip_marketing_video";
+export type MarketingVideoWorkflowName = "TONGAN" | "RBZJ_KDT";
+export type MarketingVideoInputName = "script_txt" | "opener_video" | "ending_video";
+
 export type MarketingVideoWorkflow = {
   workflow_id: string;
   customer_id: string;
   company_id: string;
-  task_type: "std_marketing_video";
+  task_type: MarketingVideoTaskType;
   task_type_label: string;
-  workflow_name: "TONGAN";
+  workflow_name: MarketingVideoWorkflowName;
   title: string;
   status: MarketingVideoWorkflowStatus;
   display_status?: MarketingVideoDisplayStatus;
@@ -51,12 +55,22 @@ export type MarketingVideoWorkflowSummary = Omit<MarketingVideoWorkflow, "subtas
 export type CreateMarketingVideoWorkflowRequest = {
   customer_id: string;
   company_id: string;
-  task_type: "std_marketing_video";
-  workflow_name: "TONGAN";
+  task_type: MarketingVideoTaskType;
+  workflow_name: MarketingVideoWorkflowName;
   mode: "standard";
   title: string;
   input_bundle: {
     script_txt: {
+      upload_session_id: string;
+      filename: string;
+      tos_key?: string;
+    };
+    opener_video?: {
+      upload_session_id: string;
+      filename: string;
+      tos_key?: string;
+    };
+    ending_video?: {
       upload_session_id: string;
       filename: string;
       tos_key?: string;
@@ -68,6 +82,24 @@ export type MarketingVideoUploadResult = {
   upload_session_id: string;
   filename: string;
   tos_key?: string;
+};
+
+export type MarketingVideoInputUploadResult = Record<MarketingVideoInputName, MarketingVideoUploadResult | undefined> & {
+  script_txt: MarketingVideoUploadResult;
+};
+
+export type MarketingVideoWorkflowProfile = {
+  kind: "tongan" | "kdt";
+  customerId: "tongan" | "kdt";
+  taskType: MarketingVideoTaskType;
+  workflowName: MarketingVideoWorkflowName;
+  mode: "standard";
+  defaultTitle: string;
+  modeLabel: string;
+  taskBadge: string;
+  description: string;
+  inputHint: string;
+  supportsOpenerEnding: boolean;
 };
 
 type MarketingVideoPresignResponse = {
@@ -88,18 +120,57 @@ type MarketingVideoPresignResponse = {
 type MockOutcome = "auto" | "succeeded" | "failed";
 
 const MOCK_STORAGE_KEY = "marketing-video-stage6a-workflows";
-const MOCK_NODE_NAMES = [
+const TONGAN_MOCK_NODE_NAMES = [
   ["tongan_pre_pipeline", "准备素材与基础视频", "general"],
   ["tongan_pipeline_exec", "智能匹配素材", "special"],
   ["tongan_post_pipeline", "渲染成片", "general"],
 ] as const;
+const KDT_MOCK_NODE_NAMES = [
+  ["kdt_validate_inputs", "校验输入", "general"],
+  ["kdt_pre_pipeline", "准备素材", "general"],
+  ["kdt_pipeline_exec", "智能匹配", "special"],
+  ["kdt_post_pipeline", "渲染成片", "general"],
+] as const;
 
 const TONGAN_STAGE5C_NODE_ORDER = ["tongan_pre_pipeline", "tongan_pipeline_exec", "tongan_post_pipeline"] as const;
+const KDT_NODE_ORDER = ["kdt_validate_inputs", "kdt_pre_pipeline", "kdt_pipeline_exec", "kdt_post_pipeline"] as const;
 
-const TONGAN_STAGE5C_NODE_LABELS: Record<(typeof TONGAN_STAGE5C_NODE_ORDER)[number], string> = {
+const MARKETING_VIDEO_NODE_LABELS: Record<string, string> = {
   tongan_pre_pipeline: "准备素材与基础视频",
   tongan_pipeline_exec: "智能匹配素材",
   tongan_post_pipeline: "渲染成片",
+  kdt_validate_inputs: "校验输入",
+  kdt_pre_pipeline: "准备素材",
+  kdt_pipeline_exec: "智能匹配",
+  kdt_post_pipeline: "渲染成片",
+};
+
+const TONGAN_PROFILE: MarketingVideoWorkflowProfile = {
+  kind: "tongan",
+  customerId: "tongan",
+  taskType: "std_marketing_video",
+  workflowName: "TONGAN",
+  mode: "standard",
+  defaultTitle: "TONGAN 07 staging sample",
+  modeLabel: "TONGAN 标准",
+  taskBadge: "标准视频模式",
+  description: "上传短视频的文案并创建 TONGAN 标准营销视频任务。创建后可以离开本页，后续进度、停止、改名和下载都在任务中心处理。",
+  inputHint: "输入短视频的文案(txt文件格式)",
+  supportsOpenerEnding: false,
+};
+
+const KDT_PROFILE: MarketingVideoWorkflowProfile = {
+  kind: "kdt",
+  customerId: "kdt",
+  taskType: "ip_marketing_video",
+  workflowName: "RBZJ_KDT",
+  mode: "standard",
+  defaultTitle: "KDT IP 视频样片",
+  modeLabel: "KDT IP营销视频",
+  taskBadge: "IP 视频模式",
+  description: "上传 KDT 文案并创建 IP 出镜营销视频任务。可选上传开头和结尾视频；不勾选时使用后端默认素材策略。",
+  inputHint: "输入 KDT 文案(txt文件格式)",
+  supportsOpenerEnding: true,
 };
 
 function getApiMode(): "mock" | "real" {
@@ -111,16 +182,23 @@ export function isMarketingVideoMockMode(): boolean {
   return getApiMode() === "mock";
 }
 
+export function getMarketingVideoWorkflowProfile(companyId: number | null | undefined): MarketingVideoWorkflowProfile | null {
+  if (companyId === 1) return KDT_PROFILE;
+  if (companyId === 2 || companyId === 10) return TONGAN_PROFILE;
+  return null;
+}
+
 function sleep(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 export function getMarketingVideoNodeLabel(nodeCode: string, nodeName?: string | null): string {
-  return TONGAN_STAGE5C_NODE_LABELS[nodeCode as keyof typeof TONGAN_STAGE5C_NODE_LABELS] ?? nodeName ?? nodeCode;
+  return MARKETING_VIDEO_NODE_LABELS[nodeCode] ?? nodeName ?? nodeCode;
 }
 
 function getCanonicalNodeIndex(nodeCode: string): number {
-  const index = TONGAN_STAGE5C_NODE_ORDER.indexOf(nodeCode as (typeof TONGAN_STAGE5C_NODE_ORDER)[number]);
+  const order = [...TONGAN_STAGE5C_NODE_ORDER, ...KDT_NODE_ORDER] as readonly string[];
+  const index = order.indexOf(nodeCode);
   return index === -1 ? Number.MAX_SAFE_INTEGER : index;
 }
 
@@ -265,8 +343,12 @@ function writeMockWorkflow(workflow: MarketingVideoWorkflow & { mock_outcome?: M
   window.localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(workflows));
 }
 
-function buildSubtasks(stageIndex: number, status: MarketingVideoWorkflowStatus): MarketingVideoSubtask[] {
-  return MOCK_NODE_NAMES.map(([node_code, node_name, worker_kind], index) => {
+function getMockNodeNames(workflowName: MarketingVideoWorkflowName) {
+  return workflowName === "RBZJ_KDT" ? KDT_MOCK_NODE_NAMES : TONGAN_MOCK_NODE_NAMES;
+}
+
+function buildSubtasks(stageIndex: number, status: MarketingVideoWorkflowStatus, workflowName: MarketingVideoWorkflowName = "TONGAN"): MarketingVideoSubtask[] {
+  return getMockNodeNames(workflowName).map(([node_code, node_name, worker_kind], index) => {
     if (status === "failed" && index === stageIndex) {
       return {
         subtask_id: `st_mock_${node_code}`,
@@ -334,7 +416,7 @@ function withMockProgress(workflow: MarketingVideoWorkflow & { mock_outcome?: Mo
       updated_at: now,
       error_message: "样例 07 文案解析失败，请检查 TXT 内容后重试。",
       download: { available: false, final_video_url: null, task_manifest_key: null },
-      subtasks: buildSubtasks(1, "failed"),
+      subtasks: buildSubtasks(1, "failed", workflow.workflow_name),
     };
   }
 
@@ -349,10 +431,10 @@ function withMockProgress(workflow: MarketingVideoWorkflow & { mock_outcome?: Mo
       error_message: null,
       download: {
         available: true,
-        final_video_url: "https://example.com/stage6a/tongan-07-final.mp4",
+        final_video_url: "https://autocut-malin.tos-cn-shanghai.volces.com/video-workflows/staging/tongan/mock/tongan-07-final.mp4",
         task_manifest_key: "video-workflows/staging/tongan/final/task_manifest.json",
       },
-      subtasks: buildSubtasks(MOCK_NODE_NAMES.length, "succeeded"),
+      subtasks: buildSubtasks(getMockNodeNames(workflow.workflow_name).length, "succeeded", workflow.workflow_name),
     };
   }
 
@@ -364,12 +446,12 @@ function withMockProgress(workflow: MarketingVideoWorkflow & { mock_outcome?: Mo
       current_node_label: "等待调度",
       progress_percent: 8,
       updated_at: now,
-      subtasks: buildSubtasks(0, "queued"),
+      subtasks: buildSubtasks(0, "queued", workflow.workflow_name),
     };
   }
 
   const stageIndex = elapsedSeconds < 4 ? 0 : elapsedSeconds < 7 ? 1 : 2;
-  const [current_node, current_node_label] = MOCK_NODE_NAMES[stageIndex];
+  const [current_node, current_node_label] = getMockNodeNames(workflow.workflow_name)[stageIndex];
   return {
     ...workflow,
     status: "running",
@@ -377,7 +459,7 @@ function withMockProgress(workflow: MarketingVideoWorkflow & { mock_outcome?: Mo
     current_node_label,
     progress_percent: Math.min(96, Math.round(18 + elapsedSeconds * 8)),
     updated_at: now,
-    subtasks: buildSubtasks(stageIndex, "running"),
+    subtasks: buildSubtasks(stageIndex, "running", workflow.workflow_name),
   };
 }
 
@@ -409,6 +491,11 @@ export async function uploadMarketingVideoScript(
   file: File,
   options?: { companyId?: number | string; onProgress?: (percent: number) => void },
 ): Promise<MarketingVideoUploadResult> {
+  const bundle = await uploadMarketingVideoInputs({ scriptFile: file, companyId: options?.companyId, onProgress: options?.onProgress });
+  return bundle.script_txt;
+}
+
+function assertScriptFile(file: File) {
   if (!file.name.toLowerCase().endsWith(".txt")) {
     throw new Error("请上传 TXT 文案文件。");
   }
@@ -416,57 +503,39 @@ export async function uploadMarketingVideoScript(
   if (file.size === 0) {
     throw new Error("TXT 文件为空，请重新选择。");
   }
+}
 
-  if (getApiMode() === "mock") {
-    options?.onProgress?.(25);
-    await sleep(120);
-    options?.onProgress?.(70);
-    await sleep(120);
-    options?.onProgress?.(100);
-    return {
-      upload_session_id: `upl_mock_${Date.now()}`,
-      filename: file.name,
-      tos_key: `video-workflows/staging/tongan/uploads/mock/${encodeURIComponent(file.name)}`,
-    };
+function assertVideoFile(file: File, label: string) {
+  if (!file.name.toLowerCase().endsWith(".mp4")) {
+    throw new Error(`${label} 请上传 MP4 文件。`);
   }
+  if (file.size === 0) {
+    throw new Error(`${label} 文件为空，请重新选择。`);
+  }
+}
 
-  const presign = await fetchJson<MarketingVideoPresignResponse>("/api/proxy/api/marketing-video/uploads/presign", {
-    method: "POST",
-    body: JSON.stringify({
-      customer_id: "tongan",
-      company_id: options?.companyId !== undefined ? String(options.companyId) : "tongan",
-      filename: file.name,
-      content_type: file.type || "text/plain",
-      task_type: "std_marketing_video",
-      workflow_name: "TONGAN",
-      mode: "standard",
-    }),
-  });
-
-  const scriptObject = presign.objects?.find((object) => object.input_name === "script_txt") ?? presign.objects?.[0];
-  const uploadUrl = scriptObject?.upload_url ?? presign.upload_url ?? presign.url;
-  const uploadMethod = scriptObject?.method ?? "PUT";
-  const uploadKey = scriptObject?.upload_key ?? presign.tos_key ?? presign.object_key;
+async function putPresignedObject(args: {
+  file: File;
+  object: NonNullable<MarketingVideoPresignResponse["objects"]>[number] | undefined;
+  fallbackContentType: string;
+  onProgress?: (loaded: number, total: number) => void;
+}) {
+  const uploadUrl = args.object?.upload_url;
+  const uploadMethod = args.object?.method ?? "PUT";
   if (!uploadUrl) {
     throw new Error("上传地址缺失，请稍后重试。");
   }
-  if (!presign.upload_session_id) {
-    throw new Error("上传会话缺失，请稍后重试。");
-  }
   if (uploadMethod.toUpperCase() !== "PUT") {
     throw new Error(`不支持的上传方法：${uploadMethod}`);
-  }
-  if (!uploadKey) {
-    throw new Error("上传对象路径缺失，请稍后重试。");
   }
 
   await new Promise<void>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open(uploadMethod, uploadUrl);
-    xhr.setRequestHeader("Content-Type", scriptObject?.content_type || file.type || "text/plain");
+    xhr.setRequestHeader("Content-Type", args.object?.content_type || args.file.type || args.fallbackContentType);
     xhr.upload.onprogress = (event) => {
       if (!event.lengthComputable) return;
-      options?.onProgress?.(Math.round((event.loaded / event.total) * 100));
+      args.onProgress?.(event.loaded, event.total);
     };
     xhr.onerror = () => reject(new Error("上传到 TOS 失败，请检查网络后重试。"));
     xhr.onload = () => {
@@ -476,14 +545,129 @@ export async function uploadMarketingVideoScript(
       }
       reject(new Error(`TOS upload failed: ${xhr.status}`));
     };
-    xhr.send(file);
+    xhr.send(args.file);
+  });
+}
+
+export async function uploadMarketingVideoInputs(options: {
+  scriptFile: File;
+  companyId?: number | string;
+  profile?: MarketingVideoWorkflowProfile;
+  openerFile?: File | null;
+  endingFile?: File | null;
+  onProgress?: (percent: number) => void;
+}): Promise<MarketingVideoInputUploadResult> {
+  const profile = options.profile ?? TONGAN_PROFILE;
+  assertScriptFile(options.scriptFile);
+  if (options.openerFile) assertVideoFile(options.openerFile, "开头视频");
+  if (options.endingFile) assertVideoFile(options.endingFile, "结尾视频");
+
+  if (getApiMode() === "mock") {
+    options.onProgress?.(25);
+    await sleep(120);
+    options.onProgress?.(70);
+    await sleep(120);
+    options.onProgress?.(100);
+    return {
+      script_txt: {
+        upload_session_id: `upl_mock_${Date.now()}`,
+        filename: options.scriptFile.name,
+        tos_key: `video-workflows/staging/${profile.customerId}/uploads/mock/${encodeURIComponent(options.scriptFile.name)}`,
+      },
+      opener_video: options.openerFile
+        ? {
+            upload_session_id: `upl_mock_${Date.now()}`,
+            filename: options.openerFile.name,
+            tos_key: `video-workflows/staging/${profile.customerId}/uploads/mock/${encodeURIComponent(options.openerFile.name)}`,
+          }
+        : undefined,
+      ending_video: options.endingFile
+        ? {
+            upload_session_id: `upl_mock_${Date.now()}`,
+            filename: options.endingFile.name,
+            tos_key: `video-workflows/staging/${profile.customerId}/uploads/mock/${encodeURIComponent(options.endingFile.name)}`,
+          }
+        : undefined,
+    };
+  }
+
+  const presign = await fetchJson<MarketingVideoPresignResponse>("/api/proxy/api/marketing-video/uploads/presign", {
+    method: "POST",
+    body: JSON.stringify({
+      customer_id: profile.customerId,
+      company_id: options.companyId !== undefined ? String(options.companyId) : profile.customerId,
+      filename: options.scriptFile.name,
+      content_type: options.scriptFile.type || "text/plain",
+      task_type: profile.taskType,
+      workflow_name: profile.workflowName,
+      mode: profile.mode,
+      opener_video_filename: options.openerFile?.name,
+      ending_video_filename: options.endingFile?.name,
+    }),
   });
 
-  options?.onProgress?.(100);
+  if (!presign.upload_session_id) {
+    throw new Error("上传会话缺失，请稍后重试。");
+  }
+  const objectByName = new Map((presign.objects ?? []).map((object) => [object.input_name, object]));
+  const scriptObject =
+    objectByName.get("script_txt") ??
+    (presign.upload_url || presign.url
+      ? { input_name: "script_txt", upload_url: presign.upload_url ?? presign.url, upload_key: presign.tos_key ?? presign.object_key, method: "PUT" }
+      : undefined);
+  const scriptUploadKey = scriptObject?.upload_key;
+  if (!scriptUploadKey) {
+    throw new Error("上传对象路径缺失，请稍后重试。");
+  }
+
+  const uploadJobs: Array<{ name: MarketingVideoInputName; file: File; object: NonNullable<MarketingVideoPresignResponse["objects"]>[number] | undefined; contentType: string }> = [
+    { name: "script_txt", file: options.scriptFile, object: scriptObject, contentType: "text/plain" },
+  ];
+  if (options.openerFile) uploadJobs.push({ name: "opener_video", file: options.openerFile, object: objectByName.get("opener_video"), contentType: "video/mp4" });
+  if (options.endingFile) uploadJobs.push({ name: "ending_video", file: options.endingFile, object: objectByName.get("ending_video"), contentType: "video/mp4" });
+
+  const finished = new Map<MarketingVideoInputName, number>();
+  for (const job of uploadJobs) {
+    const objectKey = job.object?.upload_key;
+    if (!objectKey) throw new Error(`${job.name} 上传对象路径缺失，请稍后重试。`);
+    await putPresignedObject({
+      file: job.file,
+      object: job.object,
+      fallbackContentType: job.contentType,
+      onProgress: (loaded, total) => {
+        finished.set(job.name, total > 0 ? loaded / total : 0);
+        const sum = uploadJobs.reduce((value, item) => value + (finished.get(item.name) ?? 0), 0);
+        options.onProgress?.(Math.round((sum / uploadJobs.length) * 100));
+      },
+    });
+    finished.set(job.name, 1);
+    const sum = uploadJobs.reduce((value, item) => value + (finished.get(item.name) ?? 0), 0);
+    options.onProgress?.(Math.round((sum / uploadJobs.length) * 100));
+  }
+
+  options.onProgress?.(100);
   return {
-    upload_session_id: presign.upload_session_id,
-    filename: file.name,
-    tos_key: uploadKey,
+    script_txt: {
+      upload_session_id: presign.upload_session_id,
+      filename: options.scriptFile.name,
+      tos_key: scriptUploadKey,
+    },
+    opener_video:
+      options.openerFile && objectByName.get("opener_video")?.upload_key
+        ? {
+            upload_session_id: presign.upload_session_id,
+            filename: options.openerFile.name,
+            tos_key: objectByName.get("opener_video")?.upload_key,
+          }
+        : undefined,
+    ending_video:
+      options.endingFile && objectByName.get("ending_video")?.upload_key
+        ? {
+            upload_session_id: presign.upload_session_id,
+            filename: options.endingFile.name,
+            tos_key: objectByName.get("ending_video")?.upload_key,
+          }
+        : undefined,
   };
 }
 
@@ -496,10 +680,10 @@ export async function createMarketingVideoWorkflow(
       workflow_id: `wf_mock_${Date.now()}`,
       customer_id: request.customer_id,
       company_id: request.company_id,
-      task_type: "std_marketing_video",
-      task_type_label: "标准营销视频剪辑",
-      workflow_name: "TONGAN",
-      title: request.title || "TONGAN 07 staging sample",
+      task_type: request.task_type,
+      task_type_label: request.task_type === "ip_marketing_video" ? "有 IP 出镜营销视频剪辑" : "标准营销视频剪辑",
+      workflow_name: request.workflow_name,
+      title: request.title || (request.workflow_name === "RBZJ_KDT" ? KDT_PROFILE.defaultTitle : TONGAN_PROFILE.defaultTitle),
       status: "queued",
       current_node: null,
       current_node_label: "等待调度",
@@ -508,7 +692,7 @@ export async function createMarketingVideoWorkflow(
       updated_at: now,
       error_message: null,
       download: { available: false, final_video_url: null, task_manifest_key: null },
-      subtasks: buildSubtasks(0, "queued"),
+      subtasks: buildSubtasks(0, "queued", request.workflow_name),
       mock_outcome: "auto",
     };
     writeMockWorkflow(workflow);

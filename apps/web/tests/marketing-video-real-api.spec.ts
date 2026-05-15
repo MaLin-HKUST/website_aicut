@@ -24,6 +24,10 @@ const USER = {
 const WORKFLOW_ID = STAGE5C_WORKFLOW_ID;
 const UPLOAD_KEY = "video-workflows/staging/tongan/uploads/upl_stage6c/script_txt/07.txt";
 const FINAL_VIDEO_URL = STAGE5C_FINAL_VIDEO_URL;
+const KDT_WORKFLOW_ID = "wf_k6c_kdt_contract";
+const KDT_SCRIPT_UPLOAD_KEY = "video-workflows/staging/kdt/uploads/upl_k6c/script_txt/kdt.txt";
+const KDT_OPENER_UPLOAD_KEY = "video-workflows/staging/kdt/uploads/upl_k6c/opener_video/opener.mp4";
+const KDT_ENDING_UPLOAD_KEY = "video-workflows/staging/kdt/uploads/upl_k6c/ending_video/ending.mp4";
 
 function workflowDetail(status: "running" | "succeeded" | "cancelled" = "running") {
   if (status === "succeeded") return stage5cSucceededDetail;
@@ -91,6 +95,72 @@ function workflowListPayloads(details: MarketingVideoWorkflow[]) {
   };
 }
 
+function kdtWorkflowDetail(status: "running" | "succeeded" = "running"): MarketingVideoWorkflow {
+  return {
+    workflow_id: KDT_WORKFLOW_ID,
+    customer_id: "kdt",
+    company_id: "1",
+    task_type: "ip_marketing_video",
+    task_type_label: "有 IP 出镜营销视频剪辑",
+    workflow_name: "RBZJ_KDT",
+    title: "KDT IP video contract",
+    status,
+    current_node: status === "succeeded" ? null : "kdt_validate_inputs",
+    current_node_label: status === "succeeded" ? "已完成" : "KDT 输入校验",
+    progress_percent: status === "succeeded" ? 100 : 12,
+    created_at: "2026-05-15T15:28:40+00:00",
+    updated_at: "2026-05-15T15:28:50+00:00",
+    error_message: null,
+    download: {
+      available: status === "succeeded",
+      final_video_url: status === "succeeded" ? "https://autocut-malin.tos-cn-shanghai.volces.com/kdt/final.mp4" : null,
+      task_manifest_key: status === "succeeded" ? `video-workflows/staging/kdt/${KDT_WORKFLOW_ID}/final/task_manifest.json` : null,
+    },
+    subtasks: [
+      {
+        subtask_id: "st_kdt_validate",
+        node_code: "kdt_validate_inputs",
+        node_name: "KDT validate uploaded inputs",
+        worker_kind: "general",
+        status: status === "succeeded" ? "succeeded" : "accepted",
+        attempt: 1,
+        progress_percent: status === "succeeded" ? 100 : 12,
+        error_message: null,
+      },
+      {
+        subtask_id: "st_kdt_pre",
+        node_code: "kdt_pre_pipeline",
+        node_name: "KDT prepare pipeline bundle",
+        worker_kind: "general",
+        status: status === "succeeded" ? "succeeded" : "pending",
+        attempt: status === "succeeded" ? 1 : 0,
+        progress_percent: status === "succeeded" ? 100 : 0,
+        error_message: null,
+      },
+      {
+        subtask_id: "st_kdt_exec",
+        node_code: "kdt_pipeline_exec",
+        node_name: "KDT/RBZJ pipeline execution",
+        worker_kind: "special",
+        status: status === "succeeded" ? "succeeded" : "pending",
+        attempt: status === "succeeded" ? 1 : 0,
+        progress_percent: status === "succeeded" ? 100 : 0,
+        error_message: null,
+      },
+      {
+        subtask_id: "st_kdt_post",
+        node_code: "kdt_post_pipeline",
+        node_name: "KDT post pipeline final video",
+        worker_kind: "general",
+        status: status === "succeeded" ? "succeeded" : "pending",
+        attempt: status === "succeeded" ? 1 : 0,
+        progress_percent: status === "succeeded" ? 100 : 0,
+        error_message: null,
+      },
+    ],
+  };
+}
+
 test("real-mode adapter parses Stage 5C succeeded detail payload", async () => {
   const workflow = normalizeMarketingVideoWorkflow(stage5cSucceededDetail);
 
@@ -106,6 +176,21 @@ test("real-mode adapter parses Stage 5C succeeded detail payload", async () => {
   ]);
   expect(workflow.download.available).toBe(true);
   expect(workflow.download.final_video_url).toBe(FINAL_VIDEO_URL);
+});
+
+test("real-mode adapter parses KDT four-node detail payload", async () => {
+  const workflow = normalizeMarketingVideoWorkflow(kdtWorkflowDetail("succeeded"));
+
+  expect(workflow.workflow_name).toBe("RBZJ_KDT");
+  expect(workflow.task_type).toBe("ip_marketing_video");
+  expect(workflow.subtasks.map((subtask) => subtask.node_name)).toEqual(["校验输入", "准备素材", "智能匹配", "渲染成片"]);
+  expect(workflow.subtasks.map((subtask) => subtask.node_code)).toEqual([
+    "kdt_validate_inputs",
+    "kdt_pre_pipeline",
+    "kdt_pipeline_exec",
+    "kdt_post_pipeline",
+  ]);
+  expect(workflow.download.available).toBe(true);
 });
 
 test("real-mode adapter parses Stage 5C failed special-node detail payload", async () => {
@@ -198,7 +283,7 @@ test("real mode create links the new workflow into task center detail", async ({
     const payload = route.request().postDataJSON() as Record<string, unknown>;
     expect(payload).toMatchObject({
       customer_id: "tongan",
-      company_id: "tongan",
+      company_id: "10",
       task_type: "std_marketing_video",
       workflow_name: "TONGAN",
       mode: "standard",
@@ -333,6 +418,173 @@ test("real mode create links the new workflow into task center detail", async ({
 
   expect(tosPutSeen).toBe(true);
   expect(createPayload?.input_bundle.script_txt.tos_key).toBe(UPLOAD_KEY);
+});
+
+test("company 1 real mode creates KDT workflow with optional opener and ending uploads", async ({ page }) => {
+  const kdtUser = {
+    username: "rbzj_real_user",
+    role: "user",
+    company_id: 1,
+    company_name: "日标住建",
+  } as const;
+  let scriptPutSeen = false;
+  let openerPutSeen = false;
+  let endingPutSeen = false;
+  let createPayload: Record<string, any> | null = null;
+
+  await page.unroute("**/api/proxy/auth/me");
+  await page.route("**/api/proxy/auth/me", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ user: kdtUser }),
+    });
+  });
+
+  await page.route("**/api/proxy/api/marketing-video/uploads/presign", async (route) => {
+    const payload = route.request().postDataJSON() as Record<string, unknown>;
+    expect(payload).toMatchObject({
+      customer_id: "kdt",
+      company_id: "1",
+      task_type: "ip_marketing_video",
+      workflow_name: "RBZJ_KDT",
+      mode: "standard",
+      filename: "kdt.txt",
+      content_type: "text/plain",
+      opener_video_filename: "opener.mp4",
+      ending_video_filename: "ending.mp4",
+    });
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        upload_session_id: "upl_k6c",
+        status: "created",
+        placeholder: false,
+        objects: [
+          {
+            input_name: "script_txt",
+            upload_key: KDT_SCRIPT_UPLOAD_KEY,
+            upload_url: "/mock-tos/k6c/kdt.txt",
+            content_type: "text/plain",
+            method: "PUT",
+          },
+          {
+            input_name: "opener_video",
+            upload_key: KDT_OPENER_UPLOAD_KEY,
+            upload_url: "/mock-tos/k6c/opener.mp4",
+            content_type: "video/mp4",
+            method: "PUT",
+          },
+          {
+            input_name: "ending_video",
+            upload_key: KDT_ENDING_UPLOAD_KEY,
+            upload_url: "/mock-tos/k6c/ending.mp4",
+            content_type: "video/mp4",
+            method: "PUT",
+          },
+        ],
+      }),
+    });
+  });
+
+  for (const [url, flag] of [
+    ["/mock-tos/k6c/kdt.txt", "script"],
+    ["/mock-tos/k6c/opener.mp4", "opener"],
+    ["/mock-tos/k6c/ending.mp4", "ending"],
+  ] as const) {
+    await page.route(`**${url}`, async (route) => {
+      expect(route.request().method()).toBe("PUT");
+      if (flag === "script") scriptPutSeen = true;
+      if (flag === "opener") openerPutSeen = true;
+      if (flag === "ending") endingPutSeen = true;
+      await route.fulfill({ status: 200, headers: { "access-control-allow-origin": "*" }, body: "" });
+    });
+  }
+
+  await page.route("**/api/proxy/api/marketing-video/workflows", async (route) => {
+    if (route.request().method() === "GET") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(workflowListPayload(kdtWorkflowDetail("running"))),
+      });
+      return;
+    }
+
+    createPayload = route.request().postDataJSON() as Record<string, any>;
+    expect(createPayload).toMatchObject({
+      customer_id: "kdt",
+      company_id: "1",
+      task_type: "ip_marketing_video",
+      workflow_name: "RBZJ_KDT",
+      input_bundle: {
+        script_txt: {
+          upload_session_id: "upl_k6c",
+          filename: "kdt.txt",
+          tos_key: KDT_SCRIPT_UPLOAD_KEY,
+        },
+        opener_video: {
+          upload_session_id: "upl_k6c",
+          filename: "opener.mp4",
+          tos_key: KDT_OPENER_UPLOAD_KEY,
+        },
+        ending_video: {
+          upload_session_id: "upl_k6c",
+          filename: "ending.mp4",
+          tos_key: KDT_ENDING_UPLOAD_KEY,
+        },
+      },
+    });
+
+    await route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify(kdtWorkflowDetail("running")),
+    });
+  });
+
+  await page.route(`**/api/proxy/api/marketing-video/workflows/${KDT_WORKFLOW_ID}`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(kdtWorkflowDetail("running")),
+    });
+  });
+
+  await page.goto("/marketing-video");
+  await expect(page.getByText("KDT IP营销视频")).toBeVisible();
+  await page.getByLabel("选择 TXT 文案").setInputFiles({
+    name: "kdt.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("KDT real contract script"),
+  });
+  await page.getByLabel("使用自定义开头和结尾视频").check();
+  await page.getByLabel("选择开头 MP4").setInputFiles({
+    name: "opener.mp4",
+    mimeType: "video/mp4",
+    buffer: Buffer.from("opener bytes"),
+  });
+  await page.getByLabel("选择结尾 MP4").setInputFiles({
+    name: "ending.mp4",
+    mimeType: "video/mp4",
+    buffer: Buffer.from("ending bytes"),
+  });
+  await page.getByRole("button", { name: "创建营销视频任务" }).click();
+
+  await expect(page.getByText("任务已进入任务中心")).toBeVisible();
+  await expect(page.getByText(KDT_WORKFLOW_ID)).toBeVisible();
+  await page.getByRole("button", { name: "查看任务详情" }).click();
+  await expect(page.getByText("校验输入").first()).toBeVisible();
+  await expect(page.getByText("准备素材").first()).toBeVisible();
+  await expect(page.getByText("智能匹配").first()).toBeVisible();
+  await expect(page.getByText("渲染成片").first()).toBeVisible();
+
+  expect(scriptPutSeen).toBe(true);
+  expect(openerPutSeen).toBe(true);
+  expect(endingPutSeen).toBe(true);
+  expect(createPayload?.workflow_name).toBe("RBZJ_KDT");
 });
 
 test("real mode can stop and archive a Marketing Video task from task center", async ({ page }) => {

@@ -134,7 +134,7 @@ test("company 2 keeps full marketing video access", async ({ page }) => {
   await expect(page.getByTestId("marketing-video-development-lock")).toHaveCount(0);
   await expect(page.getByText("标准视频模式")).toBeVisible();
   await expect(page.getByText("输入短视频的文案(txt文件格式)")).toBeVisible();
-  await expect(page.getByText("上传短视频的文案并创建 标准营销视频任务。")).toBeVisible();
+  await expect(page.getByText("上传短视频的文案并创建 TONGAN 标准营销视频任务。")).toBeVisible();
   await expect(page.getByText("只支持一个 TXT 文案文件。RBZJ/KDT IP 模式暂未开放。")).toHaveCount(0);
   await expect(page.getByText("上传一个 TXT 文案并创建 TONGAN 标准营销视频任务。")).toHaveCount(0);
   await page.getByLabel("选择 TXT 文案").setInputFiles({
@@ -145,17 +145,35 @@ test("company 2 keeps full marketing video access", async ({ page }) => {
   await expect(page.getByRole("button", { name: "创建营销视频任务" })).toBeEnabled();
 });
 
-for (const user of [
-  { ...FULL_ACCESS_USER, username: "ribu_user", company_id: 1, company_name: "日标住建" },
-  { ...FULL_ACCESS_USER, username: "xiaoyingtao_user", company_id: 9, company_name: "小樱桃文化" },
-] as const) {
-  test(`company ${user.company_id} can see marketing video page but cannot operate it`, async ({ page }) => {
-    await mockAuth(page, user);
-    await page.goto("/marketing-video");
+test("company 1 sees KDT controls and can create a mock KDT task", async ({ page }) => {
+  await mockAuth(page, { ...FULL_ACCESS_USER, username: "ribu_user", company_id: 1, company_name: "日标住建" });
+  await page.goto("/marketing-video");
 
-    await expect(page.getByRole("heading", { name: "生成营销视频" })).toBeVisible();
-    await expect(page.getByTestId("marketing-video-development-lock")).toBeVisible();
-    await expect(page.getByText("页面正在开发中")).toBeVisible();
-    await expect(page.getByRole("button", { name: "创建营销视频任务" })).toBeDisabled();
+  await expect(page.getByTestId("marketing-video-development-lock")).toHaveCount(0);
+  await expect(page.getByText("KDT IP营销视频")).toBeVisible();
+  await expect(page.getByText("IP 视频模式")).toBeVisible();
+  await expect(page.getByTestId("kdt-open-end-controls")).toBeVisible();
+  await page.getByLabel("选择 TXT 文案").setInputFiles({
+    name: "kdt.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("KDT sample script"),
   });
-}
+  await expect(page.getByRole("button", { name: "创建营销视频任务" })).toBeEnabled();
+  await page.getByRole("button", { name: "创建营销视频任务" }).click();
+  await expect(page.getByText("任务已进入任务中心")).toBeVisible();
+  await page.getByRole("button", { name: "查看任务详情" }).click();
+  await expect(page).toHaveURL(/\/tasks\?taskId=wf_mock_/);
+  await expect(page.getByText("校验输入").first()).toBeVisible();
+  await expect(page.getByText("准备素材").first()).toBeVisible();
+  await expect(page.getByText("智能匹配").first()).toBeVisible();
+});
+
+test("company 9 can see marketing video page but cannot operate it", async ({ page }) => {
+  await mockAuth(page, { ...FULL_ACCESS_USER, username: "xiaoyingtao_user", company_id: 9, company_name: "小樱桃文化" });
+  await page.goto("/marketing-video");
+
+  await expect(page.getByRole("heading", { name: "生成营销视频" })).toBeVisible();
+  await expect(page.getByTestId("marketing-video-development-lock")).toBeVisible();
+  await expect(page.getByText("页面正在开发中")).toBeVisible();
+  await expect(page.getByRole("button", { name: "创建营销视频任务" })).toBeDisabled();
+});
