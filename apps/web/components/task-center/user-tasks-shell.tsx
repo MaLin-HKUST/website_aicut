@@ -25,6 +25,7 @@ import {
 import {
   abandonTask,
   getSmartCutContinueLabel,
+  getSmartCutSubtitleDownloadUrl,
   getSmartCutTask,
   isSmartCutDeletable,
   listSmartCutTasks,
@@ -224,6 +225,7 @@ function buildDetailOutputSummary(task: SmartCutTask, fallback: string[]) {
     summarizeName(task.asr_result_tos_key),
     summarizeName(task.audio_b_url),
     summarizeName(task.final_video_url),
+    summarizeName(getSmartCutSubtitleDownloadUrl(task)),
     summarizeName(task.groundtruth_url),
   ].filter(Boolean) as string[];
   return entries.length > 0 ? entries : fallback;
@@ -491,6 +493,7 @@ export function UserTasksShell() {
     activeMarketingVideoDetail && ["cancelled", "failed"].includes(activeMarketingVideoDetail.status) && marketingAction === null,
   );
   const canRenameTask = Boolean(activeTaskDetail && user && activeTaskDetail.user_id === user.username);
+  const activeTaskSubtitleUrl = getSmartCutSubtitleDownloadUrl(activeTaskDetail);
 
   async function handleDeleteTask() {
     if (!activeTaskDetail) return;
@@ -938,6 +941,13 @@ export function UserTasksShell() {
                     <a className="inline-flex" href={activeTaskDetail?.final_video_url ?? selectedTask.downloadUrl ?? undefined} target="_blank">
                       <Button type="button" variant="secondary">
                         下载结果
+                      </Button>
+                    </a>
+                  ) : null}
+                  {activeTaskSubtitleUrl ? (
+                    <a className="inline-flex" href={activeTaskSubtitleUrl} target="_blank">
+                      <Button type="button" variant="secondary">
+                        下载字幕
                       </Button>
                     </a>
                   ) : null}

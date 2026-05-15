@@ -14,6 +14,7 @@ import {
   canAccessSmartCutTask,
   getSmartCutEdits,
   getSmartCutRuns,
+  getSmartCutSubtitleDownloadUrl,
   getSmartCutTask,
   isSmartCutAutoResumeStatus,
   isSmartCutDeletable,
@@ -159,6 +160,7 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
   );
   const audioUrl = currentEdit?.audio_b_url ?? currentEdit?.audio_a_url ?? null;
   const audioLabel = currentEdit?.audio_b_url ? "试听音频 audio_b" : currentEdit?.audio_a_url ? "分析音频 audio_a" : null;
+  const subtitleDownloadUrl = getSmartCutSubtitleDownloadUrl(task);
   const previewButtonLabel =
     task?.status === "success"
       ? "重新生成试听"
@@ -518,6 +520,28 @@ export function SmartCutWorkspace({ taskId }: { taskId?: string }) {
                   </label>
                 </div>
               </Card>
+
+              {task?.final_video_url || subtitleDownloadUrl ? (
+                <Card className="rounded-[28px] border-[#dbe4f4] bg-white p-5 shadow-sm">
+                  <p className="text-sm font-semibold text-[#243444]">完成产物</p>
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    {task.final_video_url ? (
+                      <a className="inline-flex" href={task.final_video_url} target="_blank">
+                        <Button type="button" variant="secondary">
+                          下载视频
+                        </Button>
+                      </a>
+                    ) : null}
+                    {subtitleDownloadUrl ? (
+                      <a className="inline-flex" href={subtitleDownloadUrl} target="_blank">
+                        <Button type="button" variant="secondary">
+                          下载字幕
+                        </Button>
+                      </a>
+                    ) : null}
+                  </div>
+                </Card>
+              ) : null}
 
               <Card className="rounded-[28px] border-[#dbe4f4] bg-white p-5 shadow-sm">
                 <p className="text-sm font-semibold text-[#243444]">任务时间线</p>

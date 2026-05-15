@@ -24,6 +24,7 @@ const SMART_CUT_DETAILS: Record<string, Record<string, unknown>> = {
     active_edit_id: "edit_route_smoke_001",
     audio_b_url: "smart-cut/smartcut_route_smoke_001/preview/edit_route_smoke_001/audio_b.mp3",
     final_video_url: null,
+    subtitle_srt_url: null,
     groundtruth_url: null,
     created_at: "2026-04-18T08:00:00Z",
     updated_at: "2026-04-18T10:10:00Z",
@@ -43,6 +44,7 @@ const SMART_CUT_DETAILS: Record<string, Record<string, unknown>> = {
     active_edit_id: "edit_success_self_001",
     audio_b_url: "smart-cut/smartcut_success_self_001/preview/edit_success_self_001/audio_b.mp3",
     final_video_url: "https://example.com/smartcut_success_self_001/final_video.mp4",
+    subtitle_srt_url: "https://example.com/smartcut_success_self_001/final_video.srt",
     groundtruth_url: null,
     created_at: "2026-04-18T07:00:00Z",
     updated_at: "2026-04-18T09:30:00Z",
@@ -62,6 +64,7 @@ const SMART_CUT_DETAILS: Record<string, Record<string, unknown>> = {
     active_edit_id: "edit_success_shared_001",
     audio_b_url: "smart-cut/smartcut_success_shared_001/preview/edit_success_shared_001/audio_b.mp3",
     final_video_url: "https://example.com/smartcut_success_shared_001/final_video.mp4",
+    subtitle_srt_url: "https://example.com/smartcut_success_shared_001/final_video.srt",
     groundtruth_url: null,
     created_at: "2026-04-18T06:00:00Z",
     updated_at: "2026-04-18T09:00:00Z",
@@ -81,6 +84,7 @@ const SMART_CUT_DETAILS: Record<string, Record<string, unknown>> = {
     active_edit_id: null,
     audio_b_url: null,
     final_video_url: null,
+    subtitle_srt_url: null,
     groundtruth_url: null,
     created_at: "2026-04-18T05:00:00Z",
     updated_at: "2026-04-18T08:00:00Z",
@@ -195,7 +199,7 @@ test.beforeEach(async ({ page }) => {
           download_url: "https://example.com/smartcut_success_shared_001/final_video.mp4",
           error_message: null,
           input_files: ["source_video.mp4", "reference.txt"],
-          output_files: ["final_video.mp4"],
+          output_files: ["final_video.mp4", "final_video.srt"],
         },
       ]),
     });
@@ -359,6 +363,11 @@ test("tasks detail keeps page in place and switches to continue edit for shared 
   await page.goto("/tasks?taskId=smartcut_success_shared_001");
   await expect(page.getByRole("heading", { name: "共享完成任务" })).toBeVisible();
   await expect(page.getByRole("button", { name: "继续编辑" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "下载字幕" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "下载字幕" })).toHaveAttribute(
+    "href",
+    "https://example.com/smartcut_success_shared_001/final_video.srt",
+  );
 });
 
 test("tasks detail continue edit enters shared company workspace", async ({ page }) => {
@@ -366,6 +375,7 @@ test("tasks detail continue edit enters shared company workspace", async ({ page
   await page.getByRole("button", { name: "继续编辑" }).click();
   await expect(page).toHaveURL(/\/smart-cut\/smartcut_success_shared_001$/);
   await expect(page.getByText("当前打开的是 other_user 的同公司共享任务。")).toBeVisible();
+  await expect(page.getByRole("button", { name: "下载字幕" })).toBeVisible();
 });
 
 test("analyze failed workspace shows delete action", async ({ page }) => {

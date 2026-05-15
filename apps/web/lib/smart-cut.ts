@@ -272,6 +272,18 @@ function normalizeTask(payload: any): SmartCutTask {
   };
 }
 
+export function getSmartCutSubtitleDownloadUrl(
+  task: Pick<SmartCutTask, "subtitle_srt_url" | "final_video_url"> | null | undefined,
+): string | null {
+  if (!task) return null;
+  if (task.subtitle_srt_url) return task.subtitle_srt_url;
+  if (!task.final_video_url) return null;
+
+  const baseUrl = task.final_video_url.split("#")[0]?.split("?")[0] ?? "";
+  if (!/\.mp4$/i.test(baseUrl)) return null;
+  return baseUrl.replace(/\.mp4$/i, ".srt");
+}
+
 function normalizeEdit(payload: any): SmartCutEdit {
   return {
     id: payload.id,
