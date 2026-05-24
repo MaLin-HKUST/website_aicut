@@ -519,6 +519,7 @@ test("company 1 real mode creates KDT workflow with optional opener and ending u
       company_id: "1",
       task_type: "ip_marketing_video",
       workflow_name: "RBZJ_KDT",
+      tts_voice: "日标住建-小唐",
       input_bundle: {
         script_txt: {
           upload_session_id: "upl_k6c",
@@ -555,6 +556,8 @@ test("company 1 real mode creates KDT workflow with optional opener and ending u
 
   await page.goto("/marketing-video");
   await expect(page.getByText("KDT IP营销视频")).toBeVisible();
+  await expect(page.getByLabel("TTS 音色")).toHaveValue("康迪");
+  await page.getByLabel("TTS 音色").selectOption("日标住建-小唐");
   await page.getByLabel("选择 TXT 文案").setInputFiles({
     name: "kdt.txt",
     mimeType: "text/plain",
@@ -585,6 +588,7 @@ test("company 1 real mode creates KDT workflow with optional opener and ending u
   expect(openerPutSeen).toBe(true);
   expect(endingPutSeen).toBe(true);
   expect(createPayload?.workflow_name).toBe("RBZJ_KDT");
+  expect(createPayload?.tts_voice).toBe("日标住建-小唐");
 });
 
 test("real mode can stop and archive a Marketing Video task from task center", async ({ page }) => {

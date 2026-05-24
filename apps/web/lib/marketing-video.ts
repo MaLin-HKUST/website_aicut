@@ -24,6 +24,14 @@ export type MarketingVideoTaskType = "std_marketing_video" | "ip_marketing_video
 export type MarketingVideoWorkflowName = "TONGAN" | "RBZJ_KDT";
 export type MarketingVideoInputName = "script_txt" | "opener_video" | "ending_video";
 
+export const KDT_TTS_VOICES = [
+  { value: "康迪", label: "康迪" },
+  { value: "日标住建-小唐", label: "日标住建-小唐" },
+  { value: "日标住建-凯迪", label: "日标住建-凯迪" },
+] as const;
+
+export type KdtTtsVoiceName = (typeof KDT_TTS_VOICES)[number]["value"];
+
 export type MarketingVideoWorkflow = {
   workflow_id: string;
   customer_id: string;
@@ -57,6 +65,7 @@ export type CreateMarketingVideoWorkflowRequest = {
   company_id: string;
   task_type: MarketingVideoTaskType;
   workflow_name: MarketingVideoWorkflowName;
+  tts_voice?: KdtTtsVoiceName;
   mode: "standard";
   title: string;
   input_bundle: {

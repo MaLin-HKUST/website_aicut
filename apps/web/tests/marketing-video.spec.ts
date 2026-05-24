@@ -137,6 +137,7 @@ test("company 2 keeps full marketing video access", async ({ page }) => {
   await expect(page.getByText("上传短视频的文案并创建 TONGAN 标准营销视频任务。")).toBeVisible();
   await expect(page.getByText("只支持一个 TXT 文案文件。RBZJ/KDT IP 模式暂未开放。")).toHaveCount(0);
   await expect(page.getByText("上传一个 TXT 文案并创建 TONGAN 标准营销视频任务。")).toHaveCount(0);
+  await expect(page.getByTestId("kdt-tts-voice-control")).toHaveCount(0);
   await page.getByLabel("选择 TXT 文案").setInputFiles({
     name: "07.txt",
     mimeType: "text/plain",
@@ -152,6 +153,9 @@ test("company 1 sees KDT controls and can create a mock KDT task", async ({ page
   await expect(page.getByTestId("marketing-video-development-lock")).toHaveCount(0);
   await expect(page.getByText("KDT IP营销视频")).toBeVisible();
   await expect(page.getByText("IP 视频模式")).toBeVisible();
+  await expect(page.getByTestId("kdt-tts-voice-control")).toBeVisible();
+  await expect(page.getByLabel("TTS 音色")).toHaveValue("康迪");
+  await page.getByLabel("TTS 音色").selectOption("日标住建-凯迪");
   await expect(page.getByTestId("kdt-open-end-controls")).toBeVisible();
   await page.getByLabel("选择 TXT 文案").setInputFiles({
     name: "kdt.txt",

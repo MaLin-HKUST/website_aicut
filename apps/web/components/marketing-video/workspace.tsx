@@ -8,6 +8,8 @@ import {
   createMarketingVideoWorkflow,
   getMarketingVideoWorkflowProfile,
   isMarketingVideoMockMode,
+  KDT_TTS_VOICES,
+  KdtTtsVoiceName,
   MarketingVideoWorkflowSummary,
   uploadMarketingVideoInputs,
 } from "@/lib/marketing-video";
@@ -38,6 +40,7 @@ export function MarketingVideoWorkspace() {
   const [useCustomOpenEnd, setUseCustomOpenEnd] = useState(false);
   const [openerFile, setOpenerFile] = useState<File | null>(null);
   const [endingFile, setEndingFile] = useState<File | null>(null);
+  const [kdtTtsVoice, setKdtTtsVoice] = useState<KdtTtsVoiceName>("康迪");
   const [fileInputKey, setFileInputKey] = useState(0);
   const [openerInputKey, setOpenerInputKey] = useState(0);
   const [endingInputKey, setEndingInputKey] = useState(0);
@@ -132,6 +135,7 @@ export function MarketingVideoWorkspace() {
     setOpenerFile(null);
     setEndingFile(null);
     setUseCustomOpenEnd(false);
+    setKdtTtsVoice("康迪");
     setTitle(activeProfile?.defaultTitle ?? "TONGAN 07 staging sample");
     setUploadProgress(0);
     setFileInputKey((value) => value + 1);
@@ -188,6 +192,7 @@ export function MarketingVideoWorkspace() {
         company_id: String(user.company_id),
         task_type: activeProfile.taskType,
         workflow_name: activeProfile.workflowName,
+        ...(activeProfile.kind === "kdt" ? { tts_voice: kdtTtsVoice } : {}),
         mode: activeProfile.mode,
         title: title.trim() || buildDefaultTitle(scriptFile, activeProfile.defaultTitle),
         input_bundle: inputBundle,
@@ -288,6 +293,27 @@ export function MarketingVideoWorkspace() {
                   />
                 </div>
               </div>
+
+              {activeProfile?.kind === "kdt" ? (
+                <div className="mt-5 rounded-[24px] border border-[#e4dacb] bg-[#fffdf9] p-4" data-testid="kdt-tts-voice-control">
+                  <label className="text-xs tracking-[0.2em] text-stone-500" htmlFor="kdt-tts-voice">
+                    TTS 音色
+                  </label>
+                  <select
+                    className="mt-3 h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-[#241714] shadow-sm outline-none transition focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={busy !== null || pageLocked}
+                    id="kdt-tts-voice"
+                    onChange={(event) => setKdtTtsVoice(event.target.value as KdtTtsVoiceName)}
+                    value={kdtTtsVoice}
+                  >
+                    {KDT_TTS_VOICES.map((voice) => (
+                      <option key={voice.value} value={voice.value}>
+                        {voice.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
 
               {activeProfile?.supportsOpenerEnding ? (
                 <div className="mt-5 rounded-[24px] border border-[#e4dacb] bg-[#fffdf9] p-4" data-testid="kdt-open-end-controls">
