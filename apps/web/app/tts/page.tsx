@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { UserWorkspaceShell } from "@/components/navigation/user-workspace-shell";
 import { useUserWorkspaceData } from "@/components/navigation/use-user-workspace-data";
 import { AuthResponse } from "@/lib/auth";
+import { KDT_TTS_VOICES, KdtTtsVoiceName } from "@/lib/tts-voices";
 
 type GenerateAudioResponse = {
   audio_base64: string;
@@ -22,8 +23,6 @@ const EXAMPLE_COPY = [
   "欢迎来到新一期产品介绍，我们会在三分钟内带你快速了解本次升级亮点。",
   "这段语音用于视频口播，请保持节奏清晰、停顿自然、结尾收得干净。",
 ];
-
-const FIXED_VOICE_LABEL = "康迪";
 
 function base64ToBlob(base64: string, mimeType: string) {
   const binary = atob(base64);
@@ -40,6 +39,7 @@ export default function TTSPage() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioFileName, setAudioFileName] = useState<string | null>(null);
   const [usageCredits, setUsageCredits] = useState(EXAMPLE_COPY[0].length);
+  const [selectedVoice, setSelectedVoice] = useState<KdtTtsVoiceName>("康迪");
   const workspace = useUserWorkspaceData(user?.username, user?.company_id);
 
   useEffect(() => {
@@ -104,7 +104,7 @@ export default function TTSPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, voice_name: selectedVoice }),
       });
 
       if (!response.ok) {
@@ -161,8 +161,23 @@ export default function TTSPage() {
                     <p className="text-[11px] tracking-[0.24em] text-stone-400">输入文案</p>
                     <p className="mt-2 text-[15px] text-stone-500">{characterCount} characters</p>
                   </div>
-                  <div className="rounded-full bg-[#243444] px-5 py-2 text-[11px] font-semibold tracking-[0.22em] text-white">
-                    固定音色
+                  <div className="min-w-[184px]">
+                    <label className="text-[11px] tracking-[0.24em] text-stone-400" htmlFor="tts-voice">
+                      TTS 音色
+                    </label>
+                    <select
+                      className="mt-2 h-10 w-full rounded-full border border-[#d7cfc3] bg-[#fffefb] px-4 text-sm font-semibold text-[#241714] outline-none transition focus:border-[#243444] focus:ring-1 focus:ring-[#243444]/10"
+                      disabled={submitting}
+                      id="tts-voice"
+                      onChange={(event) => setSelectedVoice(event.target.value as KdtTtsVoiceName)}
+                      value={selectedVoice}
+                    >
+                      {KDT_TTS_VOICES.map((voice) => (
+                        <option key={voice.value} value={voice.value}>
+                          {voice.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
@@ -198,8 +213,8 @@ export default function TTSPage() {
           <div className="space-y-5">
             <Card className="rounded-[28px] border-[#d8d9d5] bg-[#243444] p-5 text-white shadow-[0_10px_22px_rgba(36,52,68,0.12)]">
               <p className="text-[11px] tracking-[0.24em] text-slate-200">当前音色</p>
-              <p className="mt-3 text-[18px] font-semibold leading-tight">{FIXED_VOICE_LABEL}</p>
-              <p className="mt-2 text-sm text-slate-200/80">固定音色</p>
+              <p className="mt-3 text-[18px] font-semibold leading-tight">{selectedVoice}</p>
+              <p className="mt-2 text-sm text-slate-200/80">已选择音色</p>
             </Card>
 
             <Card className="rounded-[28px] border-[#e3e3df] bg-[#fffefb] p-5 shadow-[0_8px_20px_rgba(60,66,74,0.04)]">

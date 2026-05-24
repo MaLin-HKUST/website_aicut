@@ -45,7 +45,9 @@ test("admin can complete the bootstrap flow and a normal user is routed to welco
   await expect(page).toHaveURL(/\/welcome$/);
   await expect(page.getByRole("button", { name: "文案生成语音" })).toBeVisible();
 
+  let ttsGeneratePayload: Record<string, unknown> | null = null;
   await page.route("**/api/proxy/user/tts/generate", async (route) => {
+    ttsGeneratePayload = route.request().postDataJSON() as Record<string, unknown>;
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -62,9 +64,18 @@ test("admin can complete the bootstrap flow and a normal user is routed to welco
   await page.getByRole("button", { name: "文案生成语音" }).click();
   await expect(page).toHaveURL(/\/tts$/);
   await expect(page.getByText("本月累计TOKEN：30")).toBeVisible();
+  await expect(page.getByLabel("TTS 音色")).toHaveValue("康迪");
+  await expect(page.locator("#tts-voice option")).toHaveText(["康迪", "日标住建-小唐", "日标住建-凯迪"]);
+  await page.getByLabel("TTS 音色").selectOption("日标住建-凯迪");
+  await expect(page.getByText("已选择音色")).toBeVisible();
+  await expect(page.locator("p").filter({ hasText: "日标住建-凯迪" })).toBeVisible();
   await page.locator("#tts-text").fill("123456789012345678901234567890");
   await expect(page.getByText("本月累计TOKEN：30")).toBeVisible();
   await page.getByRole("button", { name: "生成音频" }).click();
+  expect(ttsGeneratePayload).toMatchObject({
+    text: "123456789012345678901234567890",
+    voice_name: "日标住建-凯迪",
+  });
   await expect(page.getByText("qa-output.mp3")).toBeVisible();
   await expect(page.getByRole("button", { name: "下载音频" })).toBeVisible();
 });

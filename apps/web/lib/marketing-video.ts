@@ -1,3 +1,5 @@
+import type { KdtTtsVoiceName } from "./tts-voices";
+
 export type MarketingVideoWorkflowStatus =
   | "queued"
   | "running"
@@ -24,13 +26,8 @@ export type MarketingVideoTaskType = "std_marketing_video" | "ip_marketing_video
 export type MarketingVideoWorkflowName = "TONGAN" | "RBZJ_KDT";
 export type MarketingVideoInputName = "script_txt" | "opener_video" | "ending_video";
 
-export const KDT_TTS_VOICES = [
-  { value: "康迪", label: "康迪" },
-  { value: "日标住建-小唐", label: "日标住建-小唐" },
-  { value: "日标住建-凯迪", label: "日标住建-凯迪" },
-] as const;
-
-export type KdtTtsVoiceName = (typeof KDT_TTS_VOICES)[number]["value"];
+export { KDT_TTS_VOICES } from "./tts-voices";
+export type { KdtTtsVoiceName } from "./tts-voices";
 
 export type MarketingVideoWorkflow = {
   workflow_id: string;
