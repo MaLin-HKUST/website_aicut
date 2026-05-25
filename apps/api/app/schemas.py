@@ -73,6 +73,7 @@ class MaterialRead(BaseModel):
 
 class TTSGenerateRequest(BaseModel):
     text: str = Field(min_length=1, max_length=9999)
+    voice_name: str | None = None
 
 
 class TTSGenerateResponse(BaseModel):

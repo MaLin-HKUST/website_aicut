@@ -214,7 +214,7 @@ def generate_tts(
     db: DbSession = Depends(get_db),
 ):
     try:
-        result = MinimaxTTSClient().synthesize(payload.text)
+        result = MinimaxTTSClient(voice_name=payload.voice_name).synthesize(payload.text)
     except MinimaxConfigError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except MinimaxTimeoutError as exc:

@@ -7,6 +7,13 @@ import requests
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 
+KDT_TTS_VOICE_IDS = {
+    "康迪": "moss_audio_623373aa-dd87-11f0-9536-6699b2fade72",
+    "日标住建-小唐": "moss_audio_8351c599-5682-11f1-ba6a-025474e1e406",
+    "日标住建-凯迪": "moss_audio_18625238-5719-11f1-981b-8a143315d498",
+}
+
+
 class MinimaxTTSError(Exception):
     pass
 
@@ -38,17 +45,30 @@ class MinimaxTTSClient:
         self,
         api_key: str | None = None,
         group_id: str | None = None,
+        voice_name: str | None = None,
         voice_id: str | None = None,
     ):
         self._api_key = api_key or os.getenv("MINIMAX_AUDIO_API_KEY")
         self._group_id = group_id or os.getenv("MINIMAX_AUDIO_GROUP_ID")
-        self._voice_id = voice_id or os.getenv("MINIMAX_TTS_VOICE_ID")
+        self._voice_name = str(voice_name or "").strip() or None
+        self._voice_id = self._resolve_voice_id(voice_id)
         self._base_url = "https://api.minimax.io"
 
         if not self._api_key:
             raise MinimaxConfigError("MINIMAX_AUDIO_API_KEY is required")
         if not self._voice_id:
             raise MinimaxConfigError("MINIMAX_TTS_VOICE_ID is required")
+
+    def _resolve_voice_id(self, voice_id: str | None) -> str | None:
+        if voice_id:
+            return voice_id
+        if self._voice_name:
+            resolved_voice_id = KDT_TTS_VOICE_IDS.get(self._voice_name)
+            if not resolved_voice_id:
+                allowed = ", ".join(KDT_TTS_VOICE_IDS)
+                raise MinimaxConfigError(f"Unsupported TTS voice_name '{self._voice_name}'. Allowed: {allowed}")
+            return resolved_voice_id
+        return os.getenv("MINIMAX_TTS_VOICE_ID")
 
     def synthesize(self, text: str) -> TTSSynthesisResult:
         if not text.strip():
