@@ -42,12 +42,12 @@ test("tts page lets users select one approved voice and submits it", async ({ pa
 
   await page.goto("/tts");
 
-  await expect(page.getByLabel("TTS 音色")).toHaveValue("康迪");
+  await expect(page.getByLabel("当前音色")).toHaveValue("康迪");
   await expect(page.locator("#tts-voice option")).toHaveText(["康迪", "日标住建-小唐", "日标住建-凯迪"]);
 
-  await page.getByLabel("TTS 音色").selectOption("日标住建-凯迪");
+  await page.getByLabel("当前音色").selectOption("日标住建-凯迪");
   await expect(page.getByText("当前音色")).toBeVisible();
-  await expect(page.locator("p").filter({ hasText: "日标住建-凯迪" })).toBeVisible();
+  await expect(page.getByLabel("当前音色")).toHaveValue("日标住建-凯迪");
 
   await page.locator("#tts-text").fill("123456789012345678901234567890");
   await page.getByRole("button", { name: "生成音频" }).click();

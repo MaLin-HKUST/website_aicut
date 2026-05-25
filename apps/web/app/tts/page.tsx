@@ -161,24 +161,6 @@ export default function TTSPage() {
                     <p className="text-[11px] tracking-[0.24em] text-stone-400">输入文案</p>
                     <p className="mt-2 text-[15px] text-stone-500">{characterCount} characters</p>
                   </div>
-                  <div className="min-w-[184px]">
-                    <label className="text-[11px] tracking-[0.24em] text-stone-400" htmlFor="tts-voice">
-                      TTS 音色
-                    </label>
-                    <select
-                      className="mt-2 h-10 w-full rounded-full border border-[#d7cfc3] bg-[#fffefb] px-4 text-sm font-semibold text-[#241714] outline-none transition focus:border-[#243444] focus:ring-1 focus:ring-[#243444]/10"
-                      disabled={submitting}
-                      id="tts-voice"
-                      onChange={(event) => setSelectedVoice(event.target.value as KdtTtsVoiceName)}
-                      value={selectedVoice}
-                    >
-                      {KDT_TTS_VOICES.map((voice) => (
-                        <option key={voice.value} value={voice.value}>
-                          {voice.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
                 </div>
 
                 <div className="mt-5 border-t border-dashed border-[#e6e0d6] pt-5">
@@ -212,9 +194,23 @@ export default function TTSPage() {
 
           <div className="space-y-5">
             <Card className="rounded-[28px] border-[#d8d9d5] bg-[#243444] p-5 text-white shadow-[0_10px_22px_rgba(36,52,68,0.12)]">
-              <p className="text-[11px] tracking-[0.24em] text-slate-200">当前音色</p>
-              <p className="mt-3 text-[18px] font-semibold leading-tight">{selectedVoice}</p>
-              <p className="mt-2 text-sm text-slate-200/80">已选择音色</p>
+              <label className="text-[11px] tracking-[0.24em] text-slate-200" htmlFor="tts-voice">
+                当前音色
+              </label>
+              <select
+                className="mt-4 h-12 w-full rounded-[18px] border border-white/20 bg-white px-4 text-[18px] font-semibold text-[#243444] outline-none transition focus:border-white focus:ring-2 focus:ring-white/30 disabled:cursor-not-allowed disabled:opacity-70"
+                disabled={submitting}
+                id="tts-voice"
+                onChange={(event) => setSelectedVoice(event.target.value as KdtTtsVoiceName)}
+                value={selectedVoice}
+              >
+                {KDT_TTS_VOICES.map((voice) => (
+                  <option key={voice.value} value={voice.value}>
+                    {voice.label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-3 text-sm text-slate-200/80">选择音色</p>
             </Card>
 
             <Card className="rounded-[28px] border-[#e3e3df] bg-[#fffefb] p-5 shadow-[0_8px_20px_rgba(60,66,74,0.04)]">
