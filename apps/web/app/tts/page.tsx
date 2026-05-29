@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { UserWorkspaceShell } from "@/components/navigation/user-workspace-shell";
 import { useUserWorkspaceData } from "@/components/navigation/use-user-workspace-data";
 import { AuthResponse } from "@/lib/auth";
-import { KDT_TTS_VOICES, KdtTtsVoiceName } from "@/lib/tts-voices";
+import { KdtTtsVoiceName, getTtsVoicesForCompany } from "@/lib/tts-voices";
 
 type GenerateAudioResponse = {
   audio_base64: string;
@@ -41,6 +41,7 @@ export default function TTSPage() {
   const [usageCredits, setUsageCredits] = useState(EXAMPLE_COPY[0].length);
   const [selectedVoice, setSelectedVoice] = useState<KdtTtsVoiceName>("康迪");
   const workspace = useUserWorkspaceData(user?.username, user?.company_id);
+  const availableVoices = useMemo(() => getTtsVoicesForCompany(user?.company_name), [user?.company_name]);
 
   useEffect(() => {
     async function bootstrap() {
@@ -204,7 +205,7 @@ export default function TTSPage() {
                 onChange={(event) => setSelectedVoice(event.target.value as KdtTtsVoiceName)}
                 value={selectedVoice}
               >
-                {KDT_TTS_VOICES.map((voice) => (
+                {availableVoices.map((voice) => (
                   <option key={voice.value} value={voice.value}>
                     {voice.label}
                   </option>
