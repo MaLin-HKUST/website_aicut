@@ -44,7 +44,14 @@ from .smart_cut_service import (
     start_preview_stage,
 )
 from .security import hash_password, new_session_token, verify_password
-from .tts import MinimaxAPIError, MinimaxConfigError, MinimaxTTSClient, MinimaxTimeoutError
+from .tts import (
+    RIBIAO_COMPANY_NAME,
+    RIBIAO_EXCLUSIVE_TTS_VOICE_NAMES,
+    MinimaxAPIError,
+    MinimaxConfigError,
+    MinimaxTTSClient,
+    MinimaxTimeoutError,
+)
 
 
 app = FastAPI(title="website_aicut api")
@@ -214,6 +221,10 @@ def generate_tts(
     db: DbSession = Depends(get_db),
 ):
     try:
+        if payload.voice_name in RIBIAO_EXCLUSIVE_TTS_VOICE_NAMES and (
+            user.company is None or user.company.name != RIBIAO_COMPANY_NAME
+        ):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="TTS voice is not enabled for this company")
         result = MinimaxTTSClient(voice_name=payload.voice_name).synthesize(payload.text)
     except MinimaxConfigError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc

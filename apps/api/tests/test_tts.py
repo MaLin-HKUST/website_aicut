@@ -73,9 +73,17 @@ def test_tts_client_resolves_kdt_voice_name(monkeypatch):
     monkeypatch.setenv("MINIMAX_AUDIO_API_KEY", "test-key")
     monkeypatch.delenv("MINIMAX_TTS_VOICE_ID", raising=False)
 
-    client = MinimaxTTSClient(voice_name="日标住建-小唐")
+    expected = {
+        "康迪": "moss_audio_623373aa-dd87-11f0-9536-6699b2fade72",
+        "日标住建-小唐": "moss_audio_8351c599-5682-11f1-ba6a-025474e1e406",
+        "日标住建-凯迪": "moss_audio_18625238-5719-11f1-981b-8a143315d498",
+        "日标住建-康迪2": "moss_audio_17f77bec-5b00-11f1-938c-a6f6fa6b2a0c",
+        "日标住建-小唐2": "moss_audio_a40f858f-5b11-11f1-83ef-8afcbb8b5b5c",
+    }
 
-    assert client._voice_id == "moss_audio_8351c599-5682-11f1-ba6a-025474e1e406"
+    for voice_name, voice_id in expected.items():
+        client = MinimaxTTSClient(voice_name=voice_name)
+        assert client._voice_id == voice_id
 
 
 def test_tts_client_rejects_unknown_voice_name(monkeypatch):

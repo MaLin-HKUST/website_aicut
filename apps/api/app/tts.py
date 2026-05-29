@@ -11,7 +11,12 @@ KDT_TTS_VOICE_IDS = {
     "康迪": "moss_audio_623373aa-dd87-11f0-9536-6699b2fade72",
     "日标住建-小唐": "moss_audio_8351c599-5682-11f1-ba6a-025474e1e406",
     "日标住建-凯迪": "moss_audio_18625238-5719-11f1-981b-8a143315d498",
+    "日标住建-康迪2": "moss_audio_17f77bec-5b00-11f1-938c-a6f6fa6b2a0c",
+    "日标住建-小唐2": "moss_audio_a40f858f-5b11-11f1-83ef-8afcbb8b5b5c",
 }
+
+RIBIAO_COMPANY_NAME = "日标住建"
+RIBIAO_EXCLUSIVE_TTS_VOICE_NAMES = frozenset({"日标住建-康迪2", "日标住建-小唐2"})
 
 
 class MinimaxTTSError(Exception):
