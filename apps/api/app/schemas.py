@@ -375,7 +375,7 @@ class AdminUserRead(BaseModel):
     user_id: int
     company_id: int | None
     login_account: str
-    password: str | None
+    password: str | None = None
     user_name: str | None
     status: str
     role: Role
