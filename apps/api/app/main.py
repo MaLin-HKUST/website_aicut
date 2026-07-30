@@ -184,7 +184,7 @@ def login(payload: schemas.LoginRequest, response: Response, db: DbSession = Dep
         samesite="lax",
         secure=False,
         path="/",
-        max_age=60 * 60 * 24 * 7,
+        max_age=60 * 60 * 24 * 365 * 10,
     )
     return schemas.AuthResponse(user=serialize_user(user))
 
